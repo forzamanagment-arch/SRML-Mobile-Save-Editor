@@ -18,6 +18,7 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Spinner
+import android.widget.Switch
 import android.widget.TextView
 import android.widget.ImageView
 import android.widget.FrameLayout
@@ -36,6 +37,7 @@ class SaveEditorActivity : Activity() {
         private const val WATER_ID = 48L
         private const val MAGIC_WATER_ID = 113L
         private const val MAX_U32 = 4294967295L
+        private const val MAX_PLAYER_STAT = 100L
         private val INVENTORY_MARKER = byteArrayOf(
             0x04, 0x53, 0x52, 0x41, 0x44, 0x02, 0x00, 0x00, 0x00, 0x00, 0x30
         )
@@ -69,7 +71,8 @@ class SaveEditorActivity : Activity() {
         val nameLabel: TextView,
         val field: InventoryField,
         val iconView: ImageView,
-        val badge: TextView
+        val badge: TextView,
+        val refresh: () -> Unit
     )
 
     private var parsed: ParsedSave? = null
@@ -332,6 +335,53 @@ class SaveEditorActivity : Activity() {
         hudCard(rowB, tr("Energy", "Энергия"), "Energy", data.currentEnergyOffset) { currentEnergyInput = it }
         hudCard(rowB, tr("Keys", "Ключи"), "Key", data.keysOffset) { keysInput = it }
 
+        val infiniteRow = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        fun infiniteCard(label: String, iconName: String, input: EditText?) {
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                gravity = Gravity.CENTER
+                setPadding(dp(10), dp(10), dp(10), dp(8))
+                background = rounded(Color.rgb(255, 253, 247), Color.rgb(232, 76, 138), dp(18))
+            }
+            val icon = ImageView(this)
+            GameAssets.icon(this, iconName)?.let { icon.setImageBitmap(it) }
+            card.addView(icon, LinearLayout.LayoutParams(dp(34), dp(34)))
+            card.addView(TextView(this).apply {
+                text = label
+                textSize = 12f
+                gravity = Gravity.CENTER
+                typeface = GameAssets.typeface(this@SaveEditorActivity, true)
+                setTextColor(Color.rgb(45, 55, 72))
+                setPadding(0, dp(4), 0, dp(4))
+            })
+            val toggle = Switch(this).apply {
+                isEnabled = input != null
+                isChecked = (input?.text?.toString()?.toLongOrNull() ?: 0L) >= MAX_PLAYER_STAT
+                thumbTintList = android.content.res.ColorStateList.valueOf(Color.rgb(232, 76, 138))
+                trackTintList = android.content.res.ColorStateList.valueOf(Color.rgb(255, 182, 205))
+                setOnCheckedChangeListener { _, checked ->
+                    if (checked && input != null) input.setText(MAX_PLAYER_STAT.toString())
+                }
+            }
+            card.addView(toggle)
+            val params = LinearLayout.LayoutParams(0, -2, 1f)
+            params.setMargins(dp(3), dp(5), dp(3), dp(4))
+            infiniteRow.addView(card, params)
+        }
+        infiniteCard(tr("Infinite health", "Бесконечное здоровье"), "Heart", currentHealthInput)
+        infiniteCard(tr("Infinite energy", "Бесконечная энергия"), "Energy", currentEnergyInput)
+        page.addView(infiniteRow)
+        page.addView(TextView(this).apply {
+            text = tr(
+                "Health and energy boosts may be lost after being knocked out in the game.",
+                "Бесконечное здоровье и энергия могут исчезнуть после нокаута в игре."
+            )
+            textSize = 11f
+            typeface = GameAssets.typeface(this@SaveEditorActivity)
+            setTextColor(Color.rgb(107, 123, 141))
+            setPadding(dp(2), dp(2), dp(2), dp(8))
+        })
+
         addSection(tr("INVENTORY", "ИНВЕНТАРЬ"))
         addHint(tr("Four item slots and one dedicated water slot. Tap a tile to choose an item.", "Четыре слота предметов и отдельный слот воды. Нажми на плитку, чтобы выбрать предмет."))
         slotEditors.clear()
@@ -347,6 +397,7 @@ class SaveEditorActivity : Activity() {
             inventoryGrid.addView(row)
         }
 
+        var refreshWaterTile: (() -> Unit)? = null
         addSection(tr("Slot 5 • water", "Слот 5 • вода"))
         val water = data.waterSlot
         if (water == null) {
@@ -410,28 +461,36 @@ class SaveEditorActivity : Activity() {
                 typeface = GameAssets.typeface(this@SaveEditorActivity)
                 setPadding(dp(12), 0, 0, 0)
             }
+            refreshWaterTile = {
+                val selectedId = when (spinner.selectedItemPosition) {
+                    1 -> WATER_ID
+                    2 -> MAGIC_WATER_ID
+                    else -> EMPTY_SLOT_ID
+                }
+                val selectedWaterIcon = when (selectedId) {
+                    WATER_ID -> GameAssets.icon(this@SaveEditorActivity, "Water_icon")
+                    MAGIC_WATER_ID -> GameAssets.icon(this@SaveEditorActivity, "Ancient_Water")
+                    else -> null
+                }
+                if (selectedWaterIcon != null) {
+                    waterIcon.setImageBitmap(selectedWaterIcon)
+                    waterPlaceholder.visibility = View.GONE
+                } else {
+                    waterIcon.setImageDrawable(null)
+                    waterPlaceholder.visibility = View.VISIBLE
+                }
+                waterBadge.text = waterCountInput?.text?.toString() ?: "0"
+                waterText.text = when (selectedId) {
+                    WATER_ID -> tr("Water", "Вода")
+                    MAGIC_WATER_ID -> tr("Ancient Water", "Древняя вода")
+                    else -> tr("Empty water slot", "Пустой слот воды")
+                }
+            }
             val openWaterPicker = {
                 ItemPickerDialog.show(this@SaveEditorActivity, water.id, water.count, true) { selectedId, selectedCount ->
                     spinner.setSelection(when (selectedId) { WATER_ID -> 1; MAGIC_WATER_ID -> 2; else -> 0 })
                     waterCountInput?.setText(selectedCount.toString())
-                    waterBadge.text = selectedCount.toString()
-                    val selectedWaterIcon = when (selectedId) {
-                        WATER_ID -> GameAssets.icon(this@SaveEditorActivity, "Water_icon")
-                        MAGIC_WATER_ID -> GameAssets.icon(this@SaveEditorActivity, "Ancient_Water")
-                        else -> null
-                    }
-                    if (selectedWaterIcon != null) {
-                        waterIcon.setImageBitmap(selectedWaterIcon)
-                        waterPlaceholder.visibility = View.GONE
-                    } else {
-                        waterIcon.setImageDrawable(null)
-                        waterPlaceholder.visibility = View.VISIBLE
-                    }
-                    waterText.text = when (selectedId) {
-                        WATER_ID -> tr("Water", "Вода")
-                        MAGIC_WATER_ID -> tr("Ancient Water", "Древняя вода")
-                        else -> tr("Empty water slot", "Пустой слот воды")
-                    }
+                    refreshWaterTile?.invoke()
                 }
             }
             waterTile.setOnClickListener { openWaterPicker() }
@@ -449,7 +508,51 @@ class SaveEditorActivity : Activity() {
             page.addView(spinner)
             waterTypeSpinner = spinner
             waterCountInput = addNumberField(tr("Water amount", "Количество воды"), water.count.toString()).apply { visibility = android.view.View.GONE }
+            refreshWaterTile?.invoke()
         }
+
+        val inventoryActions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        fun inventoryAction(label: String, action: () -> Unit): Button = Button(this).apply {
+            text = label
+            isAllCaps = false
+            textSize = 12f
+            typeface = GameAssets.typeface(this@SaveEditorActivity, true)
+            setTextColor(Color.WHITE)
+            background = rounded(Color.rgb(232, 76, 138), Color.TRANSPARENT, dp(24))
+            setOnClickListener { action() }
+        }
+        val clearInventory = inventoryAction(tr("Clear inventory", "Очистить инвентарь")) {
+            slotEditors.forEach { editor ->
+                editor.idInput.setText(EMPTY_SLOT_ID.toString())
+                editor.countInput.setText("0")
+                editor.refresh()
+            }
+            if (water != null) {
+                waterTypeSpinner?.setSelection(0)
+                waterCountInput?.setText("0")
+                refreshWaterTile?.invoke()
+            }
+        }
+        val fillInventory = inventoryAction(tr("Fill all", "Заполнить всё")) {
+            slotEditors.forEach { editor ->
+                val id = editor.idInput.text.toString().toLongOrNull() ?: EMPTY_SLOT_ID
+                if (id != EMPTY_SLOT_ID) {
+                    editor.countInput.setText("999999")
+                    editor.refresh()
+                }
+            }
+            if (water != null && (waterTypeSpinner?.selectedItemPosition ?: 0) != 0) {
+                waterCountInput?.setText("999999")
+                refreshWaterTile?.invoke()
+            }
+        }
+        val clearParams = LinearLayout.LayoutParams(0, dp(44), 1f)
+        clearParams.setMargins(dp(3), dp(8), dp(3), dp(6))
+        inventoryActions.addView(clearInventory, clearParams)
+        val fillParams = LinearLayout.LayoutParams(0, dp(44), 1f)
+        fillParams.setMargins(dp(3), dp(8), dp(3), dp(6))
+        inventoryActions.addView(fillInventory, fillParams)
+        page.addView(inventoryActions)
 
         addButton(tr("Save changes", "Сохранить изменения")) { prepareOutput() }
         addHint(tr("After saving, the file returns to pt_saves with its original name. The backup remains in Backup.", "После сохранения файл вернётся в pt_saves под исходным именем. Резервная копия останется в Backup."))
@@ -529,7 +632,7 @@ class SaveEditorActivity : Activity() {
         }
         tile.setOnClickListener { openPicker() }
         refreshTile()
-        return SlotEditor(idInput, countInput, nameLabel, field, iconView, badge)
+        return SlotEditor(idInput, countInput, nameLabel, field, iconView, badge, ::refreshTile)
     }
 
     private fun prepareOutput() {
