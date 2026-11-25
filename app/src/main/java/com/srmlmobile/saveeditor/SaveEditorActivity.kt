@@ -224,6 +224,9 @@ class SaveEditorActivity : Activity() {
         // The offsets below are relative to playerTag, which points at the 'S' in SRPL.
         val currentHealthOffset = if (playerTag + 0x0A + 4 <= payload.size) playerTag + 0x0A else null
         val currentEnergyOffset = if (playerTag + 0x0E + 4 <= payload.size) playerTag + 0x0E else null
+        // Experimental candidate: second literal SRGA occurrence, byte offset +0x4A.
+        val srgaOccurrences = findAll(payload, "SRGA".toByteArray(Charsets.US_ASCII))
+        val testOffset = srgaOccurrences.getOrNull(1)?.plus(0x4A)?.takeIf { it in payload.indices && (payload[it].toInt() and 0xff) <= 3 }
 
         // Find compact inventory record groups near the player block.
         val markers = findAllInRange(
@@ -257,7 +260,7 @@ class SaveEditorActivity : Activity() {
         return ParsedSave(
             entries, gameIndex, payload, newbucksOffset, keysOffset,
             currentHealthOffset, currentEnergyOffset,
-            regularSlots, waterSlot, name
+            regularSlots, waterSlot, testOffset, name
         )
     }
 
@@ -297,6 +300,17 @@ class SaveEditorActivity : Activity() {
             else addHint("Текущую энергию не удалось прочитать.")
         } else addHint("Поле текущей энергии не распознано. Его соответствие пока предварительное.")
 
+        addSection("Тест")
+        val candidate = data.testOffset
+        if (candidate != null) {
+            val currentTest = data.payload[candidate].toInt() and 0xff
+            addHint("Экспериментальное поле SRGA + 0x4A. Текущее значение: $currentTest. Назначение пока не подтверждено.")
+            addButton("Изменить") { showTestPicker(currentTest) }
+            addHint("Применяется на свой страх и риск.")
+        } else {
+            addHint("Поле SRGA + 0x4A не найдено или его значение не входит в диапазон 0–3. Функция отключена.")
+        }
+
         addSection("Инвентарь")
         addHint("Изменяются только слоты 1–4. ID 48, 113 и 16001 в них запрещены. Слоты после пятого не отображаются и не изменяются.")
         slotEditors.clear()
@@ -323,9 +337,8 @@ class SaveEditorActivity : Activity() {
             waterCountInput = addNumberField("Количество", water.count.toString())
         }
 
-        addButton("Сохранить изменённую копию") { prepareOutput() }
-        addHint("Переноси результат в pt_saves под исходным именем. Не переименовывай файл.")
-        addButton("Открыть другое сохранение") { openSavePicker() }
+        addButton("Сохранить изменения") { prepareOutput() }
+        addHint("После сохранения файл вернётся в pt_saves под исходным именем. Резервная копия останется в Backup.")
     }
 
     private fun addSlotEditor(slotNumber: Int, field: InventoryField): SlotEditor {
