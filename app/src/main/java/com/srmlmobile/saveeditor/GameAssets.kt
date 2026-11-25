@@ -40,15 +40,35 @@ object GameAssets {
         val files = indexedIcons ?: allFiles(context, ICON_ROOT).also { indexedIcons = it }
         val keys = hints.map { normalize(it) }.filter { it.length > 1 }
         if (keys.isEmpty()) return null
-        val match = files.firstOrNull { path ->
-            val name = normalize(path.substringAfterLast('/').substringBeforeLast('.'))
-            keys.any { key -> name == key || name.contains(key) || key.contains(name) && name.length > 3 }
-        } ?: return null
+        val match = files.mapNotNull { path ->
+            val raw = path.substringAfterLast('/').substringBeforeLast('.')
+            val name = normalize(raw)
+            var score = 0
+            for (key in keys) {
+                score = maxOf(score, when {
+                    name == key -> 1000
+                    name.startsWith(key) -> 760
+                    key.startsWith(name) && name.length >= 5 -> 560
+                    name.contains(key) -> 430
+                    key.contains(name) && name.length >= 6 -> 260
+                    else -> 0
+                })
+            }
+            if (score == 0) null else path to score
+        }.maxByOrNull { it.second }?.first ?: return null
         return try { context.assets.open(match).use { BitmapFactory.decodeStream(it) } } catch (_: Exception) { null }
     }
 
-    private fun normalize(value: String): String =
-        value.lowercase().replace(Regex("[^a-z0-9а-я]+"), "")
+    private fun normalize(value: String): String {
+        var name = value.substringBeforeLast('.', value).lowercase()
+            .replace(Regex("[^a-z0-9а-я]+"), "")
+        name = name.removePrefix("300px")
+        name = name.removePrefix("icon")
+        name = name.removeSuffix("sp").removeSuffix("mp")
+        name = name.removeSuffix("sr")
+        if (name.endsWith("0")) name = name.dropLast(1)
+        return name
+    }
 
     private fun allFiles(context: Context, root: String): List<String> {
         val result = mutableListOf<String>()
