@@ -1,0 +1,43 @@
+name: Inspect SRGA candidate records
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/inspect-srga-candidate.yml"
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fL "https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/Savefiles.zip" -o /tmp/saves.zip
+      - run: |
+          python3 - <<'PY'
+          import zipfile,io,os,re,struct
+          names=['20261125171726-2-1','20261125175309-3-0','20261122185933-1-1']
+          found={}
+          def walk(z,p=''):
+            for it in z.infolist():
+              if it.is_dir(): continue
+              b=z.read(it.filename); q=p+it.filename
+              if b[:2]==b'PK':
+                try: walk(zipfile.ZipFile(io.BytesIO(b)),q+'!'); continue
+                except: pass
+              if q.endswith('gamesave-sav'):
+                root=os.path.basename(q.split('!')[0])
+                if root in names: found[root]=b
+          walk(zipfile.ZipFile('/tmp/saves.zip'))
+          for n in names:
+            b=found[n]; ps=[m.start() for m in re.finditer(b'SRGA',b)]
+            print('\n===',n,'SRGA count',len(ps),'===')
+            for i,p in enumerate(ps):
+              print('RECORD',i,'ABS',hex(p),'PLAYER_REL',hex(p-b.find(b'SRPL')))
+              print('HEX -32..+160',b[max(0,p-32):p+160].hex())
+              for m in re.finditer(rb'[ -~]{3,}',b[p:p+200]):
+                print('STRING',hex(p+m.start()),repr(m.group().decode('ascii','ignore')))
+              for rel in range(0,160,2):
+                if p+rel+2<=len(b):
+                  v=struct.unpack_from('<H',b,p+rel)[0]
+                  if v in (0,1,3,100,150,200,250,20,30,40,50):
+                    print('SMALL_WORD',hex(rel),v)
+          PY
