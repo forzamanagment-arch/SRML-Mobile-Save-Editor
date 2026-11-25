@@ -369,7 +369,11 @@ class SaveEditorActivity : Activity() {
                 background = rounded(Color.rgb(230,233,242), Color.rgb(179,157,219), dp(18))
             }
             val waterIcon = ImageView(this)
-            val waterBitmap = GameAssets.icon(this, "Water", "AncientWater")
+            val waterBitmap = when (water.id) {
+                WATER_ID -> GameAssets.icon(this, "Water")
+                MAGIC_WATER_ID -> GameAssets.icon(this, "AncientWater")
+                else -> null
+            }
             if (waterBitmap != null) waterIcon.setImageBitmap(waterBitmap)
             else {
                 waterIcon.setImageResource(android.R.drawable.ic_menu_help)
@@ -403,8 +407,13 @@ class SaveEditorActivity : Activity() {
                     spinner.setSelection(when (selectedId) { WATER_ID -> 1; MAGIC_WATER_ID -> 2; else -> 0 })
                     waterCountInput?.setText(selectedCount.toString())
                     waterBadge.text = selectedCount.toString()
-                    val selectedWaterIcon = GameAssets.icon(this@SaveEditorActivity, if (selectedId == MAGIC_WATER_ID) "AncientWater" else "Water")
+                    val selectedWaterIcon = when (selectedId) {
+                        WATER_ID -> GameAssets.icon(this@SaveEditorActivity, "Water")
+                        MAGIC_WATER_ID -> GameAssets.icon(this@SaveEditorActivity, "AncientWater")
+                        else -> null
+                    }
                     if (selectedWaterIcon != null) waterIcon.setImageBitmap(selectedWaterIcon)
+                    else waterIcon.setImageResource(android.R.drawable.ic_menu_help)
                     waterText.text = when (selectedId) {
                         WATER_ID -> tr("Water", "Вода")
                         MAGIC_WATER_ID -> tr("Ancient Water", "Древняя вода")
