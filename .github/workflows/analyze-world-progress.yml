@@ -44,7 +44,7 @@ jobs:
               print(txt)
               print('--- SERIALIZED TAGS (04 + SR...) ---')
               tags={}
-              for m in re.finditer(rb'\\x04SR[A-Z0-9]{1,8}',d):
+              for m in re.finditer(rb'\x04SR[A-Z0-9]{1,8}',d):
                   tag=m.group().decode('ascii','replace')
                   tags.setdefault(tag,[]).append(m.start())
               for tag,offs in sorted(tags.items()):
