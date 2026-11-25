@@ -522,8 +522,9 @@ class SaveEditorActivity : Activity() {
         page.addView(TextView(this).apply {
             this.text = text
             textSize = 18f
-            setTextColor(Color.WHITE)
-            setPadding(0, dp(14), 0, dp(6))
+            setTextColor(Color.rgb(57, 75, 105))
+            typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+            setPadding(0, dp(17), 0, dp(7))
         })
     }
 
@@ -535,7 +536,7 @@ class SaveEditorActivity : Activity() {
         wrapper.addView(TextView(this).apply {
             text = label
             textSize = 13f
-            setTextColor(Color.LTGRAY)
+            setTextColor(Color.rgb(119, 119, 111))
         })
         val input = EditText(this).apply {
             setSingleLine(true)
