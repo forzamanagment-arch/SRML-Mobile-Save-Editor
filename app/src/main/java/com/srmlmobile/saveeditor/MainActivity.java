@@ -11,6 +11,7 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.view.MotionEvent;
+import android.view.animation.OvershootInterpolator;
 import android.view.View;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -78,8 +79,7 @@ public class MainActivity extends Activity {
         refreshStatus();
         if(hasPermission()){
             executor.execute(()->{try{ShizukuFileAccess.ensureBackup();}catch(Throwable t){AppLog.exception(this,"BACKUP","Backup directory check failed",t);}});
-            scanSaves();
-        }else show("Подключи Shizuku, чтобы увидеть сохранения.");
+        }else show(tr("Connect Shizuku to view your saves.","Подключи Shizuku, чтобы увидеть сохранения."));
     }
 
     private void buildUi(){
@@ -167,6 +167,7 @@ public class MainActivity extends Activity {
     }
     private void setPage(int page){
         selectedPage=page;
+        if(content!=null){content.setAlpha(0.82f);content.setTranslationX(dp(page>selectedPage?12:12));content.animate().alpha(1f).translationX(0).setDuration(300).setInterpolator(new OvershootInterpolator(0.7f)).start();}
         String[] titles={tr("SRML Save Editor","SRML Save Editor"),"Backup",tr("Settings","Настройки"),tr("About","О приложении")};
         pageTitle.setText(titles[page]);
         shizukuPanel.setVisibility(page<2?View.VISIBLE:View.GONE);
