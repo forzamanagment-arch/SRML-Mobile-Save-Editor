@@ -341,7 +341,13 @@ class SaveEditorActivity : Activity() {
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(14), dp(10), dp(14), dp(10))
                 background = rounded(Color.rgb(230,233,242), Color.rgb(179,157,219), dp(18))
-                setOnClickListener { spinner.performClick() }
+                setOnClickListener {
+                    ItemPickerDialog.show(this@SaveEditorActivity, water.id, waterCountInput?.text?.toString()?.toLongOrNull() ?: water.count, true) { selectedId, selectedCount ->
+                        spinner.setSelection(when (selectedId) { WATER_ID -> 1; MAGIC_WATER_ID -> 2; else -> 0 })
+                        waterCountInput?.setText(selectedCount.toString())
+                        waterText.text = tr("Water slot  •  ", "Слот воды  •  ") + selectedCount
+                    }
+                }
             }
             val waterIcon = ImageView(this)
             val waterBitmap = GameAssets.icon(this, "Water", "AncientWater")
@@ -361,14 +367,14 @@ class SaveEditorActivity : Activity() {
                 isAllCaps = false
                 setTextColor(Color.WHITE)
                 background = rounded(Color.rgb(63,184,173), Color.TRANSPARENT, dp(24))
-                setOnClickListener { spinner.performClick() }
+                setOnClickListener { waterTile.performClick() }
             }
             waterTile.addView(choose, LinearLayout.LayoutParams(dp(44), dp(40)))
             page.addView(waterTile)
             spinner.visibility = android.view.View.GONE
             page.addView(spinner)
             waterTypeSpinner = spinner
-            waterCountInput = addNumberField(tr("Water amount", "Количество воды"), water.count.toString())
+            waterCountInput = addNumberField(tr("Water amount", "Количество воды"), water.count.toString()).apply { visibility = android.view.View.GONE }
         }
 
         addButton(tr("Save changes", "Сохранить изменения")) { prepareOutput() }
