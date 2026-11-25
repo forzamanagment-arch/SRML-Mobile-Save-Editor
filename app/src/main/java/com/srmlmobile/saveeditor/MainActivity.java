@@ -85,7 +85,7 @@ public class MainActivity extends Activity {
         root.addView(brand);
 
         TextView title=new TextView(this);
-        title.setText("Save Editor");
+        title.setText("Редактор сохранений");
         title.setTextColor(INK);
         title.setTextSize(29);
         title.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));
@@ -106,7 +106,7 @@ public class MainActivity extends Activity {
         tabs.setOrientation(LinearLayout.HORIZONTAL);
         tabs.setPadding(0,dp(14),0,dp(12));
         worldsTab=tabButton("МИРЫ",true);
-        backupTab=tabButton("BACKUP",false);
+        backupTab=tabButton("Backup",false);
         tabs.addView(worldsTab,new LinearLayout.LayoutParams(0,dp(48),1));
         LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(0,dp(48),1);
         bp.leftMargin=dp(8);tabs.addView(backupTab,bp);
