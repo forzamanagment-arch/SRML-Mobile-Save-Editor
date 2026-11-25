@@ -16,6 +16,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.IOException;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -127,7 +128,7 @@ public class MainActivity extends Activity {
         output.setPadding(dp(4),dp(8),dp(4),dp(4));
         root.addView(output);
         setContentView(root);
-        renderWorldsEmpty();
+        renderSaves(new ArrayList<SaveSlot>());
     }
 
     private Button tabButton(String text,boolean active){
