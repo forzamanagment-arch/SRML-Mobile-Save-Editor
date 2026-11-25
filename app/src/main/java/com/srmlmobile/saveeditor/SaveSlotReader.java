@@ -67,6 +67,52 @@ final class SaveSlotReader {
         return null;
     }
 
+    static String diagnosticSummary(byte[] file) {
+        StringBuilder result = new StringBuilder();
+        result.append("bytes=").append(file.length).append(", first16=");
+        int limit = Math.min(file.length, 16);
+        for (int i = 0; i < limit; i++) {
+            if (i > 0) result.append(' ');
+            result.append(String.format(Locale.ROOT, "%02X", file[i] & 0xFF));
+        }
+        if (startsWith(file, "SRGAME")) return result.append(", format=raw-SRGAME").toString();
+
+        result.append(", zipLocalHeader=").append(file.length >= 4
+            && file[0] == 'P' && file[1] == 'K' && file[2] == 3 && file[3] == 4);
+        int entries = 0;
+        try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(file))) {
+            ZipEntry entry;
+            byte[] buffer = new byte[8192];
+            while ((entry = zip.getNextEntry()) != null) {
+                entries++;
+                result.append(", entry[").append(entries).append("]=").append(entry.getName())
+                    .append("(declaredSize=").append(entry.getSize()).append(", head=");
+                int read = 0;
+                while (read < 8) {
+                    int n = zip.read(buffer, read, 8 - read);
+                    if (n < 0) break;
+                    read += n;
+                }
+                for (int i = 0; i < read; i++) {
+                    if (i > 0) result.append(' ');
+                    result.append(String.format(Locale.ROOT, "%02X", buffer[i] & 0xFF));
+                }
+                result.append(')');
+                while (zip.read(buffer) != -1) { /* drain current entry */ }
+                zip.closeEntry();
+                if (entries >= 20) {
+                    result.append(", entryListTruncated=true");
+                    break;
+                }
+            }
+        } catch (Throwable t) {
+            result.append(", zipError=").append(t.getClass().getSimpleName())
+                .append(':').append(t.getMessage());
+        }
+        if (entries == 0) result.append(", zipEntries=0");
+        return result.toString();
+    }
+
     private static boolean startsWith(byte[] bytes, String marker) {
         byte[] expected = marker.getBytes(StandardCharsets.US_ASCII);
         if (bytes.length < expected.length) return false;
