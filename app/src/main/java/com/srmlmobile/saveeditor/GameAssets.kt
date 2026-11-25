@@ -8,29 +8,34 @@ import android.graphics.Typeface
 object GameAssets {
     private const val ICON_ROOT = "game-icons"
     private const val FONT_ROOT = "fonts"
-    private var cachedFont: Typeface? = null
+    private val cachedFonts = mutableMapOf<Boolean, Typeface>()
     private var indexedIcons: List<String>? = null
 
-    @JvmStatic fun typeface(context: Context): Typeface {
-        cachedFont?.let { return it }
+    @JvmStatic fun typeface(context: Context): Typeface = typeface(context, false)
+
+    @JvmStatic fun typeface(context: Context, bold: Boolean): Typeface {
+        cachedFonts[bold]?.let { return it }
         val files = allFiles(context, FONT_ROOT)
-        val preferred = listOf("regular", "medium", "semibold", "bold", "extrabold")
-        for (weight in preferred) {
+        val weight = if (bold) "bold" else "regular"
+        val preferred = if (bold) listOf("bold", "extrabold", "semibold") else listOf("regular", "medium")
+        for (candidate in preferred) {
             val file = files.firstOrNull {
                 val n = it.substringAfterLast('/').lowercase()
-                (n.endsWith(".ttf") || n.endsWith(".otf")) && n.contains("nunito-") && n.contains(weight)
+                (n.endsWith(".ttf") || n.endsWith(".otf")) &&
+                    n.startsWith("fonts/") && n.substringAfterLast('/').startsWith("nunito-") &&
+                    n.contains(candidate)
             }
             if (file != null) {
                 try {
-                    return Typeface.createFromAsset(context.assets, file).also { cachedFont = it }
+                    return Typeface.createFromAsset(context.assets, file).also { cachedFonts[bold] = it }
                 } catch (_: Exception) {}
             }
         }
         val fallback = files.firstOrNull { it.endsWith(".ttf", true) || it.endsWith(".otf", true) }
         if (fallback != null) try {
-            return Typeface.createFromAsset(context.assets, fallback).also { cachedFont = it }
+            return Typeface.createFromAsset(context.assets, fallback).also { cachedFonts[bold] = it }
         } catch (_: Exception) {}
-        return Typeface.create("sans-serif-rounded", Typeface.NORMAL)
+        return Typeface.create("sans-serif-rounded", if (bold) Typeface.BOLD else Typeface.NORMAL)
     }
 
     @JvmStatic fun icon(context: Context, vararg hints: String): Bitmap? {
