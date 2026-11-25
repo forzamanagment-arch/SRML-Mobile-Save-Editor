@@ -121,11 +121,12 @@ class SaveEditorActivity : Activity() {
         scroll.addView(page)
         setContentView(scroll)
         page.addView(TextView(this).apply {
-            text = "SRML  •  SAVE TOOLS"
+            text = tr("SAVE WORKSHOP", "МАСТЕРСКАЯ СОХРАНЕНИЙ")
             textSize = 11f
             letterSpacing = 0.12f
             typeface = GameAssets.typeface(this@SaveEditorActivity)
-            setTextColor(Color.rgb(78, 205, 196))
+            setTextColor(Color.rgb(232, 76, 138))
+            setPadding(0, 0, 0, dp(7))
         })
         page.addView(TextView(this).apply {
             text = title
