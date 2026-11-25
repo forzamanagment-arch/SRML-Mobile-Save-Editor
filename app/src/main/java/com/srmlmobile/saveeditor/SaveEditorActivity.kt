@@ -52,6 +52,7 @@ class SaveEditorActivity : Activity() {
         val gameEntryIndex: Int,
         val payload: ByteArray,
         val newbucksOffset: Int?,
+        val keysOffset: Int?,
         val currentHealthOffset: Int?,
         val currentEnergyOffset: Int?,
         val inventorySlots: List<InventoryField>,
@@ -67,6 +68,7 @@ class SaveEditorActivity : Activity() {
 
     private var parsed: ParsedSave? = null
     private var newbucksInput: EditText? = null
+    private var keysInput: EditText? = null
     private var currentHealthInput: EditText? = null
     private var currentEnergyInput: EditText? = null
     private val slotEditors = mutableListOf<SlotEditor>()
@@ -195,7 +197,9 @@ class SaveEditorActivity : Activity() {
         val playerMarkers = findAll(payload, PLAYER_MARKER)
         if (playerMarkers.size != 1) error("Не удалось однозначно найти блок игрока SRPL")
         val playerTag = playerMarkers.single() + 1
-        val newbucksOffset = if (playerTag + 26 <= payload.size) playerTag + 22 else null
+        val newbucksOffset = if (playerTag + 0x16 + 4 <= payload.size) playerTag + 0x16 else null
+        // Key count candidate: SRPL-relative +0x1A, corroborated against labelled samples.
+        val keysOffset = if (playerTag + 0x1A + 4 <= payload.size) playerTag + 0x1A else null
         // SRPL-relative current stats: +0x0A current health, +0x0E current energy.
         // The offsets below are relative to playerTag, which points at the 'S' in SRPL.
         val currentHealthOffset = if (playerTag + 0x0A + 4 <= payload.size) playerTag + 0x0A else null
@@ -231,7 +235,7 @@ class SaveEditorActivity : Activity() {
         val waterSlot = fifth?.takeIf { it.id == EMPTY_SLOT_ID || it.id == WATER_ID || it.id == MAGIC_WATER_ID }
 
         return ParsedSave(
-            entries, gameIndex, payload, newbucksOffset,
+            entries, gameIndex, payload, newbucksOffset, keysOffset,
             currentHealthOffset, currentEnergyOffset,
             regularSlots, waterSlot, name
         )
@@ -249,6 +253,14 @@ class SaveEditorActivity : Activity() {
         } else {
             addHint("Поле Ньюбаксов не распознано. Остальные разделы доступны.")
         }
+
+        addSection("Ключи")
+        val keyOffset = data.keysOffset
+        if (keyOffset != null) {
+            val current = readU32(data.payload, keyOffset)
+            if (current != null) keysInput = addNumberField("Количество ключей (SRPL + 0x1A)", current.toString())
+            else addHint("Количество ключей не удалось прочитать.")
+        } else addHint("Поле количества ключей не распознано.")
 
         addSection("Здоровье и энергия")
         addHint("Это текущие значения на момент сохранения, не максимальная ёмкость здоровья или энергии.")
@@ -331,6 +343,9 @@ class SaveEditorActivity : Activity() {
             val newbucksValue = newbucksInput?.text?.toString()?.let {
                 parseUnsigned(it, "Ньюбаки")
             }
+            val keysValue = keysInput?.text?.toString()?.let {
+                parseUnsigned(it, "Количество ключей")
+            }
             val healthValue = currentHealthInput?.text?.toString()?.let {
                 parseUnsigned(it, "Текущее здоровье")
             }
@@ -341,6 +356,12 @@ class SaveEditorActivity : Activity() {
                 val offset = data.newbucksOffset ?: error("Поле Ньюбаксов не распознано")
                 writeU32(payload, offset, newbucksValue)
                 if (readU32(payload, offset) != newbucksValue) error("Проверка Ньюбаксов не пройдена")
+            }
+
+            if (keysValue != null) {
+                val offset = data.keysOffset ?: error("Поле количества ключей не распознано")
+                writeU32(payload, offset, keysValue)
+                if (readU32(payload, offset) != keysValue) error("Проверка количества ключей не пройдена")
             }
 
             if (healthValue != null) {
