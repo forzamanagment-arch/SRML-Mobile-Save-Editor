@@ -70,6 +70,7 @@ All offsets below are relative to the `SRPL` text tag (the first `S`), little-en
 - `+0x0A`: current health at save time. Confirmed against the user's screenshot for the 120-health sample and full-health screenshots for the 100 and 250 samples.
 - `+0x0E`: candidate current energy at save time. The binary values are 87, 150, and 250; only the latter two currently match the labelled maximum energy, so exact in-game current-energy readings are still needed to confirm.
 - `+0x16`: Newbucks, confirmed across all three saves.
+- `+0x1A`: candidate current slime-key count. The three values are 0, 0, and 2, matching the TXT key counts exactly in all three samples. Treat as a strong candidate pending one controlled key gain/spend test.
 
 The maximum health and maximum energy capacities are not identified by these fields.
 
@@ -81,11 +82,24 @@ The descriptions establish these ground-truth labels, but the corresponding seri
 - Map area discovery flags / IDs (Dry Reef, Indigo Quarry).
 - Individual slime-key gate unlock flags / IDs.
 - Current key inventory count.
-- Individual Gordo burst states and their identities / positions.
-- Gordo-to-key reward accounting.
+- Ranch/map/key-gate flags and individual location identities.
+- Gordo-to-key reward accounting and mapping random Gordo instance IDs to the species/locations in the TXT.
 - Water-slot unlock state as distinct from an unlocked-but-empty slot.
 
-Do not write to guessed offsets. In particular, do not derive key count from Gordo count: the labelled sample explicitly shows 6 Gordos burst, 4 keys earned, 2 spent, and 2 currently held.
+### Gordo instance-state candidate
+
+The binary scan found 69 serialized strings beginning with `gordo` in each sample. Six instance records in the 18-day save differ from the two zero-Gordo saves: the uint32 value in the record field immediately after the `03 SRG 01 00 00 00 30` sequence is `0xFFFFFFFF` for exactly six instance names:
+
+- `gordo0806598363`
+- `gordo1686430858`
+- `gordo0966530436`
+- `gordo1440735342`
+- `gordo2083992877`
+- `gordo1173217994`
+
+This six-record match is a strong candidate for the six burst Gordos, but the random instance names have not yet been mapped to Pink/Tabby/Honey/Phosphor identities or positions. A seventh record, `gordo1831887310`, has value 2 in the progressed save and 0 in the two zero-Gordo saves; its meaning is unknown and it must not be counted as a burst Gordo.
+
+Do not write to guessed offsets. In particular, do not derive key count from Gordo count: the labelled sample explicitly shows 6 Gordos burst, 4 keys earned, 2 spent, and 2 currently held. The `SRPL + 0x1A` key-count candidate is separate from the per-Gordo records.
 
 ## Next binary-analysis experiment
 
