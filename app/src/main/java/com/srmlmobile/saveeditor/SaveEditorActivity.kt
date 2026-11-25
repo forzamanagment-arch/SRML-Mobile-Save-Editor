@@ -1,6 +1,7 @@
 package com.srmlmobile.saveeditor
 
 import android.app.Activity
+import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
@@ -57,6 +58,7 @@ class SaveEditorActivity : Activity() {
         val currentEnergyOffset: Int?,
         val inventorySlots: List<InventoryField>,
         val waterSlot: InventoryField?,
+        val testOffset: Int?,
         val sourceName: String
     )
     private data class SlotEditor(
@@ -76,12 +78,30 @@ class SaveEditorActivity : Activity() {
     private var waterTypeSpinner: Spinner? = null
     private var pendingArchive: ByteArray? = null
     private var sourceName = "save"
+    private var testValue: Int? = null
+    private var remoteTargetPath: String? = null
+    private var backupPath: String? = null
+    private var stageFile: java.io.File? = null
+    private var saveCompleted = false
     private lateinit var page: LinearLayout
     private lateinit var status: TextView
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        buildWelcome()
+        val stage = intent.getStringExtra("stage_path")
+        remoteTargetPath = intent.getStringExtra("target_path")
+        backupPath = intent.getStringExtra("backup_path")
+        if (stage != null && remoteTargetPath != null) {
+            try {
+                stageFile = java.io.File(stage)
+                sourceName = remoteTargetPath!!.substringAfterLast('/')
+                parsed = parseArchive(stageFile!!.readBytes(), sourceName)
+                showEditor()
+            } catch (e: Exception) {
+                buildWelcome()
+                status.text = "Не удалось открыть подготовленное сохранение: " + (e.message ?: "ошибка")
+            }
+        } else buildWelcome()
     }
 
     private fun buildBase(title: String) {
