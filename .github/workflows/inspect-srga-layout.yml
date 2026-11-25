@@ -1,0 +1,43 @@
+name: Inspect SRGA field layout
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fL "https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/Savefiles.zip" -o /tmp/saves.zip
+      - run: |
+          python3 - <<'PY'
+          import zipfile,io,os,re,struct
+          names=['20261125171726-2-1','20261125175309-3-0','20261122185933-1-1']
+          found={}
+          def walk(z):
+            for it in z.infolist():
+              if it.is_dir(): continue
+              b=z.read(it.filename)
+              if b[:2]==b'PK':
+                try: walk(zipfile.ZipFile(io.BytesIO(b))); continue
+                except: pass
+              if it.filename.endswith('gamesave-sav'):
+                root=os.path.basename(it.filename)
+                if root in names: found[root]=b
+          walk(zipfile.ZipFile('/tmp/saves.zip'))
+          for n in names:
+            b=found[n]; p=[m.start() for m in re.finditer(b'SRGA',b)][1]
+            print('SAVE',n,'SRGA',hex(p),'player-relative',hex(p-b.find(b'SRPL')))
+            for start in range(0,128,16):
+              print('%04x'%start,b[p+start:p+start+16].hex(' '))
+            print('scalar offsets:')
+            for off in range(0,128,2):
+              if p+off+4>len(b): break
+              u16=struct.unpack_from('<H',b,p+off)[0]
+              u32=struct.unpack_from('<I',b,p+off)[0]
+              f=struct.unpack_from('<f',b,p+off)[0]
+              if u16 in [0,1,2,3,4,5,6,7,10,20,30,40,50,100,150,200,250] or u32 in [0,1,2,3,4,5,6,7,10,20,30,40,50,100,150,200,250]:
+                print(hex(off),'u16',u16,'u32',u32,'f32',round(f,5))
+            # all strings in 256 bytes around marker
+            for m in re.finditer(rb'[ -~]{3,}',b[p:p+256]):
+              print('ASCII',hex(m.start()),repr(m.group().decode('ascii','ignore')))
+          PY
