@@ -341,13 +341,6 @@ class SaveEditorActivity : Activity() {
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(14), dp(10), dp(14), dp(10))
                 background = rounded(Color.rgb(230,233,242), Color.rgb(179,157,219), dp(18))
-                setOnClickListener {
-                    ItemPickerDialog.show(this@SaveEditorActivity, water.id, waterCountInput?.text?.toString()?.toLongOrNull() ?: water.count, true) { selectedId, selectedCount ->
-                        spinner.setSelection(when (selectedId) { WATER_ID -> 1; MAGIC_WATER_ID -> 2; else -> 0 })
-                        waterCountInput?.setText(selectedCount.toString())
-                        waterText.text = tr("Water slot  •  ", "Слот воды  •  ") + selectedCount
-                    }
-                }
             }
             val waterIcon = ImageView(this)
             val waterBitmap = GameAssets.icon(this, "Water", "AncientWater")
@@ -361,13 +354,21 @@ class SaveEditorActivity : Activity() {
                 typeface = GameAssets.typeface(this@SaveEditorActivity)
                 setPadding(dp(12), 0, 0, 0)
             }
+            val openWaterPicker = {
+                ItemPickerDialog.show(this@SaveEditorActivity, water.id, water.count, true) { selectedId, selectedCount ->
+                    spinner.setSelection(when (selectedId) { WATER_ID -> 1; MAGIC_WATER_ID -> 2; else -> 0 })
+                    waterCountInput?.setText(selectedCount.toString())
+                    waterText.text = tr("Water slot  •  ", "Слот воды  •  ") + selectedCount
+                }
+            }
+            waterTile.setOnClickListener { openWaterPicker() }
             waterTile.addView(waterText, LinearLayout.LayoutParams(0, -2, 1f))
             val choose = Button(this).apply {
                 text = "⌄"
                 isAllCaps = false
                 setTextColor(Color.WHITE)
                 background = rounded(Color.rgb(63,184,173), Color.TRANSPARENT, dp(24))
-                setOnClickListener { waterTile.performClick() }
+                setOnClickListener { openWaterPicker() }
             }
             waterTile.addView(choose, LinearLayout.LayoutParams(dp(44), dp(40)))
             page.addView(waterTile)
