@@ -336,9 +336,39 @@ class SaveEditorActivity : Activity() {
                 MAGIC_WATER_ID -> 2
                 else -> 0
             })
+            val waterTile = LinearLayout(this).apply {
+                orientation = LinearLayout.HORIZONTAL
+                gravity = Gravity.CENTER_VERTICAL
+                setPadding(dp(14), dp(10), dp(14), dp(10))
+                background = rounded(Color.rgb(230,233,242), Color.rgb(179,157,219), dp(18))
+                setOnClickListener { spinner.performClick() }
+            }
+            val waterIcon = ImageView(this)
+            val waterBitmap = GameAssets.icon(this, "Water", "AncientWater")
+            if (waterBitmap != null) waterIcon.setImageBitmap(waterBitmap)
+            else waterIcon.setBackground(rounded(Color.rgb(232,220,200), Color.rgb(203,191,168), dp(12)))
+            waterTile.addView(waterIcon, LinearLayout.LayoutParams(dp(48), dp(48)))
+            val waterText = TextView(this).apply {
+                text = tr("Water slot  •  ", "Слот воды  •  ") + water.count
+                textSize = 14f
+                setTextColor(Color.rgb(45,55,72))
+                typeface = GameAssets.typeface(this@SaveEditorActivity)
+                setPadding(dp(12), 0, 0, 0)
+            }
+            waterTile.addView(waterText, LinearLayout.LayoutParams(0, -2, 1f))
+            val choose = Button(this).apply {
+                text = "⌄"
+                isAllCaps = false
+                setTextColor(Color.WHITE)
+                background = rounded(Color.rgb(63,184,173), Color.TRANSPARENT, dp(24))
+                setOnClickListener { spinner.performClick() }
+            }
+            waterTile.addView(choose, LinearLayout.LayoutParams(dp(44), dp(40)))
+            page.addView(waterTile)
+            spinner.visibility = android.view.View.GONE
             page.addView(spinner)
             waterTypeSpinner = spinner
-            waterCountInput = addNumberField(tr("Amount", "Количество"), water.count.toString())
+            waterCountInput = addNumberField(tr("Water amount", "Количество воды"), water.count.toString())
         }
 
         addButton(tr("Save changes", "Сохранить изменения")) { prepareOutput() }
