@@ -19,6 +19,7 @@ import android.widget.HorizontalScrollView;
 import android.view.animation.OvershootInterpolator;
 import android.view.View;
 import android.content.Intent;
+import android.net.Uri;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.text.InputType;
@@ -413,14 +414,37 @@ public class MainActivity extends Activity {
     private void renderAbout(){
         content.removeAllViews();
         LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
-        card.setGravity(Gravity.CENTER_HORIZONTAL);card.setPadding(dp(24),dp(30),dp(24),dp(30));
+        card.setGravity(Gravity.CENTER_HORIZONTAL);card.setPadding(dp(24),dp(26),dp(24),dp(26));
         card.setBackground(background(CARD,SAND,dp(28)));
         card.addView(new SlimeLogoView(this),new LinearLayout.LayoutParams(dp(82),dp(82)));
         TextView name=text("SRML Save Editor",24,INK,true);name.setTypeface(GameAssets.typeface(this,true));name.setPadding(0,dp(17),0,dp(4));card.addView(name);
         card.addView(text("Version "+BuildConfig.VERSION_NAME,13,Color.rgb(155,168,181),false));
-        TextView description=text(tr("A cozy little tool inspired by the world of Slime Rancher. Built with love and a lot of plorts.","Уютный маленький инструмент, вдохновлённый миром Slime Rancher. Создан с любовью и кучей плортов."),15,MUTED,false);
-        description.setGravity(Gravity.CENTER);description.setPadding(0,dp(18),0,0);card.addView(description);
+        TextView description=text(tr("An Android save editor for Slime Rancher Mobile. Manage supported save values and inventory slots, and keep recoverable backups.","Android-редактор сохранений Slime Rancher Mobile. Изменяй поддерживаемые значения и предметы инвентаря, сохраняя резервные копии."),15,MUTED,false);
+        description.setGravity(Gravity.CENTER);description.setPadding(0,dp(16),0,0);card.addView(description);
         content.addView(card,new LinearLayout.LayoutParams(-1,-2));
+
+        addSectionCard(tr("Authors & credits","Авторы и благодарности"),
+            tr("Project creator and developer: forzamanagment-arch.\\nDevelopment assistance: ChatGPT (OpenAI).\\nSlime Rancher is developed by Monomi Park. Game names and original game assets belong to their respective owners.","Создатель и разработчик проекта: forzamanagment-arch.\\nПомощь в разработке: ChatGPT (OpenAI).\\nSlime Rancher разработана Monomi Park. Названия и оригинальные игровые материалы принадлежат их правообладателям."));
+        addSectionCard(tr("How it works","Как это работает"),
+            tr("The app uses Shizuku permission to access the Slime Rancher Mobile save folder. It reads the save archive, locates the gamesave-sav data, and exposes supported values for editing. Before an edit, the app creates a backup that can be restored from the Backups tab. Unknown save data is intended to remain unchanged.","Приложение использует разрешение Shizuku для доступа к папке сохранений Slime Rancher Mobile. Оно читает архив сохранения, находит данные gamesave-sav и показывает поддерживаемые значения для редактирования. Перед изменением создаётся резервная копия, которую можно восстановить во вкладке Backups. Неизвестные данные сохранения не должны изменяться."));
+        addSectionCard(tr("What you need","Что потребуется"),
+            tr("Install Slime Rancher Mobile and Shizuku, start the Shizuku service, then grant this app permission. Close the game before editing saves. This app edits save files; it does not modify the game APK or inject code into the game.","Установи Slime Rancher Mobile и Shizuku, запусти службу Shizuku и выдай приложению разрешение. Перед редактированием закрой игру. Приложение изменяет файлы сохранений, а не APK игры и не внедряет код в игру."));
+        addSectionCard(tr("Backup location","Где хранятся копии"),
+            tr("Backups are stored in the game's files directory under Backup. If a restore would overwrite a save with the same name, the existing file is preserved first.","Резервные копии хранятся в каталоге файлов игры, в папке Backup. Если восстановление заменит сохранение с таким же именем, существующий файл сначала сохраняется отдельно."));
+        TextView shizukuTitle=text(tr("Shizuku fork by thedjchi","Форк Shizuku от thedjchi"),18,INK,true);
+        shizukuTitle.setPadding(dp(2),dp(4),dp(2),dp(8));content.addView(shizukuTitle);
+        Button shizukuLink=actionButton("Open GitHub Releases  ↗",()->openExternalUrl("https://github.com/thedjchi/Shizuku/releases/latest"));
+        content.addView(shizukuLink,new LinearLayout.LayoutParams(-1,dp(48)));
+    }
+    private void openExternalUrl(String url){
+        try{startActivity(new Intent(Intent.ACTION_VIEW,Uri.parse(url)));}
+        catch(Throwable t){Toast.makeText(this,"Unable to open link: "+t.getMessage(),Toast.LENGTH_LONG).show();}
+    }
+    private View glyphTile(View glyph,int size){
+        FrameLayout tile=new FrameLayout(this);
+        tile.setBackground(background(Color.rgb(232,220,200),Color.rgb(203,191,168),dp(15)));
+        tile.addView(glyph,new FrameLayout.LayoutParams(dp(size),dp(size),Gravity.CENTER));
+        return tile;
     }
     private void addSectionCard(String title,String subtitle){
         LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
@@ -441,6 +465,36 @@ public class MainActivity extends Activity {
             p.setColor(INK);canvas.drawCircle(32,46,2.5f,p);canvas.drawCircle(50,46,2.5f,p);
             p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(2f);p.setStrokeCap(Paint.Cap.ROUND);
             canvas.drawArc(35,48,47,57,15,150,false,p);
+            canvas.restore();
+        }
+    }
+    private class DocumentGlyph extends View{
+        private final Paint paint=new Paint(3);
+        DocumentGlyph(Activity activity){super(activity);}
+        @Override protected void onDraw(Canvas canvas){
+            super.onDraw(canvas);
+            float scale=Math.min(getWidth(),getHeight())/26f;
+            canvas.save();canvas.translate((getWidth()-26f*scale)/2f,(getHeight()-26f*scale)/2f);canvas.scale(scale,scale);
+            paint.setColor(TEAL);paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(1.9f);paint.setStrokeCap(Paint.Cap.ROUND);paint.setStrokeJoin(Paint.Join.ROUND);
+            Path page=new Path();page.moveTo(7,3);page.lineTo(16,3);page.lineTo(21,8);page.lineTo(21,23);page.lineTo(7,23);page.close();canvas.drawPath(page,paint);
+            canvas.drawLine(16,3,16,8,paint);canvas.drawLine(16,8,21,8,paint);
+            canvas.drawLine(10,13,18,13,paint);canvas.drawLine(10,17,18,17,paint);
+            canvas.restore();
+        }
+    }
+    private class BackupGlyph extends View{
+        private final Paint paint=new Paint(3);
+        BackupGlyph(Activity activity){super(activity);}
+        @Override protected void onDraw(Canvas canvas){
+            super.onDraw(canvas);
+            float scale=Math.min(getWidth(),getHeight())/26f;
+            canvas.save();canvas.translate((getWidth()-26f*scale)/2f,(getHeight()-26f*scale)/2f);canvas.scale(scale,scale);
+            paint.setColor(TEAL);paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(1.9f);paint.setStrokeCap(Paint.Cap.ROUND);paint.setStrokeJoin(Paint.Join.ROUND);
+            canvas.drawRoundRect(3,10,23,22,2,2,paint);
+            canvas.drawLine(3,13,13,18,paint);canvas.drawLine(23,13,13,18,paint);
+            canvas.drawLine(13,18,13,22,paint);
+            canvas.drawArc(5,2,21,18,205,230,false,paint);
+            Path arrow=new Path();arrow.moveTo(5,3);arrow.lineTo(5,8);arrow.lineTo(10,7);canvas.drawPath(arrow,paint);
             canvas.restore();
         }
     }
@@ -576,7 +630,7 @@ public class MainActivity extends Activity {
         LinearLayout content=pageContents[1];
         content.removeAllViews();
         LinearLayout heading=new LinearLayout(this);heading.setOrientation(LinearLayout.HORIZONTAL);heading.setGravity(Gravity.CENTER_VERTICAL);
-        heading.addView(gameIconTile("Backup",38),new LinearLayout.LayoutParams(dp(42),dp(42)));
+        heading.addView(glyphTile(new BackupGlyph(this),38),new LinearLayout.LayoutParams(dp(42),dp(42)));
         TextView headingText=text(tr("Your backups","Резервные копии"),22,INK,true);
         headingText.setPadding(dp(10),0,0,0);heading.addView(headingText);
         content.addView(heading);
@@ -591,7 +645,7 @@ public class MainActivity extends Activity {
             card.setPadding(dp(20),dp(18),dp(20),dp(18));card.setBackground(background(CARD,SAND,dp(26)));
             LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,-2);cp.bottomMargin=dp(10);content.addView(card,cp);
             LinearLayout titleRow=new LinearLayout(this);titleRow.setOrientation(LinearLayout.HORIZONTAL);titleRow.setGravity(Gravity.CENTER_VERTICAL);
-            titleRow.addView(gameIconTile("Backup",34),new LinearLayout.LayoutParams(dp(40),dp(40)));
+            titleRow.addView(glyphTile(new DocumentGlyph(this),34),new LinearLayout.LayoutParams(dp(40),dp(40)));
             TextView backupName=text(item.originalName,16,INK,true);backupName.setPadding(dp(10),0,0,0);
             titleRow.addView(backupName,new LinearLayout.LayoutParams(0,-2,1));
             card.addView(titleRow);
@@ -725,7 +779,7 @@ public class MainActivity extends Activity {
             card.setPadding(dp(14),dp(12),dp(14),dp(12));card.setBackground(background(CARD,SAND,dp(26)));
             LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,-2);cp.bottomMargin=dp(10);content.addView(card,cp);
             LinearLayout titleRow=new LinearLayout(this);titleRow.setOrientation(LinearLayout.HORIZONTAL);titleRow.setGravity(Gravity.CENTER_VERTICAL);
-            titleRow.addView(gameIconTile("Conservatory",34),new LinearLayout.LayoutParams(dp(40),dp(40)));
+            titleRow.addView(glyphTile(new DocumentGlyph(this),34),new LinearLayout.LayoutParams(dp(40),dp(40)));
             TextView worldName=text(slot.displayName,16,INK,true);worldName.setPadding(dp(10),0,0,0);
             titleRow.addView(worldName,new LinearLayout.LayoutParams(0,-2,1));
             card.addView(titleRow);
