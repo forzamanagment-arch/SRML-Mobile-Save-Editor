@@ -478,12 +478,6 @@ class SaveEditorActivity : Activity() {
             }
         }
         refreshTile()
-                        }.show()
-                }
-                .setNegativeButton(tr("Cancel", "Отмена"), null)
-                .show()
-        }
-        refreshTile()
         return SlotEditor(idInput, countInput, nameLabel, field, iconView, badge)
     }
 
