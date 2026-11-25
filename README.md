@@ -26,6 +26,12 @@ Other serialized records are preserved unchanged. They are not exposed as editab
 
 The app does not upload save files. The original archive is not overwritten. After exporting, place the output in the game's save folder using the exact original filename. Keep a backup of the original.
 
+## v0.2 direction: pattern-based recognition
+
+The next architecture is a version-pinned structural parser, not a table of absolute offsets. It must load a single save, recognize the serialization schema, enumerate inventory records dynamically, preserve unknown records, and refuse ambiguous edits. The design and safety requirements are documented in [SAVE_PATTERN_ENGINE_V02.md](docs/SAVE_PATTERN_ENGINE_V02.md).
+
+This is a design milestone, not yet a released universal parser or APK. Do not treat unverified fields as editable.
+
 ## Build
 
 GitHub Actions workflow **Build SRML Mobile Save Editor** builds a debug APK on push or manual dispatch.
