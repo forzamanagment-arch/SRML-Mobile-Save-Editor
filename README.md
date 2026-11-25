@@ -8,7 +8,8 @@ Android prototype for editing Slime Rancher Mobile save archives.
 - Reads the `gamesave-sav` entry.
 - Detects and edits both mirrored Newbucks fields.
 - Detects serialized inventory records using the `SRAD` marker.
-- Edits Water (record ID 48) and all other detected inventory records.
+- Edits only the currently verified records: Honey slimes (ID 59), Chickadoos (ID 16), and Water (ID 48).
+- Leaves unknown record IDs untouched until their meaning is confirmed.
 - Rebuilds the archive into a separate output file.
 - Suggests the original save filename for the output.
 
@@ -16,10 +17,12 @@ Android prototype for editing Slime Rancher Mobile save archives.
 
 This is an early, version-specific prototype, not a universal save editor. The Newbucks signatures and inventory record layout were checked against the paired sample saves supplied for this project. If the expected signatures are missing or ambiguous, the app refuses to write a modified archive.
 
-Unknown inventory records are shown by numeric ID. Known IDs currently labeled in the UI:
+Only the three verified record IDs are editable in this prototype:
 - 59: Honey slimes
 - 16: Chickadoos
 - 48: Water
+
+Other serialized records are preserved unchanged. They are not exposed as editable inventory until their meaning is verified.
 
 The app does not upload save files. The original archive is not overwritten. After exporting, place the output in the game's save folder using the exact original filename. Keep a backup of the original.
 
