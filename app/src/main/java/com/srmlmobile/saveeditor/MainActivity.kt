@@ -189,10 +189,11 @@ class MainActivity : Activity() {
             if (countOffset + 4 > payload.size) continue
             inventory.add(InventoryField(readU32(payload, idOffset), countOffset, readU32(payload, countOffset)))
         }
-        if (inventory.none { it.id == WATER_ID }) {
+        val editableInventory = inventory.filter { it.id == WATER_ID || it.id == 59L || it.id == 16L }
+        if (editableInventory.none { it.id == WATER_ID }) {
             error("Не найдено поле воды (ID 48). Эта структура сохранения пока не поддерживается")
         }
-        return ParsedSave(entries, gameIndex, payload, currencyOffsets, inventory, name)
+        return ParsedSave(entries, gameIndex, payload, currencyOffsets, editableInventory, name)
     }
 
     private fun showEditor() {
