@@ -97,12 +97,9 @@ public class MainActivity extends Activity {
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(20),dp(24),dp(20),dp(12));
         root.setBackground(new MarshmallowDrawable());
-
-         View pinkRule=new View(this);
-        pinkRule.setBackground(background(PINK,Color.TRANSPARENT,dp(4)));
-        LinearLayout.LayoutParams ruleParams=new LinearLayout.LayoutParams(dp(46),dp(5));
-        ruleParams.bottomMargin=dp(8);
-        root.addView(pinkRule,ruleParams);
+        getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(CREAM));
+        getWindow().setStatusBarColor(CREAM);
+        getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
         pageTitle=text("SRML Save Editor",30,INK,true);
         pageTitle.setTypeface(GameAssets.typeface(this,true));
         pageTitle.setPadding(0,dp(3),0,dp(14));
@@ -349,15 +346,6 @@ public class MainActivity extends Activity {
         Button b=new Button(this);b.setText(label);b.setAllCaps(false);b.setTextSize(14);
         b.setTextColor(Color.WHITE);b.setTypeface(GameAssets.typeface(this,true));
         b.setBackground(background(TEAL,Color.TRANSPARENT,dp(28)));
-        if(label.equals("Launch game")||label.equals("Запустить игру")){
-            android.graphics.Bitmap gameIcon=GameAssets.icon(this,"PinkSlime","Slime");
-            if(gameIcon!=null){
-                BitmapDrawable drawable=new BitmapDrawable(getResources(),gameIcon);
-                drawable.setBounds(0,0,dp(26),dp(26));
-                b.setCompoundDrawables(drawable,null,null,null);
-                b.setCompoundDrawablePadding(dp(8));
-            }
-        }
         b.setMinHeight(dp(46));b.setOnClickListener(v->action.run());return b;
     }
     private void show(String message){if(output!=null)output.setText(message);}
@@ -415,7 +403,7 @@ public class MainActivity extends Activity {
         LinearLayout content=pageContents[1];
         content.removeAllViews();
         LinearLayout heading=new LinearLayout(this);heading.setOrientation(LinearLayout.HORIZONTAL);heading.setGravity(Gravity.CENTER_VERTICAL);
-        heading.addView(gameIconTile("Key",38),new LinearLayout.LayoutParams(dp(42),dp(42)));
+        heading.addView(gameIconTile("Backup",38),new LinearLayout.LayoutParams(dp(42),dp(42)));
         TextView headingText=text(tr("Your backups","Резервные копии"),22,INK,true);
         headingText.setPadding(dp(10),0,0,0);heading.addView(headingText);
         content.addView(heading);
@@ -430,7 +418,7 @@ public class MainActivity extends Activity {
             card.setPadding(dp(20),dp(18),dp(20),dp(18));card.setBackground(background(CARD,SAND,dp(26)));
             LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,-2);cp.bottomMargin=dp(10);content.addView(card,cp);
             LinearLayout titleRow=new LinearLayout(this);titleRow.setOrientation(LinearLayout.HORIZONTAL);titleRow.setGravity(Gravity.CENTER_VERTICAL);
-            titleRow.addView(gameIconTile("Key",34),new LinearLayout.LayoutParams(dp(40),dp(40)));
+            titleRow.addView(gameIconTile("Backup",34),new LinearLayout.LayoutParams(dp(40),dp(40)));
             TextView backupName=text(item.originalName,16,INK,true);backupName.setPadding(dp(10),0,0,0);
             titleRow.addView(backupName,new LinearLayout.LayoutParams(0,-2,1));
             card.addView(titleRow);
@@ -442,12 +430,65 @@ public class MainActivity extends Activity {
         if(backupNotice!=null){show(backupNotice);backupNotice=null;}else show(tr("Backups: ","Резервных копий: ")+items.size());
     }
     private void confirmRestore(ShizukuFileAccess.BackupItem item){
-        new AlertDialog.Builder(this)
-            .setTitle("Восстановить сохранение?")
-            .setMessage(item.originalName+"\nДата копирования: "+item.stamp+"\n\nЕсли в pt_saves уже есть файл с таким именем, он сначала будет сохранён в Backup.")
-            .setNegativeButton("Отмена",null)
-            .setPositiveButton("Восстановить",(d,w)->restore(item))
-            .show();
+        LinearLayout card=new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(18),dp(8),dp(18),dp(18));
+        card.setBackground(background(CARD,SAND,dp(28)));
+        View pinkBar=new View(this);
+        pinkBar.setBackground(background(PINK,Color.TRANSPARENT,dp(8)));
+        card.addView(pinkBar,new LinearLayout.LayoutParams(-1,dp(6)));
+
+        TextView title=text(tr("Restore this save?","Восстановить сохранение?"),22,INK,true);
+        title.setPadding(0,dp(16),0,dp(10));
+        card.addView(title);
+
+        TextView file=text(item.originalName,13,Color.rgb(31,41,55),true);
+        file.setPadding(dp(12),dp(8),dp(12),dp(8));
+        file.setBackground(background(Color.rgb(230,248,245),TEAL,dp(18)));
+        card.addView(file);
+
+        TextView details=text(
+            tr("Copied: ","Дата копирования: ")+item.stamp+
+            tr("\\n\\nThe selected copy will be returned to pt_saves. If a save with the same name already exists, the current file is first preserved in Backup.","\\n\\nВыбранная копия будет возвращена в pt_saves. Если файл с таким именем уже существует, текущий файл сначала будет сохранён в Backup."),
+            14,MUTED,false);
+        details.setPadding(0,dp(12),0,dp(16));
+        card.addView(details);
+
+        LinearLayout actions=new LinearLayout(this);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        actions.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);
+        Button cancel=new Button(this);
+        cancel.setText(tr("Cancel","Отмена"));
+        cancel.setAllCaps(false);
+        cancel.setTextSize(13);
+        cancel.setTypeface(GameAssets.typeface(this,true));
+        cancel.setTextColor(TEAL);
+        cancel.setBackground(background(Color.TRANSPARENT,TEAL,dp(28)));
+        Button restore=new Button(this);
+        restore.setText(tr("Restore","Восстановить"));
+        restore.setAllCaps(false);
+        restore.setTextSize(13);
+        restore.setTypeface(GameAssets.typeface(this,true));
+        restore.setTextColor(Color.WHITE);
+        restore.setBackground(background(PINK,Color.TRANSPARENT,dp(28)));
+        LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(0,dp(44),1);
+        cp.rightMargin=dp(8);
+        actions.addView(cancel,cp);
+        actions.addView(restore,new LinearLayout.LayoutParams(0,dp(44),1));
+        card.addView(actions);
+
+        AlertDialog dialog=new AlertDialog.Builder(this).setView(card).create();
+        cancel.setOnClickListener(v->dialog.dismiss());
+        restore.setOnClickListener(v->{dialog.dismiss();restore(item);});
+        dialog.show();
+        if(dialog.getWindow()!=null){
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+            dialog.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            android.view.WindowManager.LayoutParams params=dialog.getWindow().getAttributes();
+            params.dimAmount=0.45f;
+            dialog.getWindow().setAttributes(params);
+            dialog.getWindow().setLayout(getResources().getDisplayMetrics().widthPixels-dp(32),-2);
+        }
     }
     private void restore(ShizukuFileAccess.BackupItem item){
         show("Восстанавливаю сохранение…");
