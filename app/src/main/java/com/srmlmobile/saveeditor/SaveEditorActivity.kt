@@ -466,15 +466,20 @@ class SaveEditorActivity : Activity() {
         val params = LinearLayout.LayoutParams(0, dp(108), 1f)
         params.setMargins(dp(4), dp(4), dp(4), dp(8))
         parent.addView(tile, params)
-        tile.setOnClickListener {
+        fun openPicker() {
             ItemPickerDialog.show(
-                this,
-                idInput.text.toString().toLongOrNull() ?: 0L,
-                countInput.text.toString().toLongOrNull() ?: 0L
-            ) { selectedId, selectedCount ->
-                idInput.setText(selectedId.toString())
-                countInput.setText(selectedCount.toString())
-                refreshTile()
+                activity = this@SaveEditorActivity,
+                currentId = idInput.text.toString().toLongOrNull() ?: 0L,
+                currentCount = countInput.text.toString().toLongOrNull() ?: 0L,
+                onSelect = { selectedId: Long, selectedCount: Long ->
+                    idInput.setText(selectedId.toString())
+                    countInput.setText(selectedCount.toString())
+                    refreshTile()
+                }
+            )
+        }
+        tile.setOnClickListener { openPicker() }
+        refreshTile()
             }
         }
         refreshTile()
