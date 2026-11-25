@@ -1,9 +1,13 @@
 package com.srmlmobile.saveeditor;
 
 import android.app.Activity;
+import android.app.AlertDialog;
 import android.os.Bundle;
 import android.graphics.Color;
+import android.graphics.Typeface;
+import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
+import android.view.View;
 import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.widget.Button;
@@ -23,337 +27,301 @@ import java.util.concurrent.Executors;
 import rikka.shizuku.Shizuku;
 
 public class MainActivity extends Activity {
-    private static final int REQUEST_CODE = 4201;
-    private static final String SAVE_DIR = "/storage/emulated/0/Android/data/com.playdigious.slimerancher/files/pt_saves";
-    private static final int MAX_FILE_BYTES = 64 * 1024 * 1024;
-    private final ExecutorService executor = Executors.newSingleThreadExecutor();
-    private TextView status, output;
-    private LinearLayout savesContainer;
-    private final Shizuku.OnRequestPermissionResultListener permissionListener =
-        (code, result) -> runOnUiThread(() -> {
-            if (code == REQUEST_CODE) {
-                AppLog.i(this, "SHIZUKU", "Permission callback result=" + result);
-                refreshStatus();
-                if (result == PackageManager.PERMISSION_GRANTED) scanSaves();
-                else show("Разрешение Shizuku не выдано.");
-            }
-        });
-    private final Shizuku.OnBinderReceivedListener binderReceivedListener =
-        () -> runOnUiThread(this::refreshStatus);
-    private final Shizuku.OnBinderDeadListener binderDeadListener =
-        () -> runOnUiThread(this::refreshStatus);
+    private static final int REQUEST_CODE=4201;
+    private static final int MAX_FILE_BYTES=64*1024*1024;
+    private static final int INK=Color.rgb(57,75,105);
+    private static final int MUTED=Color.rgb(119,119,111);
+    private static final int CREAM=Color.rgb(248,240,221);
+    private static final int CARD=Color.rgb(255,251,240);
+    private static final int TEAL=Color.rgb(43,181,199);
+    private static final int PINK=Color.rgb(232,82,139);
+    private static final int SAND=Color.rgb(225,207,174);
+    private final ExecutorService executor=Executors.newSingleThreadExecutor();
+    private TextView status,output;
+    private LinearLayout content;
+    private boolean showingBackups=false;
 
-    @Override public void onCreate(Bundle state) {
+    private final Shizuku.OnRequestPermissionResultListener permissionListener=(code,result)->runOnUiThread(()->{
+        if(code==REQUEST_CODE){
+            refreshStatus();
+            if(result==PackageManager.PERMISSION_GRANTED){
+                executor.execute(()->{try{ShizukuFileAccess.ensureBackup();}catch(Throwable t){AppLog.exception(this,"BACKUP","Backup check failed",t);}});
+                scanSaves();
+            }else show("Нужно разрешение Shizuku для доступа к сохранениям.");
+        }
+    });
+    private final Shizuku.OnBinderReceivedListener binderReceivedListener=()->runOnUiThread(this::refreshStatus);
+    private final Shizuku.OnBinderDeadListener binderDeadListener=()->runOnUiThread(this::refreshStatus);
+
+    @Override public void onCreate(Bundle state){
         super.onCreate(state);
-        AppLog.i(this, "APP", "Started Android=" + android.os.Build.VERSION.SDK_INT
-            + ", device=" + android.os.Build.MANUFACTURER + " " + android.os.Build.MODEL
-            + ", version=" + BuildConfig.VERSION_NAME);
+        AppLog.i(this,"APP","Started Android="+android.os.Build.VERSION.SDK_INT+", device="+android.os.Build.MODEL+", version="+BuildConfig.VERSION_NAME);
         Shizuku.addRequestPermissionResultListener(permissionListener);
         Shizuku.addBinderReceivedListenerSticky(binderReceivedListener);
         Shizuku.addBinderDeadListener(binderDeadListener);
         buildUi();
         refreshStatus();
-        if (hasPermission()) executor.execute(() -> { try { ShizukuFileAccess.ensureBackup(); } catch (Throwable t) { AppLog.exception(this, "BACKUP", "Backup directory check failed", t); } });
-        else show("Подключи Shizuku и выдай разрешение. После этого приложение проверит папку Backup.");
+        if(hasPermission()){
+            executor.execute(()->{try{ShizukuFileAccess.ensureBackup();}catch(Throwable t){AppLog.exception(this,"BACKUP","Backup directory check failed",t);}});
+            scanSaves();
+        }else show("Подключи Shizuku, чтобы увидеть сохранения.");
     }
 
-    private void buildUi() {
-        LinearLayout root = new LinearLayout(this);
+    private void buildUi(){
+        LinearLayout root=new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(24, 30, 24, 20);
-        root.setBackgroundColor(Color.rgb(8, 9, 12));
+        root.setPadding(dp(18),dp(22),dp(18),dp(14));
+        root.setBackgroundColor(CREAM);
 
-        TextView title = new TextView(this);
-        title.setText("SRML Save Editor");
-        title.setTextColor(Color.WHITE);
-        title.setTextSize(26);
-        title.setGravity(Gravity.CENTER_VERTICAL);
+        TextView brand=new TextView(this);
+        brand.setText("SLIME RANCHER 2");
+        brand.setTextColor(TEAL);
+        brand.setTextSize(12);
+        brand.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));
+        brand.setLetterSpacing(0.12f);
+        root.addView(brand);
+
+        TextView title=new TextView(this);
+        title.setText("Save Editor");
+        title.setTextColor(INK);
+        title.setTextSize(29);
+        title.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));
+        title.setPadding(0,dp(2),0,dp(10));
         root.addView(title);
 
-        TextView subtitle = new TextView(this);
-        subtitle.setText("Выбор мира для редактирования");
-        subtitle.setTextColor(Color.LTGRAY);
-        root.addView(subtitle);
+        status=new TextView(this);
+        status.setTextColor(INK);
+        status.setTextSize(13);
+        status.setPadding(dp(13),dp(10),dp(13),dp(10));
+        status.setBackground(background(CARD,SAND,dp(16)));
+        root.addView(status,new LinearLayout.LayoutParams(-1,-2));
 
-        status = new TextView(this);
-        status.setTextColor(Color.WHITE);
-        status.setTextSize(15);
-        status.setPadding(0, 18, 0, 12);
-        root.addView(status);
+        LinearLayout tabs=new LinearLayout(this);
+        tabs.setOrientation(LinearLayout.HORIZONTAL);
+        tabs.setPadding(0,dp(14),0,dp(12));
+        Button worlds=tabButton("МИРЫ",false);
+        Button backups=tabButton("BACKUP",true);
+        tabs.addView(worlds,new LinearLayout.LayoutParams(0,dp(48),1));
+        LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(0,dp(48),1);
+        bp.leftMargin=dp(8);tabs.addView(backups,bp);
+        worlds.setOnClickListener(v->showWorlds());
+        backups.setOnClickListener(v->showBackups());
+        root.addView(tabs);
 
-        addButton(root, "Подключить / проверить Shizuku", this::requestShizuku);
-        addButton(root, "Обновить список миров", this::scanSaves);
-        addButton(root, "Открыть редактор сохранения", () -> startActivity(new Intent(this, SaveEditorActivity.class)));
+        ScrollView scroll=new ScrollView(this);
+        content=new LinearLayout(this);
+        content.setOrientation(LinearLayout.VERTICAL);
+        content.setPadding(0,0,0,dp(10));
+        scroll.addView(content);
+        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
 
-        TextView header = new TextView(this);
-        header.setText("ТВОИ СОХРАНЕНИЯ");
-        header.setTextColor(Color.WHITE);
-        header.setTextSize(13);
-        header.setPadding(0, 20, 0, 8);
-        root.addView(header);
-
-        ScrollView scroll = new ScrollView(this);
-        savesContainer = new LinearLayout(this);
-        savesContainer.setOrientation(LinearLayout.VERTICAL);
-        scroll.addView(savesContainer);
-        root.addView(scroll, new LinearLayout.LayoutParams(-1, 0, 1));
-
-        output = new TextView(this);
-        output.setTextColor(Color.LTGRAY);
+        output=new TextView(this);
+        output.setTextColor(INK);
         output.setTextSize(13);
-        output.setTextIsSelectable(true);
-        output.setPadding(0, 12, 0, 8);
-        savesContainer.addView(output);
-
-        addButton(root, "Показать журнал диагностики", this::showLogs);
-        addButton(root, "Поделиться журналом", this::shareLogs);
-
-        TextView note = new TextView(this);
-        note.setText("Сейчас доступно чтение и выбор мира. Оригинальные файлы не меняются. День появится после подтверждения его поля в формате сохранения.");
-        note.setTextColor(Color.GRAY);
-        note.setPadding(0, 8, 0, 0);
-        root.addView(note);
+        output.setPadding(dp(4),dp(8),dp(4),dp(4));
+        root.addView(output);
         setContentView(root);
+        renderWorldsEmpty();
     }
 
-    private void addButton(LinearLayout root, String label, Runnable action) {
-        Button button = new Button(this);
-        button.setText(label);
-        button.setOnClickListener(v -> action.run());
-        root.addView(button);
+    private Button tabButton(String text,boolean active){
+        Button b=new Button(this);b.setText(text);b.setAllCaps(false);b.setTextSize(13);
+        b.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));
+        b.setTextColor(Color.WHITE);b.setBackground(background(active?PINK:TEAL,Color.TRANSPARENT,dp(18)));
+        return b;
     }
-
-    private void show(String message) { if (output != null) output.setText(message); }
-
-    private boolean hasPermission() {
-        try {
-            return Shizuku.pingBinder()
-                && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED;
-        } catch (Throwable t) {
-            AppLog.exception(this, "SHIZUKU", "Permission check failed", t);
-            return false;
+    private GradientDrawable background(int fill,int stroke,int radius){
+        GradientDrawable d=new GradientDrawable();d.setColor(fill);d.setCornerRadius(radius);
+        if(stroke!=Color.TRANSPARENT)d.setStroke(dp(1),stroke);return d;
+    }
+    private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+0.5f);}
+    private TextView text(String value,int size,int color,boolean bold){
+        TextView t=new TextView(this);t.setText(value);t.setTextSize(size);t.setTextColor(color);
+        if(bold)t.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));return t;
+    }
+    private Button actionButton(String label,Runnable action){
+        Button b=new Button(this);b.setText(label);b.setAllCaps(false);b.setTextSize(14);
+        b.setTextColor(Color.WHITE);b.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));
+        b.setBackground(background(TEAL,Color.TRANSPARENT,dp(16)));
+        b.setMinHeight(dp(46));b.setOnClickListener(v->action.run());return b;
+    }
+    private void show(String message){if(output!=null)output.setText(message);}
+    private boolean hasPermission(){
+        try{return Shizuku.pingBinder()&&Shizuku.checkSelfPermission()==PackageManager.PERMISSION_GRANTED;}
+        catch(Throwable t){AppLog.exception(this,"SHIZUKU","Permission check failed",t);return false;}
+    }
+    private void refreshStatus(){
+        boolean binder=false,granted=false;
+        try{binder=Shizuku.pingBinder();granted=binder&&Shizuku.checkSelfPermission()==PackageManager.PERMISSION_GRANTED;}
+        catch(Throwable ignored){}
+        if(status!=null)status.setText(binder?(granted?"● Shizuku подключён":"● Shizuku: нужно разрешение"):"● Shizuku не подключён");
+    }
+    private void requestShizuku(){
+        try{
+            if(!Shizuku.pingBinder()){show("Запусти Shizuku и повтори подключение.");refreshStatus();}
+            else if(Shizuku.checkSelfPermission()==PackageManager.PERMISSION_GRANTED){scanSaves();}
+            else Shizuku.requestPermission(REQUEST_CODE);
+        }catch(Throwable t){show("Не удалось подключить Shizuku: "+t.getClass().getSimpleName());}
+    }
+    private Process startShell(String command)throws Exception{
+        java.lang.reflect.Method m=Shizuku.class.getDeclaredMethod("newProcess",String[].class,String[].class,String.class);
+        m.setAccessible(true);return (Process)m.invoke(null,new String[]{"sh","-c",command},null,null);
+    }
+    private static String quote(String s){return "'"+s.replace("'","'\\''")+"'";}
+    private byte[] readRemoteFile(String path)throws Exception{
+        Process p=startShell("cat -- "+quote(path));
+        try{
+            ByteArrayOutputStream out=new ByteArrayOutputStream();InputStream in=p.getInputStream();byte[]b=new byte[8192];int n;
+            while((n=in.read(b))!=-1){if(out.size()+n>MAX_FILE_BYTES)throw new IllegalStateException("Файл больше 64 МБ");out.write(b,0,n);}
+            int x=p.waitFor();if(x!=0)throw new IOException("Не удалось прочитать "+path);return out.toByteArray();
+        }finally{p.destroy();}
+    }
+    private byte[] readLocalFile(File file)throws Exception{
+        try(InputStream in=new FileInputStream(file);ByteArrayOutputStream out=new ByteArrayOutputStream()){
+            byte[]b=new byte[8192];int n;while((n=in.read(b))!=-1){if(out.size()+n>MAX_FILE_BYTES)throw new IOException("Архив больше 64 МБ");out.write(b,0,n);}return out.toByteArray();
         }
     }
-
-    private void refreshStatus() {
-        boolean binder = false, granted = false;
-        try {
-            binder = Shizuku.pingBinder();
-            granted = binder && Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED;
-        } catch (Throwable t) { AppLog.exception(this, "SHIZUKU", "Status check failed", t); }
-        if (status != null) status.setText("Shizuku: " + (binder
-            ? (granted ? "подключён · доступ разрешён" : "подключён · нужно разрешение")
-            : "не подключён"));
-        AppLog.i(this, "SHIZUKU_STATUS", "binder=" + binder + ", permission=" + granted);
+    private void showWorlds(){
+        showingBackups=false;scanSaves();
     }
-
-    private void requestShizuku() {
-        try {
-            if (!Shizuku.pingBinder()) {
-                show("Shizuku не запущен. Запусти его и повтори проверку.");
-                refreshStatus();
-            } else if (Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED) {
-                scanSaves();
-            } else {
-                Shizuku.requestPermission(REQUEST_CODE);
-            }
-        } catch (Throwable t) {
-            AppLog.exception(this, "SHIZUKU", "Request failed", t);
-            show("Ошибка Shizuku: " + t.getClass().getSimpleName());
+    private void showBackups(){
+        showingBackups=true;
+        if(!hasPermission()){show("Подключи Shizuku для просмотра резервных копий.");refreshStatus();return;}
+        show("Загружаю резервные копии…");
+        executor.execute(()->{
+            try{
+                List<ShizukuFileAccess.BackupItem>items=ShizukuFileAccess.listBackups();
+                runOnUiThread(()->renderBackups(items));
+            }catch(Throwable t){AppLog.exception(this,"BACKUP","Backup list failed",t);runOnUiThread(()->show("Не удалось открыть Backup: "+t.getMessage()));}
+        });
+    }
+    private void renderBackups(List<ShizukuFileAccess.BackupItem>items){
+        content.removeAllViews();
+        content.addView(text("Резервные копии",22,INK,true));
+        TextView hint=text("Выбери копию и восстанови её в список миров.",13,MUTED,false);
+        hint.setPadding(0,dp(4),0,dp(12));content.addView(hint);
+        if(items.isEmpty()){
+            addEmptyCard("Пока нет резервных копий","Копии появятся здесь после редактирования миров.");
+            show("Резервных копий: 0");return;
         }
-    }
-
-    private Process startShell(String command) throws Exception {
-        // Shizuku API 13.1.5 marks newProcess private; invoke that API method reflectively.
-        java.lang.reflect.Method method = Shizuku.class.getDeclaredMethod(
-            "newProcess", String[].class, String[].class, String.class);
-        method.setAccessible(true);
-        return (Process) method.invoke(null, new String[]{"sh", "-c", command}, null, null);
-    }
-
-    private static String shellQuote(String value) {
-        return "'" + value.replace("'", "'\\''") + "'";
-    }
-
-    private byte[] readRemoteFile(String path) throws Exception {
-        Process process = startShell("cat -- " + shellQuote(path));
-        try {
-            ByteArrayOutputStream out = new ByteArrayOutputStream();
-            InputStream in = process.getInputStream();
-            byte[] buffer = new byte[8192];
-            int n;
-            while ((n = in.read(buffer)) != -1) {
-                if (out.size() + n > MAX_FILE_BYTES) throw new IllegalStateException("Файл больше 64 МБ");
-                out.write(buffer, 0, n);
-            }
-            int exit = process.waitFor();
-            if (exit != 0) throw new IllegalStateException("cat exit=" + exit);
-            return out.toByteArray();
-        } finally { process.destroy(); }
-    }
-
-    private byte[] readLocalFile(File file) throws Exception {
-        try (InputStream in = new FileInputStream(file);
-             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
-            byte[] buffer = new byte[8192];
-            int n;
-            while ((n = in.read(buffer)) != -1) {
-                if (out.size() + n > MAX_FILE_BYTES)
-                    throw new IllegalStateException("Копия архива больше 64 МБ");
-                out.write(buffer, 0, n);
-            }
-            return out.toByteArray();
+        for(ShizukuFileAccess.BackupItem item:items){
+            LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(dp(14),dp(12),dp(14),dp(12));card.setBackground(background(CARD,SAND,dp(18)));
+            LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,-2);cp.bottomMargin=dp(10);content.addView(card,cp);
+            card.addView(text(item.originalName,16,INK,true));
+            TextView date=text(item.stamp,13,MUTED,false);date.setPadding(0,dp(3),0,dp(8));card.addView(date);
+            Button restore=actionButton("Восстановить",()->confirmRestore(item));
+            card.addView(restore,new LinearLayout.LayoutParams(-1,dp(46)));
         }
+        show("Резервных копий: "+items.size());
     }
-
-    private void scanSaves() {
-        if (!hasPermission()) {
-            show("Сначала подключи Shizuku и выдай разрешение приложению.");
-            refreshStatus();
-            return;
-        }
-        show("Читаю pt_saves. Это может занять несколько секунд…");
-        AppLog.i(this, "SAVE_SCAN", "Reading save directory " + SAVE_DIR);
-        executor.execute(() -> {
-            try {
-                String command = "if [ -d " + shellQuote(SAVE_DIR) + " ] && [ -r "
-                    + shellQuote(SAVE_DIR) + " ]; then find " + shellQuote(SAVE_DIR)
-                    + " -maxdepth 1 -type f -print 2>/dev/null; else echo __NO_ACCESS__; fi";
-                Process process = startShell(command);
-                String listing;
-                try {
-                    ByteArrayOutputStream out = new ByteArrayOutputStream();
-                    byte[] buffer = new byte[4096];
-                    int n;
-                    while ((n = process.getInputStream().read(buffer)) != -1) out.write(buffer, 0, n);
-                    int exit = process.waitFor();
-                    listing = new String(out.toByteArray(), StandardCharsets.UTF_8);
-                    if (exit != 0) throw new IllegalStateException("find exit=" + exit);
-                } finally { process.destroy(); }
-
-                if (listing.contains("__NO_ACCESS__"))
-                    throw new IllegalStateException("pt_saves не найдена или недоступна через Shizuku");
-
-                List<SaveSlot> found = new ArrayList<>();
-                File tempDir = new File(getCacheDir(), "save_scan_tmp");
-                if (!tempDir.exists() && !tempDir.mkdirs())
-                    throw new IllegalStateException("Не удалось создать временную папку сканирования");
-                int index = 0;
-                try {
-                    for (String path : listing.split("\\r?\\n")) {
-                        String sourcePath = path.trim();
-                        if (sourcePath.isEmpty()) continue;
-                        String originalName = new File(sourcePath).getName();
-                        File temporaryZip = new File(tempDir, originalName + ".zip");
-                        index++;
-                        try {
-                            // The game stores ZIP archives without an extension. Copy each
-                            // source file into app cache with .zip appended; never rename originals.
-                            byte[] sourceBytes = readRemoteFile(sourcePath);
-                            try (FileOutputStream fileOut = new FileOutputStream(temporaryZip)) {
-                                fileOut.write(sourceBytes);
-                                fileOut.getFD().sync();
-                            }
-                            byte[] copiedBytes = readLocalFile(temporaryZip);
-                            AppLog.i(this, "SAVE_SCAN", "Read sizes for " + sourcePath
-                                + ": remote=" + sourceBytes.length + " cache=" + copiedBytes.length);
-                            AppLog.i(this, "SAVE_SCAN", "Archive probe " + sourcePath + ": "
-                                + SaveSlotReader.diagnosticSummary(copiedBytes));
-                            SaveSlot slot = SaveSlotReader.inspect(sourcePath, copiedBytes);
-                            if (slot != null) {
-                                found.add(slot);
-                                AppLog.i(this, "SAVE_SCAN", "Recognized save archive " + sourcePath);
-                            } else {
-                                AppLog.w(this, "SAVE_SCAN", "Archive was read, but no recognized SRGAME payload was accepted in " + sourcePath + "; check the Archive probe fields savEntries and savPayloadSignature.");
-                            }
-                        } catch (Throwable e) {
-                            AppLog.w(this, "SAVE_SCAN", "Skipped " + sourcePath + ": " + e);
-                        } finally {
-                            if (temporaryZip.exists() && !temporaryZip.delete())
-                                AppLog.w(this, "SAVE_SCAN", "Could not delete temporary copy " + temporaryZip.getName());
-                        }
-                    }
-                } finally {
-                    File[] leftovers = tempDir.listFiles();
-                    if (leftovers != null) for (File file : leftovers) file.delete();
-                    tempDir.delete();
-                }
-                runOnUiThread(() -> renderSaves(found));
-            } catch (Throwable t) {
-                AppLog.exception(this, "SAVE_SCAN", "Save scan failed", t);
-                runOnUiThread(() -> show("Не удалось прочитать pt_saves: " + t.getMessage()
-                    + "\nПроверь Shizuku и наличие сохранений в игре."));
+    private void confirmRestore(ShizukuFileAccess.BackupItem item){
+        new AlertDialog.Builder(this)
+            .setTitle("Восстановить сохранение?")
+            .setMessage(item.originalName+"\nДата копирования: "+item.stamp+"\n\nЕсли в pt_saves уже есть файл с таким именем, он сначала будет сохранён в Backup.")
+            .setNegativeButton("Отмена",null)
+            .setPositiveButton("Восстановить",(d,w)->restore(item))
+            .show();
+    }
+    private void restore(ShizukuFileAccess.BackupItem item){
+        show("Восстанавливаю сохранение…");
+        executor.execute(()->{
+            try{
+                ShizukuFileAccess.RestoreResult result=ShizukuFileAccess.restoreBackup(item.path);
+                runOnUiThread(()->{
+                    if(result.hadConflict()){
+                        show("Сохранение «"+result.restoredName+"» успешно восстановлено из Backup.\n\nВ pt_saves уже был файл с таким именем. Он сохранён в Backup под именем:\n"+new File(result.conflictBackupPath).getName()+"\n\nКонфликт имён предотвращён.");
+                    }else show("Сохранение «"+result.restoredName+"» успешно восстановлено из Backup.");
+                    showBackups();
+                });
+            }catch(Throwable t){
+                AppLog.exception(this,"BACKUP_RESTORE","Restore failed",t);
+                runOnUiThread(()->show("Не удалось восстановить сохранение: "+t.getMessage()+"\nИсходная резервная копия не удаляется при ошибке проверки."));
             }
         });
     }
-
-    private void renderSaves(List<SaveSlot> found) {
-        savesContainer.removeAllViews();
-        if (found.isEmpty()) {
-            TextView empty = new TextView(this);
-            empty.setText("Миры не найдены. Возможно, папка пуста или формат файла ещё не распознан.");
-            empty.setTextColor(Color.LTGRAY);
-            empty.setPadding(0, 12, 0, 12);
-            savesContainer.addView(empty);
-            show("Проверка завершена: подходящих файлов сохранений нет.");
-            AppLog.w(this, "SAVE_SCAN", "No save slots detected");
-            return;
-        }
-        for (SaveSlot slot : found) {
-            Button item = new Button(this);
-            item.setAllCaps(false);
-            item.setText(slot.displayName + "\n" + slot.fileName + " · " + slot.sizeText);
-            item.setOnClickListener(v -> beginEditing(slot));
-            savesContainer.addView(item);
-        }
-        show("Найдено миров: " + found.size() + ". Нажми на нужный мир, чтобы выбрать его.");
-        AppLog.i(this, "SAVE_SCAN", "Found " + found.size() + " save slots");
+    private void scanSaves(){
+        if(!hasPermission()){show("Сначала подключи Shizuku и выдай разрешение.");refreshStatus();return;}
+        showingBackups=false;show("Загружаю список миров…");
+        executor.execute(()->{
+            try{
+                ShizukuFileAccess.ensureBackup();
+                String command="if [ -d "+quote(ShizukuFileAccess.SAVE_DIR)+" ] && [ -r "+quote(ShizukuFileAccess.SAVE_DIR)+" ]; then find "+quote(ShizukuFileAccess.SAVE_DIR)+" -maxdepth 1 -type f -print 2>/dev/null; else echo __NO_ACCESS__; fi";
+                Process p=startShell(command);ByteArrayOutputStream out=new ByteArrayOutputStream();
+                try{byte[]b=new byte[4096];int n;while((n=p.getInputStream().read(b))!=-1)out.write(b,0,n);int x=p.waitFor();if(x!=0)throw new IOException("Не удалось прочитать pt_saves");}finally{p.destroy();}
+                String listing=new String(out.toByteArray(),StandardCharsets.UTF_8);
+                if(listing.contains("__NO_ACCESS__"))throw new IOException("Папка pt_saves недоступна через Shizuku");
+                List<SaveSlot>found=new ArrayList<>();File tempDir=new File(getCacheDir(),"save_scan_tmp");
+                if(!tempDir.exists()&&!tempDir.mkdirs())throw new IOException("Не удалось создать временную папку");
+                try{
+                    for(String line:listing.split("\\r?\\n")){
+                        String path=line.trim();if(path.isEmpty())continue;
+                        File temp=new File(tempDir,new File(path).getName()+".zip");
+                        try{
+                            byte[]remote=readRemoteFile(path);
+                            try(FileOutputStream o=new FileOutputStream(temp)){o.write(remote);o.getFD().sync();}
+                            SaveSlot slot=SaveSlotReader.inspect(path,readLocalFile(temp));
+                            if(slot!=null)found.add(slot);
+                        }catch(Throwable e){AppLog.w(this,"SAVE_SCAN","Skipped "+path+": "+e);}
+                        finally{if(temp.exists())temp.delete();}
+                    }
+                }finally{File[]left=tempDir.listFiles();if(left!=null)for(File x:left)x.delete();tempDir.delete();}
+                runOnUiThread(()->renderSaves(found));
+            }catch(Throwable t){AppLog.exception(this,"SAVE_SCAN","Save scan failed",t);runOnUiThread(()->show("Не удалось прочитать список миров: "+t.getMessage()));}
+        });
     }
-
-    private void beginEditing(SaveSlot slot) {
-        if (!hasPermission()) { show("Нет разрешения Shizuku. Оригинал не затронут."); requestShizuku(); return; }
-        show("Создаю и проверяю резервную копию…");
-        executor.execute(() -> {
-            try {
-                String path = slot.fileName.startsWith("/") ? slot.fileName : SAVE_DIR + "/" + slot.fileName;
-                ShizukuFileAccess.Stage stage = ShizukuFileAccess.backupStage(this, path);
-                AppLog.i(this, "SAVE_EDIT", "Backup=" + stage.backup + "; staged=" + stage.file);
-                runOnUiThread(() -> {
-                    Intent intent = new Intent(this, SaveEditorActivity.class);
-                    intent.putExtra("stage_path", stage.file.getAbsolutePath());
-                    intent.putExtra("target_path", stage.target);
-                    intent.putExtra("backup_path", stage.backup);
+    private void renderSaves(List<SaveSlot>found){
+        content.removeAllViews();
+        content.addView(text("Твои миры",22,INK,true));
+        TextView hint=text("Выбери мир, чтобы изменить сохранение.",13,MUTED,false);hint.setPadding(0,dp(4),0,dp(12));content.addView(hint);
+        if(found.isEmpty()){addEmptyCard("Миры не найдены","Проверь, что игра уже создала сохранение.");show("Список миров обновлён.");return;}
+        for(SaveSlot slot:found){
+            LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
+            card.setPadding(dp(14),dp(12),dp(14),dp(12));card.setBackground(background(CARD,SAND,dp(18)));
+            LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,-2);cp.bottomMargin=dp(10);content.addView(card,cp);
+            card.addView(text(slot.displayName,16,INK,true));
+            TextView detail=text(slot.fileName+"  •  "+slot.sizeText,12,MUTED,false);detail.setPadding(0,dp(3),0,dp(8));card.addView(detail);
+            card.addView(actionButton("Редактировать",()->beginEditing(slot)),new LinearLayout.LayoutParams(-1,dp(46)));
+        }
+        show("Найдено миров: "+found.size());
+    }
+    private void addEmptyCard(String title,String description){
+        LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setPadding(dp(16),dp(16),dp(16),dp(16));
+        card.setBackground(background(CARD,SAND,dp(18)));
+        card.addView(text(title,17,INK,true));TextView d=text(description,13,MUTED,false);d.setPadding(0,dp(5),0,0);card.addView(d);
+        content.addView(card,new LinearLayout.LayoutParams(-1,-2));
+    }
+    private void beginEditing(SaveSlot slot){
+        if(!hasPermission()){show("Нет доступа Shizuku.");requestShizuku();return;}
+        show("Создаю резервную копию…");
+        executor.execute(()->{
+            try{
+                String path=slot.fileName.startsWith("/")?slot.fileName:ShizukuFileAccess.SAVE_DIR+"/"+slot.fileName;
+                ShizukuFileAccess.Stage stage=ShizukuFileAccess.backupStage(this,path);
+                AppLog.i(this,"SAVE_EDIT","Backup created "+stage.backup);
+                runOnUiThread(()->{
+                    Intent intent=new Intent(this,SaveEditorActivity.class);
+                    intent.putExtra("stage_path",stage.file.getAbsolutePath());
+                    intent.putExtra("target_path",stage.target);
+                    intent.putExtra("backup_path",stage.backup);
                     startActivity(intent);
                 });
-            } catch (Throwable t) {
-                AppLog.exception(this, "SAVE_EDIT", "Could not stage save", t);
-                runOnUiThread(() -> show("Не удалось подготовить сохранение: " + t.getMessage() + "\nОригинал не удаляется, если Backup не прошёл проверку."));
-            }
+            }catch(Throwable t){AppLog.exception(this,"SAVE_EDIT","Could not stage save",t);runOnUiThread(()->show("Не удалось подготовить сохранение: "+t.getMessage()));}
         });
     }
-
-    private void showLogs() {
-        String logs = AppLog.read(this);
-        show(logs.length() == 0 ? "Журнал пока пуст." : logs);
+    private void showLogs(){
+        String logs=AppLog.read(this);
+        new AlertDialog.Builder(this).setTitle("Журнал").setMessage(logs.length()==0?"Журнал пуст.":logs)
+            .setPositiveButton("Закрыть",null).show();
     }
-
-    private void shareLogs() {
-        String logs = AppLog.read(this);
-        if (logs.length() == 0) logs = "Журнал пуст.";
-        Intent intent = new Intent(Intent.ACTION_SEND);
-        intent.setType("text/plain");
-        intent.putExtra(Intent.EXTRA_SUBJECT, "SRML Save Editor diagnostic log");
-        intent.putExtra(Intent.EXTRA_TEXT, logs);
-        startActivity(Intent.createChooser(intent, "Отправить журнал"));
-        AppLog.i(this, "LOG_EXPORT", "Share sheet opened");
+    private void shareLogs(){
+        Intent i=new Intent(Intent.ACTION_SEND);i.setType("text/plain");i.putExtra(Intent.EXTRA_TEXT,AppLog.read(this));
+        startActivity(Intent.createChooser(i,"Поделиться журналом"));
     }
-
-    @Override protected void onDestroy() {
-        AppLog.i(this, "APP", "Activity destroyed");
+    @Override protected void onDestroy(){
         Shizuku.removeRequestPermissionResultListener(permissionListener);
         Shizuku.removeBinderReceivedListener(binderReceivedListener);
         Shizuku.removeBinderDeadListener(binderDeadListener);
-        executor.shutdownNow();
-        super.onDestroy();
+        executor.shutdownNow();super.onDestroy();
     }
 }
