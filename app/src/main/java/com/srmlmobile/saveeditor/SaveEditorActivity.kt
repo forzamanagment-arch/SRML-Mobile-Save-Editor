@@ -112,8 +112,11 @@ class SaveEditorActivity : Activity() {
         val scroll = ScrollView(this)
         page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(24), dp(20), dp(34))
-            setBackgroundColor(Color.rgb(245, 240, 232))
+            setPadding(dp(18), dp(22), dp(18), dp(34))
+            background = android.graphics.drawable.GradientDrawable(
+                android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
+                intArrayOf(Color.rgb(245,240,232), Color.rgb(237,232,220))
+            )
         }
         scroll.addView(page)
         setContentView(scroll)
@@ -126,8 +129,8 @@ class SaveEditorActivity : Activity() {
         })
         page.addView(TextView(this).apply {
             text = title
-            textSize = 28f
-            typeface = android.graphics.Typeface.create("sans-serif-rounded", android.graphics.Typeface.BOLD)
+            textSize = 30f
+            typeface = GameAssets.typeface(this@SaveEditorActivity)
             setTextColor(Color.rgb(45, 55, 72))
             setPadding(0, dp(3), 0, dp(7))
         })
@@ -139,9 +142,9 @@ class SaveEditorActivity : Activity() {
         })
         status = TextView(this).apply {
             textSize = 14f
-            setTextColor(Color.rgb(45, 55, 72))
+            setTextColor(Color.WHITE)
             setPadding(dp(16), dp(14), dp(16), dp(14))
-            background = rounded(Color.rgb(255, 253, 247), Color.rgb(224, 216, 204), dp(24))
+            background = rounded(Color.rgb(31, 41, 55), Color.TRANSPARENT, dp(24))
         }
         page.addView(status)
     }
@@ -624,7 +627,7 @@ class SaveEditorActivity : Activity() {
             this.text = text
             textSize = 18f
             setTextColor(Color.rgb(45, 55, 72))
-            typeface = android.graphics.Typeface.create("sans-serif-rounded", android.graphics.Typeface.BOLD)
+            typeface = GameAssets.typeface(this@SaveEditorActivity)
             setPadding(0, dp(17), 0, dp(7))
         })
     }
