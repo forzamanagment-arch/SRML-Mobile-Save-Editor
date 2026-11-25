@@ -16,15 +16,15 @@ jobs:
           import zipfile,io,os,re,struct
           names=['20261125171726-2-1','20261125175309-3-0','20261122185933-1-1']
           found={}
-          def walk(z):
+          def walk(z,prefix=''):
             for it in z.infolist():
               if it.is_dir(): continue
-              b=z.read(it.filename)
+              b=z.read(it.filename); path=prefix+it.filename
               if b[:2]==b'PK':
-                try: walk(zipfile.ZipFile(io.BytesIO(b))); continue
+                try: walk(zipfile.ZipFile(io.BytesIO(b)),path+'!'); continue
                 except: pass
-              if it.filename.endswith('gamesave-sav'):
-                root=os.path.basename(it.filename)
+              if path.endswith('gamesave-sav'):
+                root=os.path.basename(path.split('!')[0])
                 if root in names: found[root]=b
           walk(zipfile.ZipFile('/tmp/saves.zip'))
           for n in names:
