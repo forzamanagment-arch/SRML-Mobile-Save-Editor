@@ -67,23 +67,23 @@ jobs:
               if len(rows)<2: continue
               for width,fmt in [(1,'B'),(2,'H'),(4,'I'),(8,'Q')]:
                   hits=[]
-                  for rel in range(0,8192-width+1):
+                  for rel in range(-min(markers[n][0] for n,_,_ in rows), min(len(d)-markers[n][0] for n,_,d in rows)-width+1):
                       vals=[]
                       for n,_,d in rows:
                           anchor=markers[n][0]
                           if anchor+rel+width>len(d): break
                           vals.append(struct.unpack_from('<'+fmt,d,anchor+rel)[0])
                       if len(vals)==len(rows) and vals==[v for _,v,_ in rows]: hits.append(rel)
-                  for rel in hits[:100]: print(f'  SRPL+0x{rel:X} uint{width*8} LE => {[v for _,v,_ in rows]}')
+                  for rel in hits[:100]: print(f'  SRPL{rel:+#x} uint{width*8} LE => {[v for _,v,_ in rows]}')
               fhits=[]
-              for rel in range(0,8192-3):
+              for rel in range(-min(markers[n][0] for n,_,_ in rows), min(len(d)-markers[n][0] for n,_,d in rows)-3):
                   vals=[]
                   for n,_,d in rows:
                       anchor=markers[n][0]
                       if anchor+rel+4>len(d): break
                       vals.append(struct.unpack_from('<f',d,anchor+rel)[0])
                   if len(vals)==len(rows) and all(abs(x-v)<1e-4 for x,(_,v,_) in zip(vals,rows)): fhits.append(rel)
-              for rel in fhits[:100]: print(f'  SRPL+0x{rel:X} float32 => {[v for _,v,_ in rows]}')
+              for rel in fhits[:100]: print(f'  SRPL{rel:+#x} float32 => {[v for _,v,_ in rows]}')
           print('=== PLAYER-REGION LENGTH / FIRST 512 BYTES ===')
           for n,(vals,d) in labelled.items():
               for p in markers[n]:
