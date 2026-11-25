@@ -1,0 +1,49 @@
+name: Inspect and package Slime Rancher assets
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/workflows/inspect-game-assets.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect-assets:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download release archives
+        run: |
+          mkdir -p work/icons work/fonts
+          curl -L --fail --retry 3 'https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/Icons.zip' -o work/Icons.zip
+          curl -L --fail --retry 3 'https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/Font.Nunito.Full-ver.zip' -o work/Fonts.zip
+          unzip -q work/Icons.zip -d work/icons
+          unzip -q work/Fonts.zip -d work/fonts
+      - name: Analyze archive contents
+        run: |
+          python3 - <<'PY'
+          import os, json
+          root='work'
+          files=[]
+          for base, _, names in os.walk(root):
+              for name in names:
+                  path=os.path.join(base,name)
+                  if path.endswith(('.png','.webp','.jpg','.jpeg','.ttf','.otf','.woff','.woff2')):
+                      files.append({'path':path.replace('work/',''),'name':name,'extension':os.path.splitext(name)[1].lower(),'bytes':os.path.getsize(path)})
+          fonts=[x for x in files if x['extension'] in ('.ttf','.otf','.woff','.woff2')]
+          icons=[x for x in files if x['extension'] in ('.png','.webp','.jpg','.jpeg')]
+          report={'total_files':len(files),'icon_count':len(icons),'font_count':len(fonts),'fonts':fonts,'icons':icons}
+          with open('asset-manifest.json','w',encoding='utf-8') as f: json.dump(report,f,ensure_ascii=False,indent=2)
+          print(json.dumps({'total_files':len(files),'icon_count':len(icons),'font_count':len(fonts),'fonts':fonts,'icon_examples':icons[:40]},ensure_ascii=False,indent=2))
+          PY
+      - name: Upload inspected assets and manifest
+        uses: actions/upload-artifact@v4
+        with:
+          name: SRML-game-assets-inspection
+          path: |
+            asset-manifest.json
+            work/Icons.zip
+            work/Fonts.zip
+          if-no-files-found: error
