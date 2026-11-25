@@ -72,7 +72,7 @@ jobs:
                   state=None
                   sr=context.find(b'\x03SRG')
                   if sr>=0 and sr+16<=len(context):
-                      state=struct.unpack_from('<I',context,sr+12)[0]
+                      state=struct.unpack_from('<I',context,sr+9)[0]
                   print(hex(p),m.group().decode('ascii','replace'),'state_candidate=',state,context.hex())
               print('--- PLAYER SRPL FIELD WINDOW ---')
               for m in re.finditer(b'SRPL',d):
