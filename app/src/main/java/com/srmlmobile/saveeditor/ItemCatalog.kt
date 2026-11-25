@@ -341,7 +341,7 @@ object ItemCatalog {
     )
 
     fun localizedName(id: Long, russian: Boolean): String =
-        if (russian) displayName(id) else englishNames[id] ?: displayName(id)
+        if (russian) displayName(id) else englishNames[id] ?: "Item ID $id"
 
     fun isKnown(id: Long): Boolean = names.containsKey(id)
 
