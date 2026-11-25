@@ -370,7 +370,11 @@ object ItemCatalog {
         return true
     }
 
-    fun iconHints(id: Long): List<String> = when (id) {
+    fun iconHints(id: Long): List<String> = if (
+        id in 14000L..14999L ||
+        names[id]?.contains("орнамент", ignoreCase = true) == true ||
+        names[id]?.contains("ornament", ignoreCase = true) == true
+    ) listOf("Ornaments") else when (id) {
         4L -> listOf("PlortRad")
         5L -> listOf("PlortRock")
         6L -> listOf("IconPlortPink")
