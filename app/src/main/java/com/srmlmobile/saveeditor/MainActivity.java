@@ -101,7 +101,7 @@ public class MainActivity extends Activity {
         ruleParams.bottomMargin=dp(8);
         root.addView(pinkRule,ruleParams);
         pageTitle=text("SRML Save Editor",30,INK,true);
-        pageTitle.setTypeface(GameAssets.typeface(this),Typeface.BOLD);
+        pageTitle.setTypeface(GameAssets.typeface(this,true));
         pageTitle.setPadding(0,dp(3),0,dp(14));
         root.addView(pageTitle);
 
@@ -265,7 +265,7 @@ public class MainActivity extends Activity {
         card.setGravity(Gravity.CENTER_HORIZONTAL);card.setPadding(dp(24),dp(30),dp(24),dp(30));
         card.setBackground(background(CARD,SAND,dp(28)));
         card.addView(new SlimeLogoView(this),new LinearLayout.LayoutParams(dp(82),dp(82)));
-        TextView name=text("SRML Save Editor",24,INK,true);name.setTypeface(GameAssets.typeface(this),Typeface.BOLD);name.setPadding(0,dp(17),0,dp(4));card.addView(name);
+        TextView name=text("SRML Save Editor",24,INK,true);name.setTypeface(GameAssets.typeface(this,true));name.setPadding(0,dp(17),0,dp(4));card.addView(name);
         card.addView(text("Version "+BuildConfig.VERSION_NAME,13,Color.rgb(155,168,181),false));
         TextView description=text(tr("A cozy little tool inspired by the world of Slime Rancher. Built with love and a lot of plorts.","Уютный маленький инструмент, вдохновлённый миром Slime Rancher. Создан с любовью и кучей плортов."),15,MUTED,false);
         description.setGravity(Gravity.CENTER);description.setPadding(0,dp(18),0,0);card.addView(description);
@@ -340,11 +340,11 @@ public class MainActivity extends Activity {
     private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+0.5f);}
     private TextView text(String value,int size,int color,boolean bold){
         TextView t=new TextView(this);t.setText(value);t.setTextSize(size);t.setTextColor(color);
-        t.setTypeface(GameAssets.typeface(this),bold?Typeface.BOLD:Typeface.NORMAL);return t;
+        t.setTypeface(GameAssets.typeface(this,bold));return t;
     }
     private Button actionButton(String label,Runnable action){
         Button b=new Button(this);b.setText(label);b.setAllCaps(false);b.setTextSize(14);
-        b.setTextColor(Color.WHITE);b.setTypeface(GameAssets.typeface(this),Typeface.BOLD);
+        b.setTextColor(Color.WHITE);b.setTypeface(GameAssets.typeface(this,true));
         b.setBackground(background(TEAL,Color.TRANSPARENT,dp(28)));
         b.setMinHeight(dp(46));b.setOnClickListener(v->action.run());return b;
     }
