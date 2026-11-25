@@ -424,7 +424,7 @@ public class MainActivity extends Activity {
         content.addView(card,new LinearLayout.LayoutParams(-1,-2));
 
         addSectionCard(tr("Authors & credits","Авторы и благодарности"),
-            tr("Project creator and developer: forzamanagment-arch.\\nDevelopment assistance: ChatGPT (OpenAI).\\nSlime Rancher is developed by Monomi Park. Game names and original game assets belong to their respective owners.","Создатель и разработчик проекта: forzamanagment-arch.\\nПомощь в разработке: ChatGPT (OpenAI).\\nSlime Rancher разработана Monomi Park. Названия и оригинальные игровые материалы принадлежат их правообладателям."));
+            tr("Project creator and developer: forzamanagment-arch.\nDevelopment assistance: ChatGPT (OpenAI).\nSlime Rancher is developed by Monomi Park. Game names and original game assets belong to their respective owners.","Создатель и разработчик проекта: forzamanagment-arch.\nПомощь в разработке: ChatGPT (OpenAI).\nSlime Rancher разработана Monomi Park. Названия и оригинальные игровые материалы принадлежат их правообладателям."));
         addSectionCard(tr("How it works","Как это работает"),
             tr("The app uses Shizuku permission to access the Slime Rancher Mobile save folder. It reads the save archive, locates the gamesave-sav data, and exposes supported values for editing. Before an edit, the app creates a backup that can be restored from the Backups tab. Unknown save data is intended to remain unchanged.","Приложение использует разрешение Shizuku для доступа к папке сохранений Slime Rancher Mobile. Оно читает архив сохранения, находит данные gamesave-sav и показывает поддерживаемые значения для редактирования. Перед изменением создаётся резервная копия, которую можно восстановить во вкладке Backups. Неизвестные данные сохранения не должны изменяться."));
         addSectionCard(tr("What you need","Что потребуется"),
@@ -676,7 +676,7 @@ public class MainActivity extends Activity {
 
         TextView details=text(
             tr("Copied: ","Дата копирования: ")+item.stamp+
-            tr("\\n\\nThe selected copy will be returned to pt_saves. If a save with the same name already exists, the current file is first preserved in Backup.","\\n\\nВыбранная копия будет возвращена в pt_saves. Если файл с таким именем уже существует, текущий файл сначала будет сохранён в Backup."),
+            tr("\n\nThe selected copy will be returned to pt_saves. If a save with the same name already exists, the current file is first preserved in Backup.","\n\nВыбранная копия будет возвращена в pt_saves. Если файл с таким именем уже существует, текущий файл сначала будет сохранён в Backup."),
             14,MUTED,false);
         details.setPadding(0,dp(12),0,dp(16));
         card.addView(details);
@@ -748,7 +748,7 @@ public class MainActivity extends Activity {
                 List<SaveSlot>found=new ArrayList<>();File tempDir=new File(getCacheDir(),"save_scan_tmp");
                 if(!tempDir.exists()&&!tempDir.mkdirs())throw new IOException("Не удалось создать временную папку");
                 try{
-                    for(String line:listing.split("\\r?\\n")){
+                    for(String line:listing.split("\\r?\n")){
                         String path=line.trim();if(path.isEmpty())continue;
                         File temp=new File(tempDir,new File(path).getName()+".zip");
                         try{
