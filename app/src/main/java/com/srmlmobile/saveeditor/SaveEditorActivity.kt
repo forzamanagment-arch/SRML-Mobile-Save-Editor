@@ -445,7 +445,7 @@ class SaveEditorActivity : Activity() {
             } + ItemCatalog.displayName(id)
             val bitmap = GameAssets.icon(this, *aliases.toTypedArray())
             if (bitmap != null) iconView.setImageBitmap(bitmap) else {
-                iconView.setImageDrawable(null)
+                iconView.setImageResource(android.R.drawable.ic_menu_help)
                 iconView.setBackground(rounded(Color.rgb(232,220,200), Color.rgb(203,191,168), dp(12)))
                 iconView.contentDescription = "?"
             }
