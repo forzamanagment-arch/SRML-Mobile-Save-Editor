@@ -429,7 +429,7 @@ class SaveEditorActivity : Activity() {
         val idInput = EditText(this).apply { setText(field.id.toString()); visibility = android.view.View.GONE }
         val countInput = EditText(this).apply { setText(field.count.toString()); visibility = android.view.View.GONE }
         val nameLabel = TextView(this).apply {
-            text = ItemCatalog.displayName(field.id)
+            text = ItemCatalog.localizedName(field.id, russian)
             textSize = 11f
             gravity = Gravity.CENTER
             maxLines = 2
@@ -456,7 +456,7 @@ class SaveEditorActivity : Activity() {
                 72L -> listOf("SlimeAqueux", "PuddleSlime"); 76L -> listOf("Key"); 79L -> listOf("SlimeDeCristal", "CrystalSlime")
                 89L -> listOf("QuantumSlime"); 102L -> listOf("DervishSlime"); 104L -> listOf("MosaicSlime")
                 106L -> listOf("TangleSlime"); 108L -> listOf("FireSlime"); else -> emptyList()
-            } + ItemCatalog.displayName(id)
+            } + ItemCatalog.localizedName(id, russian)
             val bitmap = GameAssets.icon(this, *aliases.toTypedArray())
             if (bitmap != null) iconView.setImageBitmap(bitmap) else {
                 iconView.setImageResource(android.R.drawable.ic_menu_help)
@@ -464,7 +464,7 @@ class SaveEditorActivity : Activity() {
                 iconView.contentDescription = "?"
             }
             badge.text = countInput.text.toString()
-            nameLabel.text = if (id == 0L) "?" else ItemCatalog.displayName(id)
+            nameLabel.text = if (id == 0L) "?" else ItemCatalog.localizedName(id, russian)
         }
         val tile = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
