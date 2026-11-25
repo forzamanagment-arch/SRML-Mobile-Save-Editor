@@ -73,6 +73,11 @@ public final class ShizukuFileAccess {
   }
   Collections.sort(r,(a,b)->{try{SimpleDateFormat f=new SimpleDateFormat(STAMP_PATTERN,Locale.ROOT);return f.parse(b.stamp).compareTo(f.parse(a.stamp));}catch(Exception e){return b.stamp.compareTo(a.stamp);}});return r;
  }
+ public static void clearBackups()throws Exception{
+  ensureBackup();
+  if(run("find "+q(BACKUP_DIR)+" -mindepth 1 -maxdepth 1 -exec rm -rf -- {} + && test -z \"$(find "+q(BACKUP_DIR)+" -mindepth 1 -maxdepth 1 -print -quit)\"")!=0)
+   throw new IOException("Не удалось полностью очистить папку Backup");
+ }
  public static final class Stage{public final File file;public final String target,backup;Stage(File f,String t,String b){file=f;target=t;backup=b;}}
  public static Stage backupStage(Context c,String path)throws Exception{
   ensureBackup();String name=path.substring(path.lastIndexOf('/')+1);String backup=backupVerified(path,name);byte[]data=read(path);
