@@ -240,7 +240,9 @@ public class MainActivity extends Activity {
                     for (String path : listing.split("\\r?\\n")) {
                         String sourcePath = path.trim();
                         if (sourcePath.isEmpty()) continue;
-                        File temporaryZip = new File(tempDir, "slot_" + (index++) + ".zip");
+                        String originalName = new File(sourcePath).getName();
+                        File temporaryZip = new File(tempDir, originalName + ".zip");
+                        index++;
                         try {
                             // The game stores ZIP archives without an extension. Copy each
                             // source file into app cache with .zip appended; never rename originals.
