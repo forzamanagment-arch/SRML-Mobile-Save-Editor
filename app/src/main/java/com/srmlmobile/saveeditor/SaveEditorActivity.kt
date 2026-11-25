@@ -1,7 +1,6 @@
 package com.srmlmobile.saveeditor
 
 import android.app.Activity
-import android.app.AlertDialog
 import android.content.Intent
 import android.graphics.Color
 import android.net.Uri
@@ -58,7 +57,6 @@ class SaveEditorActivity : Activity() {
         val currentEnergyOffset: Int?,
         val inventorySlots: List<InventoryField>,
         val waterSlot: InventoryField?,
-        val testOffset: Int?,
         val sourceName: String
     )
     private data class SlotEditor(
@@ -78,7 +76,6 @@ class SaveEditorActivity : Activity() {
     private var waterTypeSpinner: Spinner? = null
     private var pendingArchive: ByteArray? = null
     private var sourceName = "save"
-    private var testValue: Int? = null
     private var remoteTargetPath: String? = null
     private var backupPath: String? = null
     private var stageFile: java.io.File? = null
@@ -224,9 +221,6 @@ class SaveEditorActivity : Activity() {
         // The offsets below are relative to playerTag, which points at the 'S' in SRPL.
         val currentHealthOffset = if (playerTag + 0x0A + 4 <= payload.size) playerTag + 0x0A else null
         val currentEnergyOffset = if (playerTag + 0x0E + 4 <= payload.size) playerTag + 0x0E else null
-        // Experimental candidate: second literal SRGA occurrence, byte offset +0x4A.
-        val srgaOccurrences = findAll(payload, "SRGA".toByteArray(Charsets.US_ASCII))
-        val testOffset = srgaOccurrences.getOrNull(1)?.plus(0x4A)?.takeIf { it in payload.indices && (payload[it].toInt() and 0xff) <= 3 }
 
         // Find compact inventory record groups near the player block.
         val markers = findAllInRange(
@@ -260,7 +254,7 @@ class SaveEditorActivity : Activity() {
         return ParsedSave(
             entries, gameIndex, payload, newbucksOffset, keysOffset,
             currentHealthOffset, currentEnergyOffset,
-            regularSlots, waterSlot, testOffset, name
+            regularSlots, waterSlot, name
         )
     }
 
@@ -299,17 +293,6 @@ class SaveEditorActivity : Activity() {
             if (current != null) currentEnergyInput = addNumberField("Текущая энергия (SRPL + 0x0E)", current.toString())
             else addHint("Текущую энергию не удалось прочитать.")
         } else addHint("Поле текущей энергии не распознано. Его соответствие пока предварительное.")
-
-        addSection("Тест")
-        val candidate = data.testOffset
-        if (candidate != null) {
-            val currentTest = data.payload[candidate].toInt() and 0xff
-            addHint("Экспериментальное поле SRGA + 0x4A. Текущее значение: $currentTest. Назначение пока не подтверждено.")
-            addButton("Изменить") { showTestPicker(currentTest) }
-            addHint("Применяется на свой страх и риск.")
-        } else {
-            addHint("Поле SRGA + 0x4A не найдено или его значение не входит в диапазон 0–3. Функция отключена.")
-        }
 
         addSection("Инвентарь")
         addHint("Изменяются только слоты 1–4. ID 48, 113 и 16001 в них запрещены. Слоты после пятого не отображаются и не изменяются.")
@@ -368,19 +351,6 @@ class SaveEditorActivity : Activity() {
         return SlotEditor(idInput, countInput, nameLabel, field)
     }
 
-    private fun showTestPicker(current: Int) {
-        val values = arrayOf("0", "1", "2", "3")
-        AlertDialog.Builder(this)
-            .setTitle("Тест • SRGA + 0x4A")
-            .setSingleChoiceItems(values, current) { dialog, which ->
-                testValue = which
-                dialog.dismiss()
-                status.text = "Для функции Тест выбрано значение " + which + ". Оно будет записано после нажатия «Сохранить изменения»."
-            }
-            .setNegativeButton("Отмена", null)
-            .show()
-    }
-
     private fun prepareOutput() {
         try {
             val data = parsed ?: error("Сначала выбери сохранение")
@@ -419,13 +389,6 @@ class SaveEditorActivity : Activity() {
                 val offset = data.currentEnergyOffset ?: error("Поле текущей энергии не распознано")
                 writeU32(payload, offset, energyValue)
                 if (readU32(payload, offset) != energyValue) error("Проверка текущей энергии не пройдена")
-            }
-
-            if (testValue != null) {
-                val offset = data.testOffset ?: error("Поле SRGA + 0x4A не распознано")
-                if (testValue !in 0..3) error("Для функции Тест разрешены только значения 0, 1, 2, 3")
-                payload[offset] = testValue!!.toByte()
-                if ((payload[offset].toInt() and 0xff) != testValue) error("Проверка функции Тест не пройдена")
             }
 
             slotEditors.forEachIndexed { index, editor ->
