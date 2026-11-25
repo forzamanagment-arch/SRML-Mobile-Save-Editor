@@ -360,13 +360,13 @@ object ItemCatalog {
         (90L..98L) + (115L..147L) + (151L..163L)
 
     fun isAllowedInRegularSlot(id: Long): Boolean {
-        if (id in 13000L..13999L || id == 175L) return false
+        if (id == 76L || id == 101L || id in 13000L..13999L || id == 175L) return false
         if (!names.containsKey(id) || id in forbiddenSlots1To4 ||
             id in nonInventoryEntityIds || id in largoIds) return false
         val name = names[id]?.lowercase().orEmpty()
         if (name.contains("ларго") || name.contains("гордо")) return false
         if (name.contains("пугало") || name.contains("scarecrow")) return false
-        if (name.contains("слайм") && id !in setOf(76L, 11010L)) return false
+        if (name.contains("слайм") && id != 11010L) return false
         return true
     }
 
@@ -378,7 +378,7 @@ object ItemCatalog {
         4L -> listOf("PlortRad")
         5L -> listOf("PlortRock")
         6L -> listOf("IconPlortPink")
-        7L -> listOf("GoldPlort")
+        7L -> listOf("PLORTGold")
         8L -> listOf("Cuberry")
         9L -> listOf("Mint_mango")
         16L -> listOf("Hen_hen")
