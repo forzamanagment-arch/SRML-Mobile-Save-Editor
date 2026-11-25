@@ -338,6 +338,93 @@ object ItemCatalog {
 
     fun isKnown(id: Long): Boolean = names.containsKey(id)
 
-    fun isAllowedInRegularSlot(id: Long): Boolean =
-        names.containsKey(id) && id !in forbiddenSlots1To4
+    // These IDs describe world entities, not objects the player can carry in a normal inventory slot.
+    private val nonInventoryEntityIds = setOf(
+        1L, 2L, 3L, 10L, 11L, 15L, 21L, 31L, 37L, 51L, 59L, 72L, 77L,
+        79L, 89L, 102L, 104L, 106L, 108L, 150L, 166L, 16000L, 16003L,
+        10000L, 10001L, 10002L, 10003L, 10004L, 10005L, 10006L, 10007L,
+        10008L, 10009L, 10010L, 10011L, 10012L, 10013L, 10014L,
+        44L, 45L, 46L, 47L, 74L, 75L, 112L, 114L, 15000L, 15100L,
+        16002L, 16004L
+    )
+
+    private val largoIds = (12L..14L).toSet() + (22L..24L) + (32L..35L) +
+        (39L..43L) + (53L..58L) + (61L..67L) + (80L..87L) +
+        (90L..98L) + (115L..147L) + (151L..163L)
+
+    fun isAllowedInRegularSlot(id: Long): Boolean {
+        if (!names.containsKey(id) || id in forbiddenSlots1To4 ||
+            id in nonInventoryEntityIds || id in largoIds) return false
+        val name = names[id]?.lowercase().orEmpty()
+        if (name.contains("ларго") || name.contains("гордо")) return false
+        if (name.contains("слайм") && id !in setOf(76L, 11010L)) return false
+        return true
+    }
+
+    fun iconHints(id: Long): List<String> = when (id) {
+        4L -> listOf("PlortRad")
+        5L -> listOf("PlortRock")
+        6L -> listOf("IconPlortPink")
+        7L -> listOf("GoldPlort")
+        8L -> listOf("Cuberry")
+        9L -> listOf("Mint_mango")
+        16L -> listOf("Hen_hen")
+        17L -> listOf("Roostro")
+        18L -> listOf("Chickadoo")
+        19L -> listOf("Carrot")
+        20L -> listOf("OcaOca")
+        25L -> listOf("IconPlortBoom")
+        26L -> listOf("Prickle_Pear")
+        27L -> listOf("Pogo_fruit")
+        28L -> listOf("Silver_Parsnip")
+        29L -> listOf("Heart_Beet")
+        36L -> listOf("IconPlortPhosphor")
+        38L -> listOf("PlortTABBY")
+        48L -> listOf("Water_icon")
+        49L -> listOf("Elder_hen")
+        50L -> listOf("Elder_roostro")
+        52L -> listOf("PlortHUNTER")
+        60L -> listOf("IconPlortHoney")
+        68L -> listOf("Stony_hen")
+        69L -> listOf("Briar_hen")
+        70L -> listOf("Stony_Chickadoo")
+        71L -> listOf("Briar_Chickadoo")
+        73L -> listOf("PuddlePlort")
+        76L -> listOf("SlimeKeyTP")
+        78L -> listOf("PlortCRYSTAL")
+        88L -> listOf("Odd_Onion")
+        99L -> listOf("PlortQuantum")
+        100L -> listOf("PhaseLemon")
+        103L -> listOf("PlortDERVISH")
+        105L -> listOf("PlortMOSAIC")
+        107L -> listOf("PlortTANGLE")
+        109L -> listOf("IconPlortFire")
+        110L -> listOf("Painted_Hen_SR")
+        111L -> listOf("Painted_Chickadoo")
+        113L -> listOf("Ancient_Water")
+        148L -> listOf("GildedGinger")
+        149L -> listOf("Spicy_Tofu")
+        164L -> listOf("SaberPlort")
+        165L -> listOf("KookadobaSP")
+        167L -> listOf("QuickSilverPlort")
+        11000L -> listOf("PrimordyOil")
+        11001L -> listOf("DeepBrine")
+        11002L -> listOf("Spiral_Steam")
+        11003L -> listOf("LavaDust")
+        11004L -> listOf("BuzzWax")
+        11005L -> listOf("WildHoney")
+        11006L -> listOf("Hexacomb")
+        11007L -> listOf("RoyalJelly")
+        11008L -> listOf("Jellystone")
+        11009L -> listOf("Indigonium")
+        11010L -> listOf("SlimeFossil")
+        11011L -> listOf("StrangeDiamond")
+        in 11012L..11015L -> listOf("Echoes_SP")
+        11016L -> listOf("Silky_Sand")
+        11017L -> listOf("Pepper_Jam")
+        11018L -> listOf("Glass_Shard")
+        11019L -> listOf("ManifoldCube")
+        in 17000L..17011L -> listOf("Chimes_SP")
+        else -> listOf(localizedName(id, false), displayName(id))
+    }
 }
