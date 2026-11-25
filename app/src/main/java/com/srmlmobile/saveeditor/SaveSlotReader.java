@@ -22,7 +22,7 @@ final class SaveSlotReader {
 
     static SaveSlot inspect(String path, byte[] file) throws Exception {
         byte[] payload = findGamePayload(file);
-        if (payload == null || !startsWith(payload, "SRGAME")) return null;
+        if (payload == null || !isGamePayload(payload)) return null;
         String name = findLikelyWorldName(payload);
         if (name == null) {
             int slash = path.lastIndexOf('/');
@@ -34,7 +34,7 @@ final class SaveSlotReader {
     private static byte[] findGamePayload(byte[] file) throws Exception {
         // Some game builds store the payload directly, others wrap it in a ZIP
         // archive whose filename has no .zip extension.
-        if (startsWith(file, "SRGAME")) return file;
+        if (isGamePayload(file)) return file;
 
         try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(file))) {
             ZipEntry entry;
@@ -60,7 +60,7 @@ final class SaveSlotReader {
 
                 if (!tooLarge) {
                     byte[] candidate = out.toByteArray();
-                    if (startsWith(candidate, "SRGAME")) return candidate;
+                    if (isGamePayload(candidate)) return candidate;
                 }
             }
         }
@@ -113,7 +113,7 @@ final class SaveSlotReader {
         return result.toString();
     }
 
-    private static boolean startsWith(byte[] bytes, String marker) {
+    // Save payloads use a one-byte type/length prefix before the ASCII signature.\n    // Observed gamesave-sav begins: 06 53 52 47 41 4D 45 (\\x06 + "SRGAME").\n    private static boolean isGamePayload(byte[] bytes) {\n        if (bytes == null || bytes.length < 7 || (bytes[0] & 0xFF) != 0x06) return false;\n        byte[] marker = "SRGAME".getBytes(StandardCharsets.US_ASCII);\n        for (int i = 0; i < marker.length; i++) if (bytes[i + 1] != marker[i]) return false;\n        return true;\n    }\n\n    private static boolean startsWith(byte[] bytes, String marker) {
         byte[] expected = marker.getBytes(StandardCharsets.US_ASCII);
         if (bytes.length < expected.length) return false;
         for (int i = 0; i < expected.length; i++) if (bytes[i] != expected[i]) return false;
