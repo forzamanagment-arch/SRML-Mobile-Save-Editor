@@ -76,7 +76,7 @@ The maximum health and maximum energy capacities are not identified by these fie
 
 ## World-progress binary research status
 
-The descriptions establish these ground-truth labels, but the corresponding serialized fields have **not yet been located and independently validated**:
+The descriptions establish these ground-truth labels. The following serialized patterns have been found but need controlled before/after samples before they can be treated as universal rules:
 
 - Ranch expansion flags / IDs (Grotto, Overgrowth, Docks, Lab).
 - Map area discovery flags / IDs (Dry Reef, Indigo Quarry).
@@ -84,7 +84,11 @@ The descriptions establish these ground-truth labels, but the corresponding seri
 - Current key inventory count.
 - Ranch/map/key-gate flags and individual location identities.
 - Gordo-to-key reward accounting and mapping random Gordo instance IDs to the species/locations in the TXT.
-- Water-slot unlock state as distinct from an unlocked-but-empty slot.
+- The exact binary flag for water-slot unlock; however, the three samples show a useful structural distinction: the locked sample has only four inventory records, while both unlocked samples have a fifth record. The 150/150 sample's fifth record is ID 0/count 0 (unlocked but empty), and the 250/250 sample's fifth record is ID 113/count 29.
+
+### Water-slot structural candidate
+
+The 100/100 save, whose TXT says the water slot is locked, has four inventory records. Both saves whose TXT says the water slot is unlocked have a fifth inventory record: ID 0/count 0 when empty, or ID 113/count 29 for Ancient Water. The editor now recognizes ID 0 as an unlocked empty water slot rather than misclassifying it as locked. This is a strong three-sample structural rule, but it should still be checked against a controlled lock/unlock pair.
 
 ### Gordo instance-state candidate
 
