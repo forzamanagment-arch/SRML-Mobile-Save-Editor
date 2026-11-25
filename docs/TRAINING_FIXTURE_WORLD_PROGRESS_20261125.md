@@ -115,3 +115,15 @@ Use controlled pairs of saves from the same world, changing only one progress ac
 5. Before/after unlocking the water slot.
 
 This separates individual flags from aggregate counters and avoids attributing unrelated world changes to the wrong field.
+
+## Other serialized sections inspected
+
+The deep scan also found these repeated record families in the three payloads:
+
+- `SRGA`: one section per save. The variable-length string data immediately before it differs between samples. The 100/100 sample includes the string `REEF`, while the 250/250 sample includes `MAP`; this is suggestive of progress/achievement labels but does not yet establish the individual map/ranch unlock encoding.
+- `SRHD`: one section per save, followed by an `SRAP` record collection. Its values differ, but no reliable location-name mapping has been established.
+- `SRLP`: 41 records in each sample, with some readable `plot...` identifiers. These look like plot-related records, but the current TXT descriptions do not label each plot's state or type.
+- `SRRW`: 408–410 repeated records containing vector-like numeric data. They appear to be world/transform records, not directly labelled location unlock flags.
+- `SRTP`: 181 records in each sample with `pod...` identifiers. These are likely treasure-pod instance records, but the TXT files do not say which pods are opened.
+
+These are now marked as inspected, not decoded. The presence of a tag or a readable identifier is not enough to safely assign it to a gameplay setting.
