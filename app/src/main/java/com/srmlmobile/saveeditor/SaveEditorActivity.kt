@@ -92,6 +92,7 @@ class SaveEditorActivity : Activity() {
         buildBase("SRML Save Editor")
         status.text = "Выбери оригинальный файл сохранения. Поддерживаются ZIP-архивы с записью gamesave-sav, в том числе файлы без расширения."
         addButton("Выбрать сохранение") { openSavePicker() }
+        addButton("Тест распознавания нового сохранения") { startActivity(Intent(this, SaveAnalyzerActivity::class.java)) }
         addHint("Исходный файл не перезаписывается. Редактор создаёт отдельную копию с тем же именем.")
     }
 
