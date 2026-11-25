@@ -1,0 +1,65 @@
+name: Deep scan world progress fields
+
+on:
+  push:
+    paths:
+      - ".github/workflows/analyze-world-progress.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download and scan labelled saves
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -fL "https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/Savefiles.zip" -o /tmp/Savefiles.zip
+          python3 - <<'PY'
+          import zipfile, io, os, re, struct, hashlib
+          files={}
+          def collect(zf,prefix=''):
+              for info in zf.infolist():
+                  if info.is_dir(): continue
+                  data=zf.read(info.filename); name=prefix+info.filename
+                  if data[:2]==b'PK':
+                      try:
+                          with zipfile.ZipFile(io.BytesIO(data)) as inner:
+                              collect(inner,name+'!')
+                              continue
+                      except zipfile.BadZipFile: pass
+                  files[name]=data
+          with zipfile.ZipFile('/tmp/Savefiles.zip') as z: collect(z)
+          texts={n:d.decode('utf-8','replace') for n,d in files.items() if n.lower().endswith('.txt')}
+          saves={n:d for n,d in files.items() if '!' in n and not n.lower().endswith('.txt')}
+          for n,d in sorted(saves.items()):
+              base=os.path.basename(n.split('!')[0])
+              txt=next((t for p,t in texts.items() if os.path.basename(p[:-4])==base),'')
+              print('\\n'+'='*90)
+              print('SAVE',base,'bytes',len(d),'sha256',hashlib.sha256(d).hexdigest())
+              print('--- COMPLETE TXT LABELS ---')
+              print(txt)
+              print('--- SERIALIZED TAGS (04 + SR...) ---')
+              tags={}
+              for m in re.finditer(rb'\\x04SR[A-Z0-9]{1,8}',d):
+                  tag=m.group().decode('ascii','replace')
+                  tags.setdefault(tag,[]).append(m.start())
+              for tag,offs in sorted(tags.items()):
+                  print(tag,'count=',len(offs),'offsets=',','.join(hex(x) for x in offs[:80]))
+              print('--- READABLE ASCII RUNS (length >= 5) ---')
+              for m in re.finditer(rb'[ -~]{5,}',d):
+                  s=m.group().decode('ascii','replace')
+                  if any(ch.isalpha() for ch in s):
+                      print(hex(m.start()),repr(s[:180]))
+              print('--- PLAYER SRPL FIELD WINDOW ---')
+              for m in re.finditer(b'SRPL',d):
+                  p=m.start()
+                  print('SRPL',hex(p))
+                  for rel in range(0,0x61,4):
+                      if p+rel+4<=len(d):
+                          u=struct.unpack_from('<I',d,p+rel)[0]
+                          print(f'  +{rel:#04x}: {u} (0x{u:08x})')
+          PY
