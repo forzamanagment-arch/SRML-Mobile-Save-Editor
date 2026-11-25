@@ -18,6 +18,7 @@ jobs:
           mkdir -p app/src/main/assets/game-icons app/src/main/assets/fonts
           curl -L --fail --retry 3 'https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/Icons.zip' -o /tmp/sr-icons.zip
           curl -L --fail --retry 3 'https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/newicons.zip' -o /tmp/sr-new-icons.zip
+          curl -L --fail --retry 3 'https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/PLORTGold.webp' -o app/src/main/assets/game-icons/PLORTGold.webp
           curl -L --fail --retry 3 'https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/Font.Nunito.Full-ver.zip' -o /tmp/sr-fonts.zip
           unzip -q /tmp/sr-icons.zip -d app/src/main/assets/game-icons
           unzip -oq /tmp/sr-new-icons.zip -d app/src/main/assets/game-icons
