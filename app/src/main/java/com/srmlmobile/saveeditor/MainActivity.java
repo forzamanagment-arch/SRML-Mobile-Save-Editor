@@ -83,7 +83,7 @@ public class MainActivity extends Activity {
     }
 
     private void buildUi(){
-        russian=getPreferences(MODE_PRIVATE).getBoolean("russian",false);
+        russian=getSharedPreferences("srml_settings",MODE_PRIVATE).getBoolean("russian",false);
         LinearLayout root=new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(20),dp(24),dp(20),dp(12));
@@ -200,7 +200,7 @@ public class MainActivity extends Activity {
         addEmptyCard(tr("About backups","О резервных копиях"),tr("A backup is created before a save is edited. Restore it from the Backup tab.","Перед редактированием создаётся копия. Восстановить её можно во вкладке Backup."));
     }
     private void setLanguage(boolean ru){
-        russian=ru;getPreferences(MODE_PRIVATE).edit().putBoolean("russian",ru).apply();setPage(2);
+        russian=ru;getSharedPreferences("srml_settings",MODE_PRIVATE).edit().putBoolean("russian",ru).apply();setPage(2);
         refreshStatus();
         if(shizukuButton!=null)shizukuButton.setText(tr("Connect Shizuku","Подключить Shizuku"));
         if(launchButton!=null)launchButton.setText(tr("Launch game","Запустить игру"));
