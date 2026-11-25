@@ -71,7 +71,7 @@ public final class ShizukuFileAccess {
    BackupName n=parseBackupName(path.substring(path.lastIndexOf('/')+1));
    if(n!=null)r.add(new BackupItem(path,n.name,n.stamp));
   }
-  Collections.sort(r,(a,b)->b.stamp.compareTo(a.stamp));return r;
+  Collections.sort(r,(a,b)->{try{SimpleDateFormat f=new SimpleDateFormat(STAMP_PATTERN,Locale.ROOT);return f.parse(b.stamp).compareTo(f.parse(a.stamp));}catch(Exception e){return b.stamp.compareTo(a.stamp);}});return r;
  }
  public static final class Stage{public final File file;public final String target,backup;Stage(File f,String t,String b){file=f;target=t;backup=b;}}
  public static Stage backupStage(Context c,String path)throws Exception{
