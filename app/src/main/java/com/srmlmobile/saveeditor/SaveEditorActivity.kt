@@ -356,11 +356,19 @@ class SaveEditorActivity : Activity() {
             })
             val toggle = Switch(this).apply {
                 isEnabled = input != null
-                isChecked = (input?.text?.toString()?.toLongOrNull() ?: 0L) >= MAX_PLAYER_STAT
+                var previousValue = input?.text?.toString()?.toLongOrNull()
+                isChecked = (previousValue ?: 0L) >= MAX_PLAYER_STAT
                 thumbTintList = android.content.res.ColorStateList.valueOf(Color.rgb(232, 76, 138))
                 trackTintList = android.content.res.ColorStateList.valueOf(Color.rgb(255, 182, 205))
                 setOnCheckedChangeListener { _, checked ->
-                    if (checked && input != null) input.setText(MAX_PLAYER_STAT.toString())
+                    if (input != null) {
+                        if (checked) {
+                            previousValue = input.text.toString().toLongOrNull() ?: 0L
+                            input.setText(MAX_PLAYER_STAT.toString())
+                        } else if (previousValue != null) {
+                            input.setText(previousValue.toString())
+                        }
+                    }
                 }
             }
             card.addView(toggle)
