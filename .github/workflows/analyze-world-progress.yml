@@ -54,10 +54,26 @@ jobs:
                   s=m.group().decode('ascii','replace')
                   if any(ch.isalpha() for ch in s):
                       print(hex(m.start()),repr(s[:180]))
+              print('--- GLOBAL / HEADER SECTION CONTEXT ---')
+              for tag in (b'\\x04SRGA', b'\\x04SRHD'):
+                  for m in re.finditer(re.escape(tag),d):
+                      p=m.start()
+                      print(tag.decode('ascii','replace'),hex(p),d[max(0,p-64):min(len(d),p+192)].hex())
+              print('--- OTHER RECORD SAMPLE CONTEXTS ---')
+              for tag in (b'\\x04SRLP', b'\\x04SRRW', b'\\x04SRTP'):
+                  found=list(re.finditer(re.escape(tag),d))
+                  for m in found[:3]:
+                      p=m.start()
+                      print(tag.decode('ascii','replace'),hex(p),d[max(0,p-24):min(len(d),p+96)].hex())
               print('--- GORDO IDENTIFIER RECORD CONTEXT ---')
               for m in re.finditer(rb'gordo[A-Za-z0-9]+',d):
                   p=m.start(); end=m.end()
-                  print(hex(p),m.group().decode('ascii','replace'),d[max(0,p-8):min(len(d),end+24)].hex())
+                  context=d[max(0,p-8):min(len(d),end+24)]
+                  state=None
+                  sr=context.find(b'\\x03SRG')
+                  if sr>=0 and sr+16<=len(context):
+                      state=struct.unpack_from('<I',context,sr+12)[0]
+                  print(hex(p),m.group().decode('ascii','replace'),'state_candidate=',state,context.hex())
               print('--- PLAYER SRPL FIELD WINDOW ---')
               for m in re.finditer(b'SRPL',d):
                   p=m.start()
