@@ -41,6 +41,7 @@ public class MainActivity extends Activity {
     private LinearLayout content;
     private Button worldsTab,backupTab,shizukuButton;
     private String backupNotice;
+    private String backupNotice;
     private boolean showingBackups=false;
 
     private final Shizuku.OnRequestPermissionResultListener permissionListener=(code,result)->runOnUiThread(()->{
@@ -213,7 +214,7 @@ public class MainActivity extends Activity {
         hint.setPadding(0,dp(4),0,dp(12));content.addView(hint);
         if(items.isEmpty()){
             addEmptyCard("Пока нет резервных копий","Копии появятся здесь после редактирования миров.");
-            show("Резервных копий: 0");return;
+            if(backupNotice!=null){show(backupNotice);backupNotice=null;}else show("Резервных копий: 0");return;
         }
         for(ShizukuFileAccess.BackupItem item:items){
             LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
@@ -224,7 +225,7 @@ public class MainActivity extends Activity {
             Button restore=actionButton("Восстановить",()->confirmRestore(item));
             card.addView(restore,new LinearLayout.LayoutParams(-1,dp(46)));
         }
-        show("Резервных копий: "+items.size());
+        if(backupNotice!=null){show(backupNotice);backupNotice=null;}else show("Резервных копий: "+items.size());
     }
     private void confirmRestore(ShizukuFileAccess.BackupItem item){
         new AlertDialog.Builder(this)
@@ -241,8 +242,8 @@ public class MainActivity extends Activity {
                 ShizukuFileAccess.RestoreResult result=ShizukuFileAccess.restoreBackup(item.path);
                 runOnUiThread(()->{
                     if(result.hadConflict()){
-                        show("Сохранение «"+result.restoredName+"» успешно восстановлено из Backup.\n\nВ pt_saves уже был файл с таким именем. Он сохранён в Backup под именем:\n"+new File(result.conflictBackupPath).getName()+"\n\nКонфликт имён предотвращён.");
-                    }else show("Сохранение «"+result.restoredName+"» успешно восстановлено из Backup.");
+                        backupNotice="Сохранение «"+result.restoredName+"» успешно восстановлено из Backup.\n\nВ pt_saves уже был файл с таким именем. Он сохранён в Backup под именем:\n"+new File(result.conflictBackupPath).getName()+"\n\nКонфликт имён предотвращён.";
+                    }else backupNotice="Сохранение «"+result.restoredName+"» успешно восстановлено из Backup.";
                     showBackups();
                 });
             }catch(Throwable t){
