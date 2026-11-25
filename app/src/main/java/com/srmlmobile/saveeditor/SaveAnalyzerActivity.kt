@@ -23,14 +23,7 @@ class SaveAnalyzerActivity : Activity() {
         private val GAME_SIGNATURE = byteArrayOf(0x06, 0x53, 0x52, 0x47, 0x41, 0x4d, 0x45)
         private val PLAYER_MARKER = byteArrayOf(0x04, 0x53, 0x52, 0x50, 0x4c, 0x0e, 0, 0, 0, 0, 0x30)
         private val INVENTORY_MARKER = byteArrayOf(0x04, 0x53, 0x52, 0x41, 0x44, 0x02, 0, 0, 0, 0, 0x30)
-        private val ITEM_NAMES = mapOf(
-            0L to "Пустая запись",
-            3L to "Pink Slime",
-            16L to "Кур-курица (Hen-Hen)",
-            18L to "Цыпчик (Chickadoo)",
-            37L to "Tabby Slime",
-            48L to "Вода (ID 48, мобильное соответствие пока кандидат)"
-        )
+        private val ITEM_NAMES = ItemCatalog.names
     }
 
     private data class Item(val id: Long, val count: Long)
@@ -166,12 +159,10 @@ class SaveAnalyzerActivity : Activity() {
             ?: error("Не найден блок игрока SRPL")
         val playerTag = playerMarkerAt + 1
 
-        // The training fixture stores the same Newbucks value twice at these
-        // positions relative to the SRPL tag. A mismatch is never guessed.
-        val firstCurrency = readU32(bytes, playerTag + 22)
-        val secondCurrency = readU32(bytes, playerTag + 30)
-        val currencyOk = firstCurrency != null && firstCurrency == secondCurrency
-        val currency = if (currencyOk) firstCurrency else null
+        // Based on the two additional mobile save fixtures, Newbucks are at
+        // SRPL tag +22. The former +30 comparison was invalid: it is another field.
+        val currency = readU32(bytes, playerTag + 22)
+        val currencyOk = currency != null
 
         // The inventory records form a compact SRAD cluster inside the player
         // section. Other SRAD records elsewhere in the world are excluded.
@@ -209,7 +200,7 @@ class SaveAnalyzerActivity : Activity() {
         section("Инвентарь")
         if (result.items.isEmpty()) line("Записи инвентаря не распознаны.")
         result.items.forEachIndexed { index, item ->
-            val label = ITEM_NAMES[item.id] ?: "Неизвестный предмет ID " + item.id
+            val label = ItemCatalog.displayName(item.id)
             line("Запись " + (index + 1) + ": " + label + " × " + item.count)
         }
         section("Пока не распознано")
