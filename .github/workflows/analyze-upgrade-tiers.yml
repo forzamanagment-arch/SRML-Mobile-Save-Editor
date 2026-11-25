@@ -1,0 +1,54 @@
+name: Analyze upgrade tier patterns
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/analyze-upgrade-tiers.yml"
+permissions:
+  contents: read
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          curl -fL "https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/Savefiles.zip" -o /tmp/s.zip
+      - run: |
+          python3 - <<'PY'
+          import zipfile,io,os,re,struct
+          F={}
+          def walk(z,p=''):
+            for i in z.infolist():
+              if i.is_dir(): continue
+              b=z.read(i.filename); n=p+i.filename
+              if b[:2]==b'PK':
+                try: walk(zipfile.ZipFile(io.BytesIO(b)),n+'!'); continue
+                except: pass
+              F[n]=b
+          walk(zipfile.ZipFile('/tmp/s.zip'))
+          names=['20261125171726-2-1','20261125175309-3-0','20261122185933-1-1']
+          S={}
+          for n,b in F.items():
+            if '!' in n and n.endswith('gamesave-sav'):
+              base=os.path.basename(n.split('!')[0])
+              if base in names and b.find(b'SRPL')>=0: S[base]=(b,b.find(b'SRPL'))
+          assert len(S)==3,S.keys()
+          print('SAMPLES',[(n,len(S[n][0]),hex(S[n][1])) for n in names])
+          tags=[b'SRPL',b'SRAD',b'SRGA',b'SRHD',b'SRLP',b'SRRW',b'SRTP',b'SRAP',b'SRSE',b'SRMA']
+          for tag in tags: print(tag,[sum(1 for _ in re.finditer(re.escape(tag),S[n][0])) for n in names])
+          print('=== SAME SRPL RELATIVE OFFSETS WITH UPGRADE LEVELS 0,1,3 ===')
+          for w,f in [(1,'B'),(2,'H'),(4,'I')]:
+            lim=min(len(S[n][0])-S[n][1]-w for n in names); hits=[]
+            for r in range(lim-w+1):
+              v=[struct.unpack_from('<'+f,S[n][0],S[n][1]+r)[0] for n in names]
+              if v==[0,1,3]: hits.append(r)
+            print('WIDTH',w,'COUNT',len(hits))
+            for r in hits[:150]:
+              print(hex(r),[S[n][0][S[n][1]+r-16:S[n][1]+r+24].hex() for n in names])
+          print('=== SERIALIZED OBJECT IDS AROUND SRPL ===')
+          for n in names:
+            b,p=S[n]; print('\n',n)
+            for tag in tags:
+              ps=[m.start() for m in re.finditer(re.escape(tag),b) if p-512<=m.start()<=p+0x10000]
+              print(tag.decode(),[(hex(x-p),b[x:x+48].hex()) for x in ps[:80]])
+          print('=== END ===')
+          PY
