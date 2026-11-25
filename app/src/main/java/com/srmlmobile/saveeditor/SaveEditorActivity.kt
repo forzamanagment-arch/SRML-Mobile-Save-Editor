@@ -6,13 +6,17 @@ import android.graphics.Color
 import android.net.Uri
 import android.os.Bundle
 import android.provider.OpenableColumns
+import android.text.Editable
+import android.text.InputFilter
 import android.text.InputType
-import android.view.Gravity
+import android.text.TextWatcher
 import android.view.ViewGroup
+import android.widget.ArrayAdapter
 import android.widget.Button
 import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
+import android.widget.Spinner
 import android.widget.TextView
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
@@ -25,29 +29,44 @@ class SaveEditorActivity : Activity() {
         private const val PICK_SAVE = 1001
         private const val CREATE_SAVE = 1002
         private const val WATER_ID = 48L
+        private const val MAGIC_WATER_ID = 113L
+        private const val MAX_U32 = 4294967295L
         private val INVENTORY_MARKER = byteArrayOf(
             0x04, 0x53, 0x52, 0x41, 0x44, 0x02, 0x00, 0x00, 0x00, 0x00, 0x30
         )
-        private val CURRENCY_SECOND_MARKER = byteArrayOf(
+        private val PLAYER_MARKER = byteArrayOf(
             0x04, 0x53, 0x52, 0x50, 0x4c, 0x0e, 0x00, 0x00, 0x00, 0x00, 0x30
         )
     }
 
     private data class ArchiveEntry(val name: String, val bytes: ByteArray, val time: Long)
-    private data class InventoryField(val id: Long, val countOffset: Int, val count: Long)
+    private data class InventoryField(
+        val id: Long,
+        val idOffset: Int,
+        val countOffset: Int,
+        val count: Long
+    )
     private data class ParsedSave(
         val entries: List<ArchiveEntry>,
         val gameEntryIndex: Int,
         val payload: ByteArray,
-        val currencyOffsets: List<Int>,
-        val inventoryFields: List<InventoryField>,
+        val newbucksOffset: Int?,
+        val inventorySlots: List<InventoryField>,
+        val waterSlot: InventoryField?,
         val sourceName: String
+    )
+    private data class SlotEditor(
+        val idInput: EditText,
+        val countInput: EditText,
+        val nameLabel: TextView,
+        val field: InventoryField
     )
 
     private var parsed: ParsedSave? = null
     private var newbucksInput: EditText? = null
-    private var waterInput: EditText? = null
-    private val inventoryInputs = mutableListOf<Pair<InventoryField, EditText>>()
+    private val slotEditors = mutableListOf<SlotEditor>()
+    private var waterCountInput: EditText? = null
+    private var waterTypeSpinner: Spinner? = null
     private var pendingArchive: ByteArray? = null
     private var sourceName = "save"
     private lateinit var page: LinearLayout
@@ -67,7 +86,6 @@ class SaveEditorActivity : Activity() {
         }
         scroll.addView(page)
         setContentView(scroll)
-
         page.addView(TextView(this).apply {
             text = title
             textSize = 25f
@@ -75,7 +93,7 @@ class SaveEditorActivity : Activity() {
             setPadding(0, 0, 0, dp(8))
         })
         page.addView(TextView(this).apply {
-            text = "Первый прототип • Ньюбаки, вода и инвентарь"
+            text = "Редактор сохранения • 4 обычных слота + отдельный слот воды"
             textSize = 14f
             setTextColor(Color.LTGRAY)
             setPadding(0, 0, 0, dp(18))
@@ -92,7 +110,9 @@ class SaveEditorActivity : Activity() {
         buildBase("SRML Save Editor")
         status.text = "Выбери оригинальный файл сохранения. Поддерживаются ZIP-архивы с записью gamesave-sav, в том числе файлы без расширения."
         addButton("Выбрать сохранение") { openSavePicker() }
-        addButton("Тест распознавания нового сохранения") { startActivity(Intent(this, SaveAnalyzerActivity::class.java)) }
+        addButton("Тест распознавания нового сохранения") {
+            startActivity(Intent(this, SaveAnalyzerActivity::class.java))
+        }
         addHint("Исходный файл не перезаписывается. Редактор создаёт отдельную копию с тем же именем.")
     }
 
@@ -126,7 +146,7 @@ class SaveEditorActivity : Activity() {
                 contentResolver.openOutputStream(uri, "wt")?.use { it.write(archive) }
                     ?: error("Не удалось записать файл")
                 buildWelcome()
-                status.text = "Готово! Создана изменённая копия: ${queryName(uri) ?: sourceName}. Теперь перенеси её в pt_saves, сохранив исходное имя."
+                status.text = "Готово! Создана изменённая копия: ${queryName(uri) ?: sourceName}. Перенеси её в pt_saves, сохранив исходное имя."
                 addButton("Выбрать другое сохранение") { openSavePicker() }
             } catch (e: Exception) {
                 status.text = "Ошибка записи: ${e.message ?: "неизвестная ошибка"}"
@@ -165,83 +185,152 @@ class SaveEditorActivity : Activity() {
         val payload = entries[gameIndex].bytes
         if (payload.size < 100) error("Файл сохранения слишком маленький или повреждён")
 
-        val firstCurrencyMarker = byteArrayOf(0x03, 0x00, 0x00, 0x00)
-        val firstCandidates = findAll(payload, firstCurrencyMarker).filter { offset ->
-            offset + 12 <= payload.size &&
-                payload.copyOfRange(offset + 8, offset + 12).contentEquals(byteArrayOf(0x36, 0, 0, 0))
+        // Newbucks are read from the observed SRPL-relative +22 field.
+        // The old +30 equality check was false: that is a different field.
+        val playerMarkers = findAll(payload, PLAYER_MARKER)
+        if (playerMarkers.size != 1) error("Не удалось однозначно найти блок игрока SRPL")
+        val playerTag = playerMarkers.single() + 1
+        val newbucksOffset = if (playerTag + 26 <= payload.size) playerTag + 22 else null
+
+        // Find compact inventory record groups near the player block.
+        val markers = findAllInRange(
+            payload, INVENTORY_MARKER, playerTag,
+            minOf(payload.size, playerTag + 6000)
+        )
+        val groups = mutableListOf<MutableList<Int>>()
+        for (marker in markers) {
+            val group = groups.lastOrNull()
+            if (group == null || marker - group.last() > 128) groups.add(mutableListOf(marker))
+            else group.add(marker)
         }
-        val secondMarkers = findAll(payload, CURRENCY_SECOND_MARKER)
-        val currencyOffsets = mutableListOf<Int>()
-        if (firstCandidates.size != 1 || secondMarkers.size != 1) {
-            error("Не удалось однозначно определить поля ньюбаксов для этой версии сохранения")
-        }
-        currencyOffsets.add(firstCandidates.single() + 4)
-        currencyOffsets.add(secondMarkers.single() + 23)
-        val firstCurrency = readU32(payload, currencyOffsets[0])
-        val secondCurrency = readU32(payload, currencyOffsets[1])
-        if (firstCurrency != secondCurrency) {
-            error("Два поля ньюбаксов не совпадают. Сохранение не будет изменено")
+        val selected = groups.maxByOrNull { it.size } ?: emptyList()
+        if (selected.size < 4) {
+            error("Найдено меньше четырёх записей инвентаря. Слоты не будут угаданы.")
         }
 
-        val inventory = mutableListOf<InventoryField>()
-        for (markerOffset in findAll(payload, INVENTORY_MARKER)) {
-            val idOffset = markerOffset + INVENTORY_MARKER.size
+        val records = selected.mapNotNull { marker ->
+            val idOffset = marker + INVENTORY_MARKER.size
             val countOffset = idOffset + 4
-            if (countOffset + 4 > payload.size) continue
-            inventory.add(InventoryField(readU32(payload, idOffset), countOffset, readU32(payload, countOffset)))
+            val id = readU32(payload, idOffset)
+            val count = readU32(payload, countOffset)
+            if (id == null || count == null) null
+            else InventoryField(id, idOffset, countOffset, count)
         }
-        val editableInventory = inventory.filter { it.id == WATER_ID || it.id == 59L || it.id == 16L }
-        if (editableInventory.none { it.id == WATER_ID }) {
-            error("Не найдено поле воды (ID 48). Эта структура сохранения пока не поддерживается")
-        }
-        return ParsedSave(entries, gameIndex, payload, currencyOffsets, editableInventory, name)
+        if (records.size < 4) error("Не удалось прочитать четыре основных слота")
+        val regularSlots = records.take(4)
+        val fifth = records.getOrNull(4)
+        val waterSlot = fifth?.takeIf { it.id == WATER_ID || it.id == MAGIC_WATER_ID }
+
+        return ParsedSave(
+            entries, gameIndex, payload, newbucksOffset,
+            regularSlots, waterSlot, name
+        )
     }
 
     private fun showEditor() {
         val data = parsed ?: return
         buildBase("Редактирование")
-        val currentCurrency = readU32(data.payload, data.currencyOffsets[0])
-        status.text = "Сохранение распознано. Найдено записей инвентаря: ${data.inventoryFields.size}. Исходное имя: ${data.sourceName}"
-        addSection("Ньюбаки")
-        newbucksInput = addNumberField("Количество", currentCurrency.toString())
-        addSection("Вода")
-        val water = data.inventoryFields.singleOrNull { it.id == WATER_ID }
-            ?: error("Найдено несколько записей воды. Нужна дополнительная проверка формата")
-        waterInput = addNumberField("Количество воды", water.count.toString())
-        addSection("Инвентарь")
-        inventoryInputs.clear()
-        data.inventoryFields.filter { it.id != WATER_ID }.forEachIndexed { index, field ->
-            val itemName = when (field.id) {
-                59L -> "Медовые слаймы"
-                16L -> "Кур-курицы"
-                else -> "Предмет ID ${field.id}"
-            }
-            val input = addNumberField("$itemName • запись ${index + 1}", field.count.toString())
-            inventoryInputs.add(field to input)
+        val currencyOffset = data.newbucksOffset
+        addSection("Ньюбаксы")
+        if (currencyOffset != null) {
+            val current = readU32(data.payload, currencyOffset)
+            if (current != null) newbucksInput = addNumberField("Количество", current.toString())
+            else addHint("Поле Ньюбаксов не распознано. Остальные разделы доступны.")
+        } else {
+            addHint("Поле Ньюбаксов не распознано. Остальные разделы доступны.")
         }
+
+        addSection("Инвентарь")
+        addHint("Изменяются только слоты 1–4. ID 48, 113 и 16001 в них запрещены. Слоты после пятого не отображаются и не изменяются.")
+        slotEditors.clear()
+        data.inventorySlots.forEachIndexed { index, field ->
+            addSlotEditor(index + 1, field)?.let { slotEditors.add(it) }
+        }
+
+        addSection("Слот 5 • вода")
+        val water = data.waterSlot
+        if (water == null) {
+            addHint("Слот воды заблокирован или его запись не распознана. Редактирование пятого слота отключено.")
+        } else {
+            addHint("Слот воды обнаружен. Здесь разрешены только ID 48 (вода) и ID 113 (древняя вода).")
+            val spinner = Spinner(this)
+            val options = listOf("48 — Вода", "113 — Древняя вода")
+            spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, options)
+            spinner.setSelection(if (water.id == MAGIC_WATER_ID) 1 else 0)
+            page.addView(spinner)
+            waterTypeSpinner = spinner
+            waterCountInput = addNumberField("Количество", water.count.toString())
+        }
+
         addButton("Сохранить изменённую копию") { prepareOutput() }
-        addHint("Не меняй имя файла при переносе в pt_saves. Игра распознаёт сохранение по исходному имени.")
+        addHint("Переноси результат в pt_saves под исходным именем. Не переименовывай файл.")
         addButton("Открыть другое сохранение") { openSavePicker() }
+    }
+
+    private fun addSlotEditor(slotNumber: Int, field: InventoryField): SlotEditor {
+        addSection("Слот $slotNumber")
+        val idInput = addNumberField("ID предмета", field.id.toString())
+        val nameLabel = TextView(this).apply {
+            textSize = 13f
+            setTextColor(Color.rgb(170, 205, 180))
+            setPadding(0, 0, 0, dp(6))
+            text = ItemCatalog.displayName(field.id)
+        }
+        page.addView(nameLabel)
+        idInput.addTextChangedListener(object : TextWatcher {
+            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
+            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
+                val id = s?.toString()?.toLongOrNull()
+                nameLabel.text = when {
+                    id == null -> "Введи числовой ID"
+                    !ItemCatalog.isKnown(id) -> "ID отсутствует в каталоге"
+                    id in setOf(48L, 113L, 16001L) -> "Запрещено в слотах 1–4"
+                    else -> ItemCatalog.displayName(id)
+                }
+            }
+            override fun afterTextChanged(s: Editable?) {}
+        })
+        val countInput = addNumberField("Количество", field.count.toString())
+        return SlotEditor(idInput, countInput, nameLabel, field)
     }
 
     private fun prepareOutput() {
         try {
             val data = parsed ?: error("Сначала выбери сохранение")
             val payload = data.payload.copyOf()
-            val newbucks = parseUnsigned(newbucksInput?.text?.toString(), "Ньюбаки")
-            val water = parseUnsigned(waterInput?.text?.toString(), "Вода")
-            data.currencyOffsets.forEach { writeU32(payload, it, newbucks) }
-            val waterField = data.inventoryFields.single { it.id == WATER_ID }
-            writeU32(payload, waterField.countOffset, water)
-            inventoryInputs.forEach { (field, input) ->
-                writeU32(payload, field.countOffset, parseUnsigned(input.text.toString(), "Предмет ID ${field.id}"))
+
+            val newbucksValue = newbucksInput?.text?.toString()?.let {
+                parseUnsigned(it, "Ньюбаки")
+            }
+            if (newbucksValue != null) {
+                val offset = data.newbucksOffset ?: error("Поле Ньюбаксов не распознано")
+                writeU32(payload, offset, newbucksValue)
+                if (readU32(payload, offset) != newbucksValue) error("Проверка Ньюбаксов не пройдена")
             }
 
-            if (data.currencyOffsets.any { readU32(payload, it) != newbucks }) error("Проверка ньюбаксов не пройдена")
-            if (readU32(payload, waterField.countOffset) != water) error("Проверка воды не пройдена")
-            inventoryInputs.forEach { (field, input) ->
-                if (readU32(payload, field.countOffset) != parseUnsigned(input.text.toString(), "Предмет")) {
-                    error("Проверка инвентаря не пройдена")
+            slotEditors.forEachIndexed { index, editor ->
+                val id = parseUnsigned(editor.idInput.text.toString(), "ID слота ${index + 1}")
+                if (!ItemCatalog.isAllowedInRegularSlot(id)) {
+                    error("Слот ${index + 1}: ID $id отсутствует в каталоге или запрещён. Для слотов 1–4 нельзя использовать 48, 113 и 16001.")
+                }
+                val count = parseUnsigned(editor.countInput.text.toString(), "Количество в слоте ${index + 1}")
+                writeU32(payload, editor.field.idOffset, id)
+                writeU32(payload, editor.field.countOffset, count)
+                if (readU32(payload, editor.field.idOffset) != id ||
+                    readU32(payload, editor.field.countOffset) != count) {
+                    error("Проверка слота ${index + 1} не пройдена")
+                }
+            }
+
+            val water = data.waterSlot
+            if (water != null) {
+                val selectedId = if ((waterTypeSpinner?.selectedItemPosition ?: 0) == 1) MAGIC_WATER_ID else WATER_ID
+                val count = parseUnsigned(waterCountInput?.text?.toString(), "Количество воды")
+                writeU32(payload, water.idOffset, selectedId)
+                writeU32(payload, water.countOffset, count)
+                if (readU32(payload, water.idOffset) != selectedId ||
+                    readU32(payload, water.countOffset) != count) {
+                    error("Проверка пятого слота не пройдена")
                 }
             }
 
@@ -269,28 +358,29 @@ class SaveEditorActivity : Activity() {
 
     private fun parseUnsigned(text: String?, label: String): Long {
         val value = text?.trim()?.toLongOrNull() ?: error("$label: введи целое число")
-        if (value < 0 || value > 4294967295L) error("$label: допустимый диапазон 0–4294967295")
+        if (value < 0 || value > MAX_U32) error("$label: допустимый диапазон 0–4294967295")
         return value
     }
 
-    private fun findAll(data: ByteArray, pattern: ByteArray): List<Int> {
+    private fun findAll(data: ByteArray, pattern: ByteArray): List<Int> =
+        findAllInRange(data, pattern, 0, data.size)
+
+    private fun findAllInRange(data: ByteArray, pattern: ByteArray, start: Int, end: Int): List<Int> {
         val found = mutableListOf<Int>()
-        if (pattern.isEmpty() || data.size < pattern.size) return found
-        for (i in 0..data.size - pattern.size) {
+        if (pattern.isEmpty() || end - start < pattern.size) return found
+        for (i in start..(end - pattern.size)) {
             var match = true
-            for (j in pattern.indices) {
-                if (data[i + j] != pattern[j]) {
-                    match = false
-                    break
-                }
+            for (j in pattern.indices) if (data[i + j] != pattern[j]) {
+                match = false
+                break
             }
             if (match) found.add(i)
         }
         return found
     }
 
-    private fun readU32(data: ByteArray, offset: Int): Long {
-        if (offset < 0 || offset + 4 > data.size) error("Поле выходит за границы сохранения")
+    private fun readU32(data: ByteArray, offset: Int): Long? {
+        if (offset < 0 || offset + 4 > data.size) return null
         return (data[offset].toLong() and 0xff) or
             ((data[offset + 1].toLong() and 0xff) shl 8) or
             ((data[offset + 2].toLong() and 0xff) shl 16) or
@@ -324,6 +414,7 @@ class SaveEditorActivity : Activity() {
         val input = EditText(this).apply {
             setSingleLine(true)
             inputType = InputType.TYPE_CLASS_NUMBER
+            filters = arrayOf(InputFilter.LengthFilter(10))
             setText(value)
             textSize = 16f
             setTextColor(Color.WHITE)
