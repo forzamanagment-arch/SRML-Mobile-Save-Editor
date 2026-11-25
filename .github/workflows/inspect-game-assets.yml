@@ -3,8 +3,6 @@ name: Inspect and package Slime Rancher assets
 on:
   push:
     branches: [ main ]
-    paths:
-      - '.github/workflows/inspect-game-assets.yml'
   workflow_dispatch:
 
 permissions:
