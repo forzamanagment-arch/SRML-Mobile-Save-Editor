@@ -118,6 +118,7 @@ public class MainActivity extends Activity {
         content.setPadding(0,dp(14),0,dp(18));
         scroll.addView(content);
         root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
+        output=text("",12,MUTED,false);output.setPadding(dp(4),dp(5),dp(4),dp(5));root.addView(output,new LinearLayout.LayoutParams(-1,-2));
         scroll.setOnTouchListener((v,event)->{
             if(event.getAction()==MotionEvent.ACTION_DOWN){touchStartX=event.getX();touchStartY=event.getY();return false;}
             if(event.getAction()==MotionEvent.ACTION_UP){
@@ -225,7 +226,7 @@ public class MainActivity extends Activity {
     }
     private class NavIcon extends View{
         private final Paint paint=new Paint(3);private final int type;private boolean active;
-        NavIcon(Activity a,int t){super(a);type=t;paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(dp(2));paint.setStrokeCap(Paint.Cap.ROUND);paint.setStrokeJoin(Paint.Join.ROUND);}
+        NavIcon(Activity a,int t){super(a);type=t;paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(2f);paint.setStrokeCap(Paint.Cap.ROUND);paint.setStrokeJoin(Paint.Join.ROUND);}
         void setActive(boolean a){active=a;invalidate();}
         @Override protected void onDraw(Canvas canvas){
             super.onDraw(canvas);paint.setColor(active?TEAL:Color.rgb(155,168,181));
@@ -316,8 +317,8 @@ public class MainActivity extends Activity {
     }
     private void showBackups(){
         showingBackups=true;
-        if(!hasPermission()){show("Подключи Shizuku для просмотра резервных копий.");refreshStatus();return;}
-        show("Загружаю резервные копии…");
+        if(!hasPermission()){show(tr("Connect Shizuku to view backups.","Подключи Shizuku для просмотра резервных копий."));refreshStatus();return;}
+        show(tr("Loading backups…","Загружаю резервные копии…"));
         executor.execute(()->{
             try{
                 List<ShizukuFileAccess.BackupItem>items=ShizukuFileAccess.listBackups();
@@ -332,7 +333,7 @@ public class MainActivity extends Activity {
         hint.setPadding(0,dp(4),0,dp(12));content.addView(hint);
         if(items.isEmpty()){
             addEmptyCard(tr("No backups yet","Пока нет резервных копий"),tr("Backups appear here after you edit a save.","Копии появятся здесь после редактирования миров."));
-            if(backupNotice!=null){show(backupNotice);backupNotice=null;}else show("Резервных копий: 0");return;
+            if(backupNotice!=null){show(backupNotice);backupNotice=null;}else show(tr("Backups: 0","Резервных копий: 0"));return;
         }
         for(ShizukuFileAccess.BackupItem item:items){
             LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
@@ -343,7 +344,7 @@ public class MainActivity extends Activity {
             Button restore=actionButton(tr("Restore backup","Восстановить"),()->confirmRestore(item));
             card.addView(restore,new LinearLayout.LayoutParams(-1,dp(46)));
         }
-        if(backupNotice!=null){show(backupNotice);backupNotice=null;}else show("Резервных копий: "+items.size());
+        if(backupNotice!=null){show(backupNotice);backupNotice=null;}else show(tr("Backups: ","Резервных копий: ")+items.size());
     }
     private void confirmRestore(ShizukuFileAccess.BackupItem item){
         new AlertDialog.Builder(this)
@@ -372,7 +373,7 @@ public class MainActivity extends Activity {
     }
     private void scanSaves(){
         if(!hasPermission()){show("Сначала подключи Shizuku и выдай разрешение.");refreshStatus();return;}
-        showingBackups=false;show("Загружаю список миров…");
+        showingBackups=false;show(tr("Loading worlds…","Загружаю список миров…"));
         executor.execute(()->{
             try{
                 ShizukuFileAccess.ensureBackup();
@@ -413,7 +414,7 @@ public class MainActivity extends Activity {
             TextView detail=text(slot.fileName+"  •  "+slot.sizeText,12,MUTED,false);detail.setPadding(0,dp(3),0,dp(8));card.addView(detail);
             card.addView(actionButton(tr("Edit save","Редактировать"),()->beginEditing(slot)),new LinearLayout.LayoutParams(-1,dp(46)));
         }
-        show("Найдено миров: "+found.size());
+        show(tr("Worlds found: ","Найдено миров: ")+found.size());
     }
     private void addEmptyCard(String title,String description){
         LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setPadding(dp(20),dp(20),dp(20),dp(20));
