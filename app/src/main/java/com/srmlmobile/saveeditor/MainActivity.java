@@ -42,7 +42,6 @@ public class MainActivity extends Activity {
     private LinearLayout content;
     private Button worldsTab,backupTab,shizukuButton;
     private String backupNotice;
-    private String backupNotice;
     private boolean showingBackups=false;
 
     private final Shizuku.OnRequestPermissionResultListener permissionListener=(code,result)->runOnUiThread(()->{
