@@ -388,7 +388,11 @@ class SaveEditorActivity : Activity() {
             waterFrame.addView(waterBadge, FrameLayout.LayoutParams(-2, dp(20), Gravity.TOP or Gravity.END))
             waterTile.addView(waterFrame, LinearLayout.LayoutParams(dp(48), dp(48)))
             val waterText = TextView(this).apply {
-                text = tr("Water slot", "Слот воды")
+                text = when (water.id) {
+                    WATER_ID -> tr("Water", "Вода")
+                    MAGIC_WATER_ID -> tr("Ancient Water", "Древняя вода")
+                    else -> tr("Empty water slot", "Пустой слот воды")
+                }
                 textSize = 14f
                 setTextColor(Color.rgb(45,55,72))
                 typeface = GameAssets.typeface(this@SaveEditorActivity)
@@ -399,6 +403,13 @@ class SaveEditorActivity : Activity() {
                     spinner.setSelection(when (selectedId) { WATER_ID -> 1; MAGIC_WATER_ID -> 2; else -> 0 })
                     waterCountInput?.setText(selectedCount.toString())
                     waterBadge.text = selectedCount.toString()
+                    val selectedWaterIcon = GameAssets.icon(this@SaveEditorActivity, if (selectedId == MAGIC_WATER_ID) "AncientWater" else "Water")
+                    if (selectedWaterIcon != null) waterIcon.setImageBitmap(selectedWaterIcon)
+                    waterText.text = when (selectedId) {
+                        WATER_ID -> tr("Water", "Вода")
+                        MAGIC_WATER_ID -> tr("Ancient Water", "Древняя вода")
+                        else -> tr("Empty water slot", "Пустой слот воды")
+                    }
                 }
             }
             waterTile.setOnClickListener { openWaterPicker() }
