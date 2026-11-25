@@ -18,6 +18,9 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Spinner
 import android.widget.TextView
+import android.widget.ImageView
+import android.widget.FrameLayout
+import android.view.Gravity
 import java.io.ByteArrayInputStream
 import java.io.ByteArrayOutputStream
 import java.util.zip.ZipEntry
@@ -63,7 +66,9 @@ class SaveEditorActivity : Activity() {
         val idInput: EditText,
         val countInput: EditText,
         val nameLabel: TextView,
-        val field: InventoryField
+        val field: InventoryField,
+        val iconView: ImageView,
+        val badge: TextView
     )
 
     private var parsed: ParsedSave? = null
@@ -116,7 +121,7 @@ class SaveEditorActivity : Activity() {
             text = "SRML  •  SAVE TOOLS"
             textSize = 11f
             letterSpacing = 0.12f
-            typeface = android.graphics.Typeface.create("sans-serif-rounded", android.graphics.Typeface.BOLD)
+            typeface = GameAssets.typeface(this@SaveEditorActivity)
             setTextColor(Color.rgb(78, 205, 196))
         })
         page.addView(TextView(this).apply {
@@ -302,11 +307,19 @@ class SaveEditorActivity : Activity() {
             else addHint("Текущую энергию не удалось прочитать.")
         } else addHint("Поле текущей энергии не распознано.")
 
-        addSection(tr("Inventory", "Инвентарь"))
-        addHint(tr("Edit the four main inventory slots.", "Изменяются четыре основных слота инвентаря."))
+        addSection(tr("INVENTORY", "ИНВЕНТАРЬ"))
+        addHint(tr("Four item slots and one dedicated water slot. Tap a tile to choose an item.", "Четыре слота предметов и отдельный слот воды. Нажми на плитку, чтобы выбрать предмет."))
         slotEditors.clear()
-        data.inventorySlots.forEachIndexed { index, field ->
-            addSlotEditor(index + 1, field)?.let { slotEditors.add(it) }
+        val inventoryGrid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        page.addView(inventoryGrid)
+        data.inventorySlots.take(4).chunked(2).forEachIndexed { rowIndex, pair ->
+            val row = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+            pair.forEachIndexed { column, field ->
+                val editor = addSlotEditor(rowIndex * 2 + column + 1, field, row)
+                slotEditors.add(editor)
+            }
+            if (pair.size == 1) row.addView(android.view.View(this), LinearLayout.LayoutParams(0, dp(112), 1f))
+            inventoryGrid.addView(row)
         }
 
         addSection(tr("Slot 5 • water", "Слот 5 • вода"))
@@ -332,31 +345,88 @@ class SaveEditorActivity : Activity() {
         addHint(tr("After saving, the file returns to pt_saves with its original name. The backup remains in Backup.", "После сохранения файл вернётся в pt_saves под исходным именем. Резервная копия останется в Backup."))
     }
 
-    private fun addSlotEditor(slotNumber: Int, field: InventoryField): SlotEditor {
-        addSection(tr("Slot $slotNumber", "Слот $slotNumber"))
-        val idInput = addNumberField(tr("Item ID", "ID предмета"), field.id.toString())
+    private fun addSlotEditor(slotNumber: Int, field: InventoryField, parent: LinearLayout): SlotEditor {
+        val idInput = EditText(this).apply { setText(field.id.toString()); visibility = android.view.View.GONE }
+        val countInput = EditText(this).apply { setText(field.count.toString()); visibility = android.view.View.GONE }
         val nameLabel = TextView(this).apply {
-            textSize = 13f
-            setTextColor(Color.rgb(78, 170, 164))
-            setPadding(0, 0, 0, dp(6))
             text = ItemCatalog.displayName(field.id)
+            textSize = 11f
+            gravity = Gravity.CENTER
+            maxLines = 2
+            setTextColor(Color.rgb(45,55,72))
+            typeface = GameAssets.typeface(this@SaveEditorActivity)
         }
-        page.addView(nameLabel)
-        idInput.addTextChangedListener(object : TextWatcher {
-            override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
-            override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) {
-                val id = s?.toString()?.toLongOrNull()
-                nameLabel.text = when {
-                    id == null -> "Введи числовой ID"
-                    !ItemCatalog.isKnown(id) -> "ID отсутствует в каталоге"
-                    id in setOf(48L, 113L, 16001L) -> "Запрещено в слотах 1–4"
-                    else -> ItemCatalog.displayName(id)
-                }
+        val iconView = ImageView(this)
+        val badge = TextView(this).apply {
+            text = field.count.toString()
+            textSize = 10f
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            setPadding(dp(6), 0, dp(6), 0)
+            background = rounded(Color.rgb(63,184,173), Color.TRANSPARENT, dp(20))
+        }
+        fun refreshTile() {
+            val id = idInput.text.toString().toLongOrNull() ?: 0L
+            val aliases = when (id) {
+                1L -> listOf("RadSlime"); 2L -> listOf("RockSlime"); 3L -> listOf("PinkSlime")
+                8L -> listOf("Cuberry"); 9L -> listOf("MintMango"); 16L -> listOf("HenHen")
+                17L -> listOf("Roostro"); 19L -> listOf("Carrot"); 27L -> listOf("Pogofruit")
+                29L -> listOf("HeartBeet"); 31L -> listOf("PhosphorSlime"); 37L -> listOf("TabbySlime")
+                48L -> listOf("Water"); 51L -> listOf("HunterSlime"); 59L -> listOf("HoneySlime")
+                76L -> listOf("Key"); 89L -> listOf("QuantumSlime"); else -> emptyList()
+            } + ItemCatalog.displayName(id)
+            val bitmap = GameAssets.icon(this, *aliases.toTypedArray())
+            if (bitmap != null) iconView.setImageBitmap(bitmap) else {
+                iconView.setImageDrawable(null)
+                iconView.setBackground(rounded(Color.rgb(232,220,200), Color.rgb(203,191,168), dp(12)))
+                iconView.contentDescription = "?"
             }
-            override fun afterTextChanged(s: Editable?) {}
-        })
-        val countInput = addNumberField(tr("Amount", "Количество"), field.count.toString())
-        return SlotEditor(idInput, countInput, nameLabel, field)
+            badge.text = countInput.text.toString()
+            nameLabel.text = if (id == 0L) "?" else ItemCatalog.displayName(id)
+        }
+        val tile = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            gravity = Gravity.CENTER
+            setPadding(dp(8), dp(8), dp(8), dp(8))
+            background = rounded(Color.rgb(232,220,200), Color.rgb(203,191,168), dp(16))
+        }
+        val frame = FrameLayout(this)
+        frame.addView(iconView, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.CENTER))
+        frame.addView(badge, FrameLayout.LayoutParams(-2, dp(20), Gravity.TOP or Gravity.END))
+        tile.addView(frame, LinearLayout.LayoutParams(-1, dp(54)))
+        tile.addView(nameLabel, LinearLayout.LayoutParams(-1, dp(34)))
+        val params = LinearLayout.LayoutParams(0, dp(108), 1f)
+        params.setMargins(dp(4), dp(4), dp(4), dp(8))
+        parent.addView(tile, params)
+        tile.setOnClickListener {
+            val entries = ItemCatalog.names.entries.filter { (id, _) -> ItemCatalog.isAllowedInRegularSlot(id) }
+                .sortedBy { it.key }
+            val labels = entries.map { "${it.value}  •  ID: ${it.key}" }.toTypedArray()
+            AlertDialog.Builder(this)
+                .setTitle(tr("Choose item for slot $slotNumber", "Выбор предмета для слота $slotNumber"))
+                .setItems(labels) { _, which ->
+                    val selected = entries[which]
+                    idInput.setText(selected.key.toString())
+                    val quantity = EditText(this).apply {
+                        inputType = InputType.TYPE_CLASS_NUMBER
+                        setText(countInput.text.toString())
+                        hint = tr("Amount", "Количество")
+                    }
+                    AlertDialog.Builder(this)
+                        .setTitle(selected.value)
+                        .setView(quantity)
+                        .setNegativeButton(tr("Cancel", "Отмена"), null)
+                        .setPositiveButton(tr("Select", "Выбрать")) { _, _ ->
+                            val amount = quantity.text.toString().toLongOrNull()
+                            if (amount != null && amount in 0..MAX_U32) countInput.setText(amount.toString())
+                            refreshTile()
+                        }.show()
+                }
+                .setNegativeButton(tr("Cancel", "Отмена"), null)
+                .show()
+        }
+        refreshTile()
+        return SlotEditor(idInput, countInput, nameLabel, field, iconView, badge)
     }
 
     private fun prepareOutput() {
@@ -563,7 +633,7 @@ class SaveEditorActivity : Activity() {
             textSize = 15f
             setTextColor(Color.WHITE)
             typeface = android.graphics.Typeface.create("sans-serif-rounded", android.graphics.Typeface.BOLD)
-            background = rounded(Color.rgb(78, 205, 196), Color.TRANSPARENT, dp(28))
+            background = rounded(Color.rgb(63, 184, 173), Color.TRANSPARENT, dp(28))
             setOnClickListener { action() }
         }
         val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52))
