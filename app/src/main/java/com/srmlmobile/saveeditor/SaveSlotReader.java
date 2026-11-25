@@ -75,16 +75,23 @@ final class SaveSlotReader {
             if (i > 0) result.append(' ');
             result.append(String.format(Locale.ROOT, "%02X", file[i] & 0xFF));
         }
-        if (startsWith(file, "SRGAME")) return result.append(", format=raw-SRGAME").toString();
+        if (isGamePayload(file))
+            return result.append(", source=raw, savPayloadSignature=recognized").toString();
 
-        result.append(", zipLocalHeader=").append(file.length >= 4
-            && file[0] == 'P' && file[1] == 'K' && file[2] == 3 && file[3] == 4);
+        boolean zipHeader = file.length >= 4
+            && file[0] == 'P' && file[1] == 'K' && file[2] == 3 && file[3] == 4;
+        result.append(", zipLocalHeader=").append(zipHeader);
         int entries = 0;
+        int savEntries = 0;
+        boolean recognizedSav = false;
         try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(file))) {
             ZipEntry entry;
             byte[] buffer = new byte[8192];
             while ((entry = zip.getNextEntry()) != null) {
                 entries++;
+                boolean isSav = !entry.isDirectory() && entry.getName() != null
+                    && entry.getName().toLowerCase(Locale.ROOT).endsWith("-sav");
+                if (isSav) savEntries++;
                 result.append(", entry[").append(entries).append("]=").append(entry.getName())
                     .append("(declaredSize=").append(entry.getSize()).append(", head=");
                 int read = 0;
@@ -96,6 +103,11 @@ final class SaveSlotReader {
                 for (int i = 0; i < read; i++) {
                     if (i > 0) result.append(' ');
                     result.append(String.format(Locale.ROOT, "%02X", buffer[i] & 0xFF));
+                }
+                if (isSav && read >= 7 && (buffer[0] & 0xFF) == 0x06
+                    && buffer[1] == 'S' && buffer[2] == 'R' && buffer[3] == 'G'
+                    && buffer[4] == 'A' && buffer[5] == 'M' && buffer[6] == 'E') {
+                    recognizedSav = true;
                 }
                 result.append(')');
                 while (zip.read(buffer) != -1) { /* drain current entry */ }
@@ -109,7 +121,10 @@ final class SaveSlotReader {
             result.append(", zipError=").append(t.getClass().getSimpleName())
                 .append(':').append(t.getMessage());
         }
-        if (entries == 0) result.append(", zipEntries=0");
+        result.append(", zipEntries=").append(entries)
+            .append(", savEntries=").append(savEntries)
+            .append(", savPayloadSignature=").append(recognizedSav ? "recognized" : "not-recognized");
+        if (entries == 0) result.append(", note=no-readable-zip-entries");
         return result.toString();
     }
 
