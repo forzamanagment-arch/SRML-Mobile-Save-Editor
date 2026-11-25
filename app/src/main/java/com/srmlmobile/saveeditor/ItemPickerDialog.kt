@@ -24,6 +24,7 @@ object ItemPickerDialog {
         waterOnly: Boolean = false,
         onSelect: (Long, Long) -> Unit
     ) {
+        val russian = activity.getSharedPreferences("srml_settings", Activity.MODE_PRIVATE).getBoolean("russian", false)
         val root = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(activity, 12), dp(activity, 12), dp(activity, 12), dp(activity, 10))
@@ -80,7 +81,6 @@ object ItemPickerDialog {
         }
         var selectedId = currentId
         var category = "All"
-        val russian = activity.getSharedPreferences("srml_settings", Activity.MODE_PRIVATE).getBoolean("russian", false)
         fun qtyButton(label: String, action: () -> Unit) = Button(activity).apply {
             text = label
             isAllCaps = false
