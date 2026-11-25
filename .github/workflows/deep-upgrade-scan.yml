@@ -1,0 +1,94 @@
+name: Deep upgrade structure scan
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/deep-upgrade-scan.yml"
+permissions:
+  contents: read
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download reference saves
+        run: curl -fL "https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/Savefiles.zip" -o /tmp/saves.zip
+      - name: Scan binary structures
+        run: |
+          python3 - <<'PY'
+          import zipfile,io,os,re,struct,collections
+          wanted=['20261125171726-2-1','20261125175309-3-0','20261122185933-1-1']
+          files={}
+          def walk(z,p=''):
+            for it in z.infolist():
+              if it.is_dir(): continue
+              b=z.read(it.filename); n=p+it.filename
+              if b[:2]==b'PK':
+                try: walk(zipfile.ZipFile(io.BytesIO(b)),n+'!'); continue
+                except: pass
+              files[n]=b
+          walk(zipfile.ZipFile('/tmp/saves.zip'))
+          saves={}
+          for path,b in files.items():
+            if path.endswith('gamesave-sav'):
+              root=os.path.basename(path.split('!')[0])
+              if root in wanted and b.find(b'SRPL')>=0: saves[root]=b
+          assert len(saves)==3, list(saves)
+          print('SAVES',[(n,len(saves[n]),hex(saves[n].find(b'SRPL'))) for n in wanted])
+          tags=[b'SRPL',b'SRAD',b'SRGA',b'SRHD',b'SRLP',b'SRRW',b'SRTP',b'SRAP',b'SRSE',b'SRMA',b'SRRC']
+          print('=== TEXT STRINGS WITH UPGRADE-RELATED WORDS ===')
+          for n in wanted:
+            b=saves[n]; print('\nSAVE',n)
+            for m in re.finditer(rb'[ -~]{4,}',b):
+              s=m.group().decode('ascii','ignore')
+              if re.search(r'upgrade|health|energy|capacity|stamina|player|stat|level|boost|vital|inventory',s,re.I):
+                print(hex(m.start()),repr(s[:180]))
+          print('=== FULL-FILE INTEGER SIGNATURES 0,1,3 ===')
+          # Count locations where the same absolute offset has 0/1/3; report only if all files align.
+          for width,fmt in [(1,'B'),(2,'H'),(4,'I')]:
+            lim=min(len(saves[n]) for n in wanted)-width
+            hits=[]
+            for off in range(lim):
+              vals=[struct.unpack_from('<'+fmt,saves[n],off)[0] for n in wanted]
+              if vals==[0,1,3]: hits.append(off)
+            print('WIDTH',width,'COUNT',len(hits),'FIRST',[(hex(x),[saves[n][x-width:x+width+8].hex() for n in wanted]) for x in hits[:40]])
+          print('=== MARKER-RELATIVE RECORD INVENTORY ===')
+          for n in wanted:
+            b=saves[n]; print('\nSAVE',n)
+            for tag in tags:
+              pos=[m.start() for m in re.finditer(re.escape(tag),b)]
+              print(tag.decode(),len(pos))
+          print('=== TAG RECORDS WHOSE LOCAL BYTES CHANGE WITH TIER ===')
+          # For each marker, compare first 96 bytes following each occurrence; fingerprint by ordinal.
+          for tag in tags:
+            positions=[[m.start() for m in re.finditer(re.escape(tag),saves[n])] for n in wanted]
+            common=min(map(len,positions))
+            rows=[]
+            for i in range(common):
+              chunks=[saves[n][positions[k][i]:positions[k][i]+96] for k,n in enumerate(wanted)]
+              if len(set(chunks))>1:
+                # Print only first differing byte offsets and bytes for quick triage.
+                diffs=[]
+                for j in range(min(map(len,chunks))):
+                  v=[c[j] for c in chunks]
+                  if len(set(v))>1:
+                    diffs.append((j,v))
+                  if len(diffs)>=12: break
+                if diffs: rows.append((i,positions[0][i],diffs))
+            print('\nTAG',tag.decode(),'DIFF_RECORDS',len(rows))
+            for i,off,d in rows[:35]: print('record',i,'offset',hex(off),'diffs',[(hex(j),[hex(x) for x in v]) for j,v in d])
+          print('=== REPEATED BYTE/WORD TRIPLES BY MARKER-RELATIVE OFFSET ===')
+          # Aggregate all same-ordinal records for each tag and detect local scalar values matching tier triplet.
+          for tag in tags:
+            ps=[[m.start() for m in re.finditer(re.escape(tag),saves[n])] for n in wanted]
+            if min(map(len,ps))<1: continue
+            print('\nTAG',tag.decode())
+            for width,fmt in [(1,'B'),(2,'H'),(4,'I')]:
+              hits=[]
+              for idx in range(min(map(len,ps))):
+                chunks=[saves[n][ps[k][idx]:ps[k][idx]+128] for k,n in enumerate(wanted)]
+                lim=min(map(len,chunks))-width
+                for rel in range(4,lim):
+                  vals=[struct.unpack_from('<'+fmt,c,rel)[0] for c in chunks]
+                  if vals==[0,1,3]: hits.append((idx,rel))
+              if hits: print('width',width,'hits',[(i,hex(r)) for i,r in hits[:30]],'total',len(hits))
+          PY
