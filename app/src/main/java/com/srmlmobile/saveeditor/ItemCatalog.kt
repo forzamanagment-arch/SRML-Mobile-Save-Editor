@@ -331,13 +331,13 @@ object ItemCatalog {
         106L to "Tangle Slime", 108L to "Fire Slime", 109L to "Fire Plort",
         113L to "Ancient Water", 148L to "Gilded Ginger", 150L to "Saber Slime",
         16000L to "Glitch Slime", 16001L to "Debug Spray",
-        12000L to "Handlebar Mustache", 12001L to "Dark Sunglasses",
-        12002L to "Bow Tie", 12003L to "Googly Eyes",
-        12004L to "Serious Eyebrows", 12005L to "Nerd Glasses",
-        12006L to "Cute Bow", 12007L to "Crown",
-        12008L to "Top Hat", 12009L to "Party Hat",
-        12010L to "Pirate Patch", 12011L to "Hero Mask",
-        12012L to "Sci-Fi Visor", 12099L to "Fashion Pod Remover"
+        12000L to "Handlebar Fashion Pod", 12001L to "Shady Fashion Pod",
+        12002L to "Clip-On Fashion Pod", 12003L to "Googly Fashion Pod",
+        12004L to "Serious Fashion Pod", 12005L to "Scuba Fashion Pod",
+        12006L to "Cute Fashion Pod", 12007L to "Royal Fashion Pod",
+        12008L to "Dandy Fashion Pod", 12009L to "Party Fashion Pod",
+        12010L to "Piratey Fashion Pod", 12011L to "Heroic Fashion Pod",
+        12012L to "Galactic Fashion Pod", 12099L to "Fashion Pod Remover"
     )
 
     fun localizedName(id: Long, russian: Boolean): String =
