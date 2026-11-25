@@ -106,26 +106,27 @@ class SaveEditorActivity : Activity() {
         page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(20), dp(22), dp(20), dp(28))
-            setBackgroundColor(Color.rgb(10, 10, 12))
+            setBackgroundColor(Color.rgb(248, 240, 221))
         }
         scroll.addView(page)
         setContentView(scroll)
         page.addView(TextView(this).apply {
             text = title
-            textSize = 25f
-            setTextColor(Color.WHITE)
+            textSize = 27f
+            typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(57, 75, 105))
             setPadding(0, 0, 0, dp(8))
         })
         page.addView(TextView(this).apply {
-            text = "Редактор сохранения • 4 обычных слота + отдельный слот воды"
+            text = "Управление сохранением мира"
             textSize = 14f
-            setTextColor(Color.LTGRAY)
+            setTextColor(Color.rgb(119, 119, 111))
             setPadding(0, 0, 0, dp(18))
         })
         status = TextView(this).apply {
             textSize = 14f
-            setTextColor(Color.rgb(190, 210, 190))
-            setPadding(0, dp(12), 0, dp(12))
+            setTextColor(Color.rgb(57, 75, 105))
+            setPadding(dp(13), dp(11), dp(13), dp(11))
         }
         page.addView(status)
     }
@@ -137,7 +138,7 @@ class SaveEditorActivity : Activity() {
         addButton("Тест распознавания нового сохранения") {
             startActivity(Intent(this, SaveAnalyzerActivity::class.java))
         }
-        addHint("Исходный файл не перезаписывается. Редактор создаёт отдельную копию с тем же именем.")
+        addHint("Резервная копия исходного сохранения хранится во вкладке Backup.")
     }
 
     private fun openSavePicker() {
@@ -275,7 +276,7 @@ class SaveEditorActivity : Activity() {
         val keyOffset = data.keysOffset
         if (keyOffset != null) {
             val current = readU32(data.payload, keyOffset)
-            if (current != null) keysInput = addNumberField("Количество ключей (SRPL + 0x1A)", current.toString())
+            if (current != null) keysInput = addNumberField("Количество ключей", current.toString())
             else addHint("Количество ключей не удалось прочитать.")
         } else addHint("Поле количества ключей не распознано.")
 
@@ -284,18 +285,18 @@ class SaveEditorActivity : Activity() {
         val healthOffset = data.currentHealthOffset
         if (healthOffset != null) {
             val current = readU32(data.payload, healthOffset)
-            if (current != null) currentHealthInput = addNumberField("Текущее здоровье (SRPL + 0x0A)", current.toString())
+            if (current != null) currentHealthInput = addNumberField("Текущее здоровье", current.toString())
             else addHint("Текущее здоровье не удалось прочитать.")
         } else addHint("Поле текущего здоровья не распознано.")
         val energyOffset = data.currentEnergyOffset
         if (energyOffset != null) {
             val current = readU32(data.payload, energyOffset)
-            if (current != null) currentEnergyInput = addNumberField("Текущая энергия (SRPL + 0x0E)", current.toString())
+            if (current != null) currentEnergyInput = addNumberField("Текущая энергия", current.toString())
             else addHint("Текущую энергию не удалось прочитать.")
-        } else addHint("Поле текущей энергии не распознано. Его соответствие пока предварительное.")
+        } else addHint("Поле текущей энергии не распознано.")
 
         addSection("Инвентарь")
-        addHint("Изменяются только слоты 1–4. ID 48, 113 и 16001 в них запрещены. Слоты после пятого не отображаются и не изменяются.")
+        addHint("Изменяются четыре основных слота инвентаря.")
         slotEditors.clear()
         data.inventorySlots.forEachIndexed { index, field ->
             addSlotEditor(index + 1, field)?.let { slotEditors.add(it) }
@@ -304,9 +305,9 @@ class SaveEditorActivity : Activity() {
         addSection("Слот 5 • вода")
         val water = data.waterSlot
         if (water == null) {
-            addHint("Слот воды заблокирован или его запись не распознана. Редактирование пятого слота отключено.")
+            addHint("Слот воды недоступен в этом сохранении.")
         } else {
-            addHint("Слот воды обнаружен. Здесь разрешены только ID 48 (вода) и ID 113 (древняя вода).")
+            addHint("Допустимые предметы: вода и древняя вода.")
             val spinner = Spinner(this)
             val options = listOf("0 — Пусто", "48 — Вода", "113 — Древняя вода")
             spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, options)
@@ -329,7 +330,7 @@ class SaveEditorActivity : Activity() {
         val idInput = addNumberField("ID предмета", field.id.toString())
         val nameLabel = TextView(this).apply {
             textSize = 13f
-            setTextColor(Color.rgb(170, 205, 180))
+            setTextColor(Color.rgb(43, 150, 137))
             setPadding(0, 0, 0, dp(6))
             text = ItemCatalog.displayName(field.id)
         }
@@ -537,10 +538,10 @@ class SaveEditorActivity : Activity() {
             filters = arrayOf(InputFilter.LengthFilter(10))
             setText(value)
             textSize = 16f
-            setTextColor(Color.WHITE)
-            setHintTextColor(Color.GRAY)
+            setTextColor(Color.rgb(57, 75, 105))
+            setHintTextColor(Color.rgb(155, 151, 139))
             setPadding(dp(12), dp(8), dp(12), dp(8))
-            setBackgroundColor(Color.rgb(34, 34, 38))
+            background = rounded(Color.rgb(255, 251, 240), Color.rgb(225, 207, 174), dp(14))
         }
         wrapper.addView(input, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48)))
         page.addView(wrapper)
@@ -565,6 +566,14 @@ class SaveEditorActivity : Activity() {
             setTextColor(Color.LTGRAY)
             setPadding(0, dp(12), 0, dp(8))
         })
+    }
+
+    private fun rounded(fill: Int, stroke: Int, radius: Int): android.graphics.drawable.GradientDrawable {
+        return android.graphics.drawable.GradientDrawable().apply {
+            setColor(fill)
+            cornerRadius = radius.toFloat()
+            if (stroke != Color.TRANSPARENT) setStroke(dp(1), stroke)
+        }
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
