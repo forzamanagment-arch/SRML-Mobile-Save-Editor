@@ -105,36 +105,36 @@ class SaveEditorActivity : Activity() {
         val scroll = ScrollView(this)
         page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(20), dp(22), dp(20), dp(28))
-            setBackgroundColor(Color.rgb(248, 240, 221))
+            setPadding(dp(20), dp(24), dp(20), dp(34))
+            setBackgroundColor(Color.rgb(245, 240, 232))
         }
         scroll.addView(page)
         setContentView(scroll)
         page.addView(TextView(this).apply {
-            text = "SLIME RANCHER 2"
-            textSize = 12f
+            text = "SRML  •  SAVE TOOLS"
+            textSize = 11f
             letterSpacing = 0.12f
-            typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(43, 181, 199))
+            typeface = android.graphics.Typeface.create("sans-serif-rounded", android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(78, 205, 196))
         })
         page.addView(TextView(this).apply {
             text = title
-            textSize = 27f
-            typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
-            setTextColor(Color.rgb(57, 75, 105))
-            setPadding(0, 0, 0, dp(8))
+            textSize = 28f
+            typeface = android.graphics.Typeface.create("sans-serif-rounded", android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(45, 55, 72))
+            setPadding(0, dp(3), 0, dp(7))
         })
         page.addView(TextView(this).apply {
             text = "Управление сохранением мира"
             textSize = 14f
-            setTextColor(Color.rgb(119, 119, 111))
+            setTextColor(Color.rgb(107, 123, 141))
             setPadding(0, 0, 0, dp(18))
         })
         status = TextView(this).apply {
             textSize = 14f
-            setTextColor(Color.rgb(57, 75, 105))
-            setPadding(dp(13), dp(11), dp(13), dp(11))
-            background = rounded(Color.rgb(255, 251, 240), Color.rgb(225, 207, 174), dp(16))
+            setTextColor(Color.rgb(45, 55, 72))
+            setPadding(dp(16), dp(14), dp(16), dp(14))
+            background = rounded(Color.rgb(255, 253, 247), Color.rgb(224, 216, 204), dp(24))
         }
         page.addView(status)
     }
@@ -335,7 +335,7 @@ class SaveEditorActivity : Activity() {
         val idInput = addNumberField("ID предмета", field.id.toString())
         val nameLabel = TextView(this).apply {
             textSize = 13f
-            setTextColor(Color.rgb(43, 150, 137))
+            setTextColor(Color.rgb(78, 170, 164))
             setPadding(0, 0, 0, dp(6))
             text = ItemCatalog.displayName(field.id)
         }
@@ -522,8 +522,8 @@ class SaveEditorActivity : Activity() {
         page.addView(TextView(this).apply {
             this.text = text
             textSize = 18f
-            setTextColor(Color.rgb(57, 75, 105))
-            typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(45, 55, 72))
+            typeface = android.graphics.Typeface.create("sans-serif-rounded", android.graphics.Typeface.BOLD)
             setPadding(0, dp(17), 0, dp(7))
         })
     }
@@ -536,7 +536,7 @@ class SaveEditorActivity : Activity() {
         wrapper.addView(TextView(this).apply {
             text = label
             textSize = 13f
-            setTextColor(Color.rgb(119, 119, 111))
+            setTextColor(Color.rgb(107, 123, 141))
         })
         val input = EditText(this).apply {
             setSingleLine(true)
@@ -545,9 +545,9 @@ class SaveEditorActivity : Activity() {
             setText(value)
             textSize = 16f
             setTextColor(Color.rgb(57, 75, 105))
-            setHintTextColor(Color.rgb(155, 151, 139))
+            setHintTextColor(Color.rgb(155, 168, 181))
             setPadding(dp(12), dp(8), dp(12), dp(8))
-            background = rounded(Color.rgb(255, 251, 240), Color.rgb(225, 207, 174), dp(14))
+            background = rounded(Color.rgb(255, 253, 247), Color.rgb(224, 216, 204), dp(14))
         }
         wrapper.addView(input, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48)))
         page.addView(wrapper)
@@ -558,6 +558,10 @@ class SaveEditorActivity : Activity() {
         val button = Button(this).apply {
             this.text = text
             isAllCaps = false
+            textSize = 15f
+            setTextColor(Color.WHITE)
+            typeface = android.graphics.Typeface.create("sans-serif-rounded", android.graphics.Typeface.BOLD)
+            background = rounded(Color.rgb(78, 205, 196), Color.TRANSPARENT, dp(28))
             setOnClickListener { action() }
         }
         val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52))
@@ -569,7 +573,7 @@ class SaveEditorActivity : Activity() {
         page.addView(TextView(this).apply {
             this.text = text
             textSize = 12f
-            setTextColor(Color.LTGRAY)
+            setTextColor(Color.rgb(107, 123, 141))
             setPadding(0, dp(12), 0, dp(8))
         })
     }
