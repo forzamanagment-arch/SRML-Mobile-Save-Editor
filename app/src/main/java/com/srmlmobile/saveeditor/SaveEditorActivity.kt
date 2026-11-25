@@ -51,6 +51,8 @@ class SaveEditorActivity : Activity() {
         val gameEntryIndex: Int,
         val payload: ByteArray,
         val newbucksOffset: Int?,
+        val currentHealthOffset: Int?,
+        val currentEnergyOffset: Int?,
         val inventorySlots: List<InventoryField>,
         val waterSlot: InventoryField?,
         val sourceName: String
@@ -64,6 +66,8 @@ class SaveEditorActivity : Activity() {
 
     private var parsed: ParsedSave? = null
     private var newbucksInput: EditText? = null
+    private var currentHealthInput: EditText? = null
+    private var currentEnergyInput: EditText? = null
     private val slotEditors = mutableListOf<SlotEditor>()
     private var waterCountInput: EditText? = null
     private var waterTypeSpinner: Spinner? = null
@@ -191,6 +195,10 @@ class SaveEditorActivity : Activity() {
         if (playerMarkers.size != 1) error("Не удалось однозначно найти блок игрока SRPL")
         val playerTag = playerMarkers.single() + 1
         val newbucksOffset = if (playerTag + 26 <= payload.size) playerTag + 22 else null
+        // SRPL-relative current stats: +0x0A current health, +0x0E current energy.
+        // The offsets below are relative to playerTag, which points at the 'S' in SRPL.
+        val currentHealthOffset = if (playerTag + 0x0A + 4 <= payload.size) playerTag + 0x0A else null
+        val currentEnergyOffset = if (playerTag + 0x0E + 4 <= payload.size) playerTag + 0x0E else null
 
         // Find compact inventory record groups near the player block.
         val markers = findAllInRange(
@@ -223,6 +231,7 @@ class SaveEditorActivity : Activity() {
 
         return ParsedSave(
             entries, gameIndex, payload, newbucksOffset,
+            currentHealthOffset, currentEnergyOffset,
             regularSlots, waterSlot, name
         )
     }
@@ -239,6 +248,21 @@ class SaveEditorActivity : Activity() {
         } else {
             addHint("Поле Ньюбаксов не распознано. Остальные разделы доступны.")
         }
+
+        addSection("Здоровье и энергия")
+        addHint("Это текущие значения на момент сохранения, не максимальная ёмкость здоровья или энергии.")
+        val healthOffset = data.currentHealthOffset
+        if (healthOffset != null) {
+            val current = readU32(data.payload, healthOffset)
+            if (current != null) currentHealthInput = addNumberField("Текущее здоровье (SRPL + 0x0A)", current.toString())
+            else addHint("Текущее здоровье не удалось прочитать.")
+        } else addHint("Поле текущего здоровья не распознано.")
+        val energyOffset = data.currentEnergyOffset
+        if (energyOffset != null) {
+            val current = readU32(data.payload, energyOffset)
+            if (current != null) currentEnergyInput = addNumberField("Текущая энергия (SRPL + 0x0E)", current.toString())
+            else addHint("Текущую энергию не удалось прочитать.")
+        } else addHint("Поле текущей энергии не распознано. Его соответствие пока предварительное.")
 
         addSection("Инвентарь")
         addHint("Изменяются только слоты 1–4. ID 48, 113 и 16001 в них запрещены. Слоты после пятого не отображаются и не изменяются.")
@@ -302,10 +326,27 @@ class SaveEditorActivity : Activity() {
             val newbucksValue = newbucksInput?.text?.toString()?.let {
                 parseUnsigned(it, "Ньюбаки")
             }
+            val healthValue = currentHealthInput?.text?.toString()?.let {
+                parseUnsigned(it, "Текущее здоровье")
+            }
+            val energyValue = currentEnergyInput?.text?.toString()?.let {
+                parseUnsigned(it, "Текущая энергия")
+            }
             if (newbucksValue != null) {
                 val offset = data.newbucksOffset ?: error("Поле Ньюбаксов не распознано")
                 writeU32(payload, offset, newbucksValue)
                 if (readU32(payload, offset) != newbucksValue) error("Проверка Ньюбаксов не пройдена")
+            }
+
+            if (healthValue != null) {
+                val offset = data.currentHealthOffset ?: error("Поле текущего здоровья не распознано")
+                writeU32(payload, offset, healthValue)
+                if (readU32(payload, offset) != healthValue) error("Проверка текущего здоровья не пройдена")
+            }
+            if (energyValue != null) {
+                val offset = data.currentEnergyOffset ?: error("Поле текущей энергии не распознано")
+                writeU32(payload, offset, energyValue)
+                if (readU32(payload, offset) != energyValue) error("Проверка текущей энергии не пройдена")
             }
 
             slotEditors.forEachIndexed { index, editor ->
