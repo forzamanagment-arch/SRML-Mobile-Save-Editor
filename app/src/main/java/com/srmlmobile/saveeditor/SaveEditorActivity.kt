@@ -408,6 +408,13 @@ class SaveEditorActivity : Activity() {
                 if (readU32(payload, offset) != energyValue) error("Проверка текущей энергии не пройдена")
             }
 
+            if (testValue != null) {
+                val offset = data.testOffset ?: error("Поле SRGA + 0x4A не распознано")
+                if (testValue !in 0..3) error("Для функции Тест разрешены только значения 0, 1, 2, 3")
+                payload[offset] = testValue!!.toByte()
+                if ((payload[offset].toInt() and 0xff) != testValue) error("Проверка функции Тест не пройдена")
+            }
+
             slotEditors.forEachIndexed { index, editor ->
                 val id = parseUnsigned(editor.idInput.text.toString(), "ID слота ${index + 1}")
                 if (!ItemCatalog.isAllowedInRegularSlot(id)) {
