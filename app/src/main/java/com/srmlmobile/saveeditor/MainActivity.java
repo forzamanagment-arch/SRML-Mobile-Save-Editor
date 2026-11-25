@@ -11,6 +11,8 @@ import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
 import android.view.Gravity;
 import android.view.MotionEvent;
+import android.animation.ValueAnimator;
+import android.widget.HorizontalScrollView;
 import android.view.animation.OvershootInterpolator;
 import android.view.View;
 import android.content.Intent;
@@ -47,6 +49,10 @@ public class MainActivity extends Activity {
     private final ExecutorService executor=Executors.newSingleThreadExecutor();
     private TextView status,output;
     private LinearLayout content;
+    private HorizontalScrollView pager;
+    private LinearLayout pageStrip;
+    private final LinearLayout[] pageContents=new LinearLayout[4];
+    private int pageWidth;
     private Button shizukuButton,launchButton;
     private TextView pageTitle;
     private LinearLayout navBar,shizukuPanel;
@@ -114,25 +120,43 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(48));
         lp.topMargin=dp(10);root.addView(launchButton,lp);
 
-        ScrollView scroll=new ScrollView(this);
-        scroll.setFillViewport(true);
-        content=new LinearLayout(this);
-        content.setOrientation(LinearLayout.VERTICAL);
-        content.setPadding(0,dp(14),0,dp(18));
-        scroll.addView(content);
-        root.addView(scroll,new LinearLayout.LayoutParams(-1,0,1));
-        output=text("",12,MUTED,false);output.setPadding(dp(4),dp(5),dp(4),dp(5));root.addView(output,new LinearLayout.LayoutParams(-1,-2));
-        scroll.setOnTouchListener((v,event)->{
-            if(event.getAction()==MotionEvent.ACTION_DOWN){touchStartX=event.getX();touchStartY=event.getY();return false;}
-            if(event.getAction()==MotionEvent.ACTION_MOVE){
-                float dx=event.getX()-touchStartX,dy=event.getY()-touchStartY;
-                if(Math.abs(dx)>dp(12)&&Math.abs(dx)>Math.abs(dy)*1.15f) content.setTranslationX(Math.max(-dp(42),Math.min(dp(42),dx*0.22f)));
-                return false;
+        pager=new HorizontalScrollView(this);
+        pager.setHorizontalScrollBarEnabled(false);
+        pager.setFillViewport(true);
+        pager.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        pageWidth=getResources().getDisplayMetrics().widthPixels-dp(40);
+        pageStrip=new LinearLayout(this);
+        pageStrip.setOrientation(LinearLayout.HORIZONTAL);
+        for(int i=0;i<4;i++){
+            ScrollView vertical=new ScrollView(this);
+            vertical.setFillViewport(true);
+            vertical.setVerticalScrollBarEnabled(false);
+            LinearLayout pageContent=new LinearLayout(this);
+            pageContent.setOrientation(LinearLayout.VERTICAL);
+            pageContent.setPadding(0,dp(14),0,dp(18));
+            pageContents[i]=pageContent;
+            vertical.addView(pageContent,new ScrollView.LayoutParams(-1,-2));
+            pageStrip.addView(vertical,new LinearLayout.LayoutParams(pageWidth,-1));
+        }
+        pager.addView(pageStrip,new HorizontalScrollView.LayoutParams(-2,-1));
+        root.addView(pager,new LinearLayout.LayoutParams(-1,0,1));
+        content=pageContents[0];
+        pager.setOnScrollChangeListener((View v,int x,int y,int oldX,int oldY)->{
+            int visible=Math.max(0,Math.min(3,Math.round(x/(float)pageWidth)));
+            updateNavVisual(visible);
+        });
+        pager.setOnTouchListener((v,event)->{
+            if(event.getAction()==MotionEvent.ACTION_DOWN){
+                touchStartX=event.getX();touchStartY=event.getY();return false;
             }
             if(event.getAction()==MotionEvent.ACTION_UP){
                 float dx=event.getX()-touchStartX,dy=event.getY()-touchStartY;
-                content.animate().translationX(0).setDuration(180).start();
-                if(Math.abs(dx)>dp(54)&&Math.abs(dx)>Math.abs(dy)*1.15f){setPage(Math.max(0,Math.min(3,selectedPage+(dx<0?1:-1))));return true;}
+                pager.post(()->{
+                    int target=Math.max(0,Math.min(3,Math.round(pager.getScrollX()/(float)pageWidth)));
+                    if(Math.abs(dx)>dp(48)&&Math.abs(dx)>Math.abs(dy)*1.15f)
+                        target=Math.max(0,Math.min(3,selectedPage+(dx<0?1:-1)));
+                    setPage(target);
+                });
             }
             return false;
         });
@@ -173,14 +197,32 @@ public class MainActivity extends Activity {
         try{startActivity(intent);}catch(Throwable t){Toast.makeText(this,tr("Could not launch the game.","Не удалось запустить игру."),Toast.LENGTH_LONG).show();}
     }
     private void setPage(int page){
-        int previousPage=selectedPage;
+        page=Math.max(0,Math.min(3,page));
         selectedPage=page;
-        if(content!=null){content.setAlpha(0.82f);content.setTranslationX(dp(page>=previousPage?16:-16));content.animate().alpha(1f).translationX(0).setDuration(300).setInterpolator(new OvershootInterpolator(0.7f)).start();}
-        String[] titles={tr("SRML Save Editor","SRML Save Editor"),"Backup",tr("Settings","Настройки"),tr("About","О приложении")};
-        pageTitle.setText(titles[page]);
+        content=pageContents[page];
+        if(content!=null)content.removeAllViews();
+        if(pageTitle!=null){
+            String[] titles={tr("SRML Save Editor","SRML Save Editor"),tr("Backups","Резервные копии"),tr("Settings","Настройки"),tr("About","О приложении")};
+            pageTitle.setText(titles[page]);
+        }
         if(output!=null)output.setVisibility(page<2?View.VISIBLE:View.GONE);
-        shizukuPanel.setVisibility(page<2?View.VISIBLE:View.GONE);
-        launchButton.setVisibility(page==0?View.VISIBLE:View.GONE);
+        if(shizukuPanel!=null)shizukuPanel.setVisibility(page<2?View.VISIBLE:View.GONE);
+        if(launchButton!=null)launchButton.setVisibility(page==0?View.VISIBLE:View.GONE);
+        updateNavVisual(page);
+        if(pager!=null){
+            int target=page*pageWidth;
+            ValueAnimator animator=ValueAnimator.ofInt(pager.getScrollX(),target);
+            animator.setDuration(360);
+            animator.setInterpolator(new OvershootInterpolator(0.55f));
+            animator.addUpdateListener(v->pager.scrollTo((Integer)v.getAnimatedValue(),0));
+            animator.start();
+        }
+        if(page==0)showWorlds();
+        else if(page==1)showBackups();
+        else if(page==2)renderSettings();
+        else renderAbout();
+    }
+    private void updateNavVisual(int page){
         for(int i=0;i<navItems.size();i++){
             LinearLayout item=navItems.get(i);
             Object[] parts=(Object[])item.getTag();
@@ -189,10 +231,6 @@ public class MainActivity extends Activity {
             icon.setActive(active);dot.setVisibility(active?View.VISIBLE:View.INVISIBLE);
             item.setBackground(active?background(Color.rgb(232,248,245),Color.TRANSPARENT,dp(24)):background(Color.TRANSPARENT,Color.TRANSPARENT,dp(24)));
         }
-        if(page==0)showWorlds();
-        else if(page==1)showBackups();
-        else if(page==2)renderSettings();
-        else renderAbout();
     }
     private void renderSettings(){
         content.removeAllViews();
