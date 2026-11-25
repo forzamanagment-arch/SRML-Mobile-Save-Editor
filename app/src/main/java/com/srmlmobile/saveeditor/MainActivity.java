@@ -39,6 +39,8 @@ public class MainActivity extends Activity {
     private final ExecutorService executor=Executors.newSingleThreadExecutor();
     private TextView status,output;
     private LinearLayout content;
+    private Button worldsTab,backupTab,shizukuButton;
+    private String backupNotice;
     private boolean showingBackups=false;
 
     private final Shizuku.OnRequestPermissionResultListener permissionListener=(code,result)->runOnUiThread(()->{
@@ -99,13 +101,13 @@ public class MainActivity extends Activity {
         LinearLayout tabs=new LinearLayout(this);
         tabs.setOrientation(LinearLayout.HORIZONTAL);
         tabs.setPadding(0,dp(14),0,dp(12));
-        Button worlds=tabButton("МИРЫ",false);
-        Button backups=tabButton("BACKUP",true);
-        tabs.addView(worlds,new LinearLayout.LayoutParams(0,dp(48),1));
+        worldsTab=tabButton("МИРЫ",true);
+        backupTab=tabButton("BACKUP",false);
+        tabs.addView(worldsTab,new LinearLayout.LayoutParams(0,dp(48),1));
         LinearLayout.LayoutParams bp=new LinearLayout.LayoutParams(0,dp(48),1);
-        bp.leftMargin=dp(8);tabs.addView(backups,bp);
-        worlds.setOnClickListener(v->showWorlds());
-        backups.setOnClickListener(v->showBackups());
+        bp.leftMargin=dp(8);tabs.addView(backupTab,bp);
+        worldsTab.setOnClickListener(v->showWorlds());
+        backupTab.setOnClickListener(v->showBackups());
         root.addView(tabs);
 
         ScrollView scroll=new ScrollView(this);
@@ -127,7 +129,7 @@ public class MainActivity extends Activity {
     private Button tabButton(String text,boolean active){
         Button b=new Button(this);b.setText(text);b.setAllCaps(false);b.setTextSize(13);
         b.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));
-        b.setTextColor(Color.WHITE);b.setBackground(background(active?PINK:TEAL,Color.TRANSPARENT,dp(18)));
+        b.setTextColor(active?Color.WHITE:INK);b.setBackground(background(active?TEAL:SAND,Color.TRANSPARENT,dp(18)));
         return b;
     }
     private GradientDrawable background(int fill,int stroke,int radius){
