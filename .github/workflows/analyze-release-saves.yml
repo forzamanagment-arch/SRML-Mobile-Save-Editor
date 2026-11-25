@@ -48,8 +48,8 @@ jobs:
               print(t)
               vals={}
               for label,pat in [
-                ('health',r'(?:макс\\.?\\s*здоров(?:ье|ья)|max(?:imum)?\\s*health)\\D{0,30}(\\d+)'),
-                ('energy',r'(?:макс\\.?\\s*энерг(?:ия|ии)|max(?:imum)?\\s*energy)\\D{0,30}(\\d+)')]:
+                ('health',r'Макс\.\s*Здоровье:\s*(\d+)'),
+                ('energy',r'Макс\.\s*Энергия:\s*(\d+)')]:
                   m=re.search(pat,t,re.I)
                   if m: vals[label]=int(m.group(1))
               if vals: labelled[n]=(vals,d)
