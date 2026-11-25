@@ -131,7 +131,7 @@ class SaveEditorActivity : Activity() {
         page.addView(TextView(this).apply {
             text = title
             textSize = 30f
-            typeface = GameAssets.typeface(this@SaveEditorActivity)
+            typeface = GameAssets.typeface(this@SaveEditorActivity, true)
             setTextColor(Color.rgb(45, 55, 72))
             setPadding(0, dp(3), 0, dp(7))
         })
@@ -686,7 +686,7 @@ class SaveEditorActivity : Activity() {
             isAllCaps = false
             textSize = 15f
             setTextColor(Color.WHITE)
-            typeface = android.graphics.Typeface.create("sans-serif-rounded", android.graphics.Typeface.BOLD)
+            typeface = GameAssets.typeface(this@SaveEditorActivity, true)
             background = rounded(Color.rgb(63, 184, 173), Color.TRANSPARENT, dp(28))
             setOnClickListener { action() }
         }
