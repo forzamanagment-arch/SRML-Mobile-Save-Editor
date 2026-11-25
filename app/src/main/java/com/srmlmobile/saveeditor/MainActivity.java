@@ -475,7 +475,7 @@ public class MainActivity extends Activity {
             super.onDraw(canvas);
             float scale=Math.min(getWidth(),getHeight())/26f;
             canvas.save();canvas.translate((getWidth()-26f*scale)/2f,(getHeight()-26f*scale)/2f);canvas.scale(scale,scale);
-            paint.setColor(TEAL);paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(1.9f);paint.setStrokeCap(Paint.Cap.ROUND);paint.setStrokeJoin(Paint.Join.ROUND);
+            paint.setColor(PINK);paint.setStyle(Paint.Style.STROKE);paint.setStrokeWidth(1.9f);paint.setStrokeCap(Paint.Cap.ROUND);paint.setStrokeJoin(Paint.Join.ROUND);
             Path page=new Path();page.moveTo(7,3);page.lineTo(16,3);page.lineTo(21,8);page.lineTo(21,23);page.lineTo(7,23);page.close();canvas.drawPath(page,paint);
             canvas.drawLine(16,3,16,8,paint);canvas.drawLine(16,8,21,8,paint);
             canvas.drawLine(10,13,18,13,paint);canvas.drawLine(10,17,18,17,paint);
@@ -636,6 +636,11 @@ public class MainActivity extends Activity {
         content.addView(heading);
         TextView hint=text(tr("Choose a backup to restore it to your worlds.","Выбери копию, чтобы восстановить её в список миров."),13,MUTED,false);
         hint.setPadding(0,dp(4),0,dp(12));content.addView(hint);
+        Button clearFolder=actionButton(tr("Clear backup folder","Очистить папку Backup"),this::confirmClearBackups);
+        clearFolder.setBackground(background(PINK,Color.TRANSPARENT,dp(28)));
+        LinearLayout.LayoutParams clearParams=new LinearLayout.LayoutParams(-1,dp(44));
+        clearParams.bottomMargin=dp(12);
+        content.addView(clearFolder,clearParams);
         if(items.isEmpty()){
             addEmptyCard(tr("No backups yet","Пока нет резервных копий"),tr("Backups appear here after you edit a save.","Копии появятся здесь после редактирования миров."),content);
             if(backupNotice!=null){show(backupNotice);backupNotice=null;}else show(tr("Backups: 0","Резервных копий: 0"));return;
@@ -717,6 +722,31 @@ public class MainActivity extends Activity {
             dialog.getWindow().setLayout(getResources().getDisplayMetrics().widthPixels-dp(32),-2);
         }
     }
+    private void confirmClearBackups(){
+        new AlertDialog.Builder(this)
+            .setTitle(tr("Clear backup folder?","Очистить папку Backup?"))
+            .setMessage(tr(
+                "All files inside Backup will be permanently deleted. This cannot be undone.",
+                "Все файлы внутри Backup будут удалены без возможности восстановления."
+            ))
+            .setNegativeButton(tr("Cancel","Отмена"),(d,w)->d.dismiss())
+            .setPositiveButton(tr("Clear","Очистить"),(d,w)->clearBackups())
+            .show();
+    }
+    private void clearBackups(){
+        if(!hasPermission()){show(tr("Connect Shizuku first.","Сначала подключи Shizuku."));return;}
+        show(tr("Clearing backup folder…","Очищаю папку Backup…"));
+        executor.execute(()->{
+            try{
+                ShizukuFileAccess.clearBackups();
+                backupNotice=tr("Backup folder cleared.","Папка Backup очищена.");
+                runOnUiThread(this::showBackups);
+            }catch(Throwable t){
+                AppLog.exception(this,"BACKUP_CLEAR","Could not clear backup folder",t);
+                runOnUiThread(()->show(tr("Could not clear Backup: ","Не удалось очистить Backup: ")+t.getMessage()));
+            }
+        });
+    }
     private void restore(ShizukuFileAccess.BackupItem item){
         show("Восстанавливаю сохранение…");
         executor.execute(()->{
@@ -784,7 +814,9 @@ public class MainActivity extends Activity {
             titleRow.addView(worldName,new LinearLayout.LayoutParams(0,-2,1));
             card.addView(titleRow);
             TextView detail=text(slot.fileName+"  •  "+slot.sizeText,12,MUTED,false);detail.setPadding(0,dp(3),0,dp(8));card.addView(detail);
-            card.addView(actionButton(tr("Edit save","Редактировать"),()->beginEditing(slot)),new LinearLayout.LayoutParams(-1,dp(46)));
+            Button editSave=actionButton(tr("Edit save","Редактировать"),()->beginEditing(slot));
+            editSave.setBackground(background(PINK,Color.TRANSPARENT,dp(28)));
+            card.addView(editSave,new LinearLayout.LayoutParams(-1,dp(46)));
         }
         show(tr("Worlds found: ","Найдено миров: ")+found.size());
     }
