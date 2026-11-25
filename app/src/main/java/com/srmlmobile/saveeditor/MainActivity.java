@@ -261,7 +261,7 @@ public class MainActivity extends Activity {
                                 found.add(slot);
                                 AppLog.i(this, "SAVE_SCAN", "Recognized save archive " + sourcePath);
                             } else {
-                                AppLog.w(this, "SAVE_SCAN", "No valid *-sav payload in " + sourcePath);
+                                AppLog.w(this, "SAVE_SCAN", "Archive was read, but no recognized SRGAME payload was accepted in " + sourcePath + "; check the Archive probe fields savEntries and savPayloadSignature.");
                             }
                         } catch (Throwable e) {
                             AppLog.w(this, "SAVE_SCAN", "Skipped " + sourcePath + ": " + e);
