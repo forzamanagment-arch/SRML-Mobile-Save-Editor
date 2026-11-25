@@ -113,7 +113,16 @@ final class SaveSlotReader {
         return result.toString();
     }
 
-    // Save payloads use a one-byte type/length prefix before the ASCII signature.\n    // Observed gamesave-sav begins: 06 53 52 47 41 4D 45 (\\x06 + "SRGAME").\n    private static boolean isGamePayload(byte[] bytes) {\n        if (bytes == null || bytes.length < 7 || (bytes[0] & 0xFF) != 0x06) return false;\n        byte[] marker = "SRGAME".getBytes(StandardCharsets.US_ASCII);\n        for (int i = 0; i < marker.length; i++) if (bytes[i + 1] != marker[i]) return false;\n        return true;\n    }\n\n    private static boolean startsWith(byte[] bytes, String marker) {
+    // Save payloads use a one-byte type/length prefix before the ASCII signature.
+    // Observed gamesave-sav begins: 06 53 52 47 41 4D 45 (\\x06 + "SRGAME").
+    private static boolean isGamePayload(byte[] bytes) {
+        if (bytes == null || bytes.length < 7 || (bytes[0] & 0xFF) != 0x06) return false;
+        byte[] marker = "SRGAME".getBytes(StandardCharsets.US_ASCII);
+        for (int i = 0; i < marker.length; i++) if (bytes[i + 1] != marker[i]) return false;
+        return true;
+    }
+
+    private static boolean startsWith(byte[] bytes, String marker) {
         byte[] expected = marker.getBytes(StandardCharsets.US_ASCII);
         if (bytes.length < expected.length) return false;
         for (int i = 0; i < expected.length; i++) if (bytes[i] != expected[i]) return false;
