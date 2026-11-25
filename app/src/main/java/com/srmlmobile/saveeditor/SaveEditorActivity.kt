@@ -480,9 +480,6 @@ class SaveEditorActivity : Activity() {
         }
         tile.setOnClickListener { openPicker() }
         refreshTile()
-            }
-        }
-        refreshTile()
         return SlotEditor(idInput, countInput, nameLabel, field, iconView, badge)
     }
 
