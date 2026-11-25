@@ -431,27 +431,17 @@ class SaveEditorActivity : Activity() {
         params.setMargins(dp(4), dp(4), dp(4), dp(8))
         parent.addView(tile, params)
         tile.setOnClickListener {
-            val entries = ItemCatalog.names.entries.filter { (id, _) -> ItemCatalog.isAllowedInRegularSlot(id) }
-                .sortedBy { it.key }
-            val labels = entries.map { "${it.value}  •  ID: ${it.key}" }.toTypedArray()
-            AlertDialog.Builder(this)
-                .setTitle(tr("Choose item for slot $slotNumber", "Выбор предмета для слота $slotNumber"))
-                .setItems(labels) { _, which ->
-                    val selected = entries[which]
-                    idInput.setText(selected.key.toString())
-                    val quantity = EditText(this).apply {
-                        inputType = InputType.TYPE_CLASS_NUMBER
-                        setText(countInput.text.toString())
-                        hint = tr("Amount", "Количество")
-                    }
-                    AlertDialog.Builder(this)
-                        .setTitle(selected.value)
-                        .setView(quantity)
-                        .setNegativeButton(tr("Cancel", "Отмена"), null)
-                        .setPositiveButton(tr("Select", "Выбрать")) { _, _ ->
-                            val amount = quantity.text.toString().toLongOrNull()
-                            if (amount != null && amount in 0..MAX_U32) countInput.setText(amount.toString())
-                            refreshTile()
+            ItemPickerDialog.show(
+                this,
+                idInput.text.toString().toLongOrNull() ?: 0L,
+                countInput.text.toString().toLongOrNull() ?: 0L
+            ) { selectedId, selectedCount ->
+                idInput.setText(selectedId.toString())
+                countInput.setText(selectedCount.toString())
+                refreshTile()
+            }
+        }
+        refreshTile()
                         }.show()
                 }
                 .setNegativeButton(tr("Cancel", "Отмена"), null)
