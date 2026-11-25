@@ -1,0 +1,43 @@
+name: Search upgrade stat values
+on:
+  push:
+    paths:
+      - ".github/workflows/search-upgrade-stat-values.yml"
+permissions:
+  contents: read
+jobs:
+  scan:
+    runs-on: ubuntu-latest
+    steps:
+      - run: curl -fL "https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/Savefiles.zip" -o /tmp/saves.zip
+      - run: |
+          python3 - <<'PY'
+          import zipfile,io,os,struct,re
+          names=['20261125171726-2-1','20261125175309-3-0','20261122185933-1-1']; d={}
+          def walk(z,p=''):
+            for it in z.infolist():
+              if it.is_dir(): continue
+              b=z.read(it.filename); q=p+it.filename
+              if b[:2]==b'PK':
+                try: walk(zipfile.ZipFile(io.BytesIO(b)),q+'!'); continue
+                except: pass
+              if q.endswith('gamesave-sav') and os.path.basename(q.split('!')[0]) in names:
+                d[os.path.basename(q.split('!')[0])]=b
+          walk(zipfile.ZipFile('/tmp/saves.zip'))
+          for label,vals in [('health',[100,150,250]),('capacity',[20,30,50])]:
+            print('GROUP',label)
+            for fmt in ['B','H','I','f']:
+              hits=[]
+              for n,v in zip(names,vals):
+                raw=struct.pack('<'+fmt,v); hits.append([m.start() for m in re.finditer(re.escape(raw),d[n])])
+              common=set(hits[0])&set(hits[1])&set(hits[2])
+              print('FMT',fmt,'COUNTS',[len(x) for x in hits],'COMMON',[hex(x) for x in sorted(common)[:30]])
+              for tag in [b'SRPL',b'SRSE',b'SRSED',b'SRHD',b'SRAP',b'SRGA',b'SRRC']:
+                pp=[[m.start() for m in re.finditer(tag,d[n])] for n in names]
+                out=[]
+                for i in range(min(map(len,pp))):
+                  chunks=[d[n][pp[k][i]:pp[k][i]+256] for k,n in enumerate(names)]
+                  for rel in range(min(map(len,chunks))-len(raw)):
+                    if all(chunks[k][rel:rel+len(raw)]==struct.pack('<'+fmt,vals[k]) for k in range(3)): out.append((i,hex(rel)))
+                if out: print('TAG',tag.decode(),out[:25])
+          PY
