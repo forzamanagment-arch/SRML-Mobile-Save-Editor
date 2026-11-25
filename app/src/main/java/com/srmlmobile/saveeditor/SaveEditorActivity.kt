@@ -82,6 +82,8 @@ class SaveEditorActivity : Activity() {
     private var saveCompleted = false
     private lateinit var page: LinearLayout
     private lateinit var status: TextView
+    private val russian: Boolean get() = getSharedPreferences("srml_settings", MODE_PRIVATE).getBoolean("russian", false)
+    private fun tr(en: String, ru: String): String = if (russian) ru else en
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -125,7 +127,7 @@ class SaveEditorActivity : Activity() {
             setPadding(0, dp(3), 0, dp(7))
         })
         page.addView(TextView(this).apply {
-            text = "Управление сохранением мира"
+            text = tr("World save management", "Управление сохранением мира")
             textSize = 14f
             setTextColor(Color.rgb(107, 123, 141))
             setPadding(0, 0, 0, dp(18))
@@ -140,10 +142,10 @@ class SaveEditorActivity : Activity() {
     }
 
     private fun buildWelcome() {
-        buildBase("Редактор сохранений")
-        status.text = "Открой главный экран, обнови список миров и выбери сохранение там. Файл вручную выбирать не требуется."
-        addButton("Вернуться к списку миров") { finish() }
-        addHint("Резервная копия исходного сохранения хранится во вкладке Backup.")
+        buildBase(tr("Save editor", "Редактор сохранений"))
+        status.text = tr("Return to the home screen, refresh your worlds and choose a save there. No manual file selection is needed.", "Открой главный экран, обнови список миров и выбери сохранение там. Файл вручную выбирать не требуется.")
+        addButton(tr("Back to worlds", "Вернуться к списку миров")) { finish() }
+        addHint(tr("A backup of the original save is available in the Backup tab.", "Резервная копия исходного сохранения хранится во вкладке Backup."))
     }
 
     private fun openSavePicker() {
@@ -266,53 +268,53 @@ class SaveEditorActivity : Activity() {
 
     private fun showEditor() {
         val data = parsed ?: return
-        buildBase("Редактирование")
+        buildBase(tr("Edit save", "Редактирование"))
         val currencyOffset = data.newbucksOffset
-        addSection("Ньюбаксы")
+        addSection(tr("Newbucks", "Ньюбаксы"))
         if (currencyOffset != null) {
             val current = readU32(data.payload, currencyOffset)
-            if (current != null) newbucksInput = addNumberField("Количество", current.toString())
+            if (current != null) newbucksInput = addNumberField(tr("Amount", "Количество"), current.toString())
             else addHint("Поле Ньюбаксов не распознано. Остальные разделы доступны.")
         } else {
             addHint("Поле Ньюбаксов не распознано. Остальные разделы доступны.")
         }
 
-        addSection("Ключи")
+        addSection(tr("Keys", "Ключи"))
         val keyOffset = data.keysOffset
         if (keyOffset != null) {
             val current = readU32(data.payload, keyOffset)
-            if (current != null) keysInput = addNumberField("Количество ключей", current.toString())
+            if (current != null) keysInput = addNumberField(tr("Key count", "Количество ключей"), current.toString())
             else addHint("Количество ключей не удалось прочитать.")
         } else addHint("Поле количества ключей не распознано.")
 
-        addSection("Здоровье и энергия")
-        addHint("Это текущие значения на момент сохранения, не максимальная ёмкость здоровья или энергии.")
+        addSection(tr("Health and energy", "Здоровье и энергия"))
+        addHint(tr("These are current values at the time of saving, not maximum capacity.", "Это текущие значения на момент сохранения, не максимальная ёмкость здоровья или энергии."))
         val healthOffset = data.currentHealthOffset
         if (healthOffset != null) {
             val current = readU32(data.payload, healthOffset)
-            if (current != null) currentHealthInput = addNumberField("Текущее здоровье", current.toString())
+            if (current != null) currentHealthInput = addNumberField(tr("Current health", "Текущее здоровье"), current.toString())
             else addHint("Текущее здоровье не удалось прочитать.")
         } else addHint("Поле текущего здоровья не распознано.")
         val energyOffset = data.currentEnergyOffset
         if (energyOffset != null) {
             val current = readU32(data.payload, energyOffset)
-            if (current != null) currentEnergyInput = addNumberField("Текущая энергия", current.toString())
+            if (current != null) currentEnergyInput = addNumberField(tr("Current energy", "Текущая энергия"), current.toString())
             else addHint("Текущую энергию не удалось прочитать.")
         } else addHint("Поле текущей энергии не распознано.")
 
-        addSection("Инвентарь")
-        addHint("Изменяются четыре основных слота инвентаря.")
+        addSection(tr("Inventory", "Инвентарь"))
+        addHint(tr("Edit the four main inventory slots.", "Изменяются четыре основных слота инвентаря."))
         slotEditors.clear()
         data.inventorySlots.forEachIndexed { index, field ->
             addSlotEditor(index + 1, field)?.let { slotEditors.add(it) }
         }
 
-        addSection("Слот 5 • вода")
+        addSection(tr("Slot 5 • water", "Слот 5 • вода"))
         val water = data.waterSlot
         if (water == null) {
-            addHint("Слот воды недоступен в этом сохранении.")
+            addHint(tr("The water slot is not available in this save.", "Слот воды недоступен в этом сохранении."))
         } else {
-            addHint("Допустимые предметы: вода и древняя вода.")
+            addHint(tr("Available items: Water and Ancient Water.", "Допустимые предметы: вода и древняя вода."))
             val spinner = Spinner(this)
             val options = listOf("0 — Пусто", "48 — Вода", "113 — Древняя вода")
             spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, options)
@@ -323,16 +325,16 @@ class SaveEditorActivity : Activity() {
             })
             page.addView(spinner)
             waterTypeSpinner = spinner
-            waterCountInput = addNumberField("Количество", water.count.toString())
+            waterCountInput = addNumberField(tr("Amount", "Количество"), water.count.toString())
         }
 
-        addButton("Сохранить изменения") { prepareOutput() }
-        addHint("После сохранения файл вернётся в pt_saves под исходным именем. Резервная копия останется в Backup.")
+        addButton(tr("Save changes", "Сохранить изменения")) { prepareOutput() }
+        addHint(tr("After saving, the file returns to pt_saves with its original name. The backup remains in Backup.", "После сохранения файл вернётся в pt_saves под исходным именем. Резервная копия останется в Backup."))
     }
 
     private fun addSlotEditor(slotNumber: Int, field: InventoryField): SlotEditor {
-        addSection("Слот $slotNumber")
-        val idInput = addNumberField("ID предмета", field.id.toString())
+        addSection(tr("Slot $slotNumber", "Слот $slotNumber"))
+        val idInput = addNumberField(tr("Item ID", "ID предмета"), field.id.toString())
         val nameLabel = TextView(this).apply {
             textSize = 13f
             setTextColor(Color.rgb(78, 170, 164))
@@ -353,7 +355,7 @@ class SaveEditorActivity : Activity() {
             }
             override fun afterTextChanged(s: Editable?) {}
         })
-        val countInput = addNumberField("Количество", field.count.toString())
+        val countInput = addNumberField(tr("Amount", "Количество"), field.count.toString())
         return SlotEditor(idInput, countInput, nameLabel, field)
     }
 
