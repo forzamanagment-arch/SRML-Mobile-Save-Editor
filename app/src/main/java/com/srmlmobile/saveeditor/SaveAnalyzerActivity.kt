@@ -159,7 +159,7 @@ class SaveAnalyzerActivity : Activity() {
     private fun analyzePayload(bytes: ByteArray): Result {
         val header = String(bytes, 0, minOf(bytes.size, 512), Charsets.UTF_8)
         val version = Regex("\\b\\d+\\.\\d+\\.\\d+\\b").find(header)?.value
-        val world = Regex("\\d{14}-\\d+-\\d+([^\\u0000-\\u001f]{1,48})")
+        val world = Regex("\\d{14}-\\d+\\t([^\\u0000-\\u001f]{1,48})")
             .find(header)?.groupValues?.getOrNull(1)?.trim()
 
         val playerMarkerAt = findAll(bytes, PLAYER_MARKER).firstOrNull()
