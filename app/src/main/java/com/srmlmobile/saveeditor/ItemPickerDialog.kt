@@ -134,7 +134,7 @@ object ItemPickerDialog {
             val n = name.lowercase()
             return when (category) {
                 "Food" -> id in setOf(8L,9L,16L,17L,18L,19L,20L,26L,27L,28L,29L,49L,50L,68L,69L,70L,71L,88L,100L,110L,111L,148L,149L,165L)
-                "Plorts" -> n.contains("плорт")
+                "Plorts" -> n.contains("plort")
                 "Resources" -> id in 11000L..11999L
                 "Fashion Pod" -> id in 12000L..12099L
                 "Ornament" -> id in 14000L..14999L
@@ -157,8 +157,8 @@ object ItemPickerDialog {
             val items = ItemCatalog.names.entries.filter { (id, name) ->
                 val localized = ItemCatalog.localizedName(id, false)
                 (if (waterOnly) id == 0L || id == 48L || id == 113L else ItemCatalog.isAllowedInRegularSlot(id)) &&
-                    categoryMatches(id, name) &&
-                    (query.isEmpty() || name.lowercase().contains(query) || localized.lowercase().contains(query) || id.toString().contains(query))
+                    categoryMatches(id, localized) &&
+                    (query.isEmpty() || localized.lowercase().contains(query) || id.toString().contains(query))
             }
             items.chunked(2).forEach { pair ->
                 val row = LinearLayout(activity).apply { orientation = LinearLayout.HORIZONTAL }
