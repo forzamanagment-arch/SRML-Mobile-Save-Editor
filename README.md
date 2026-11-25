@@ -1,26 +1,28 @@
 # SRML Mobile Save Editor
 
-Android save editor for Slime Rancher Mobile.
+Android prototype for editing Slime Rancher Mobile save archives.
 
-## Current diagnostic alpha
+## Prototype features
 
-- Shizuku Binder and permission checks
-- Read-only check of the game's save directory
-- Persistent internal diagnostic log with timestamps and stack traces
-- Log rotation (current + previous log, 512 KB threshold)
-- In-app log viewer and Android share-sheet export
-- No original save is modified
+- Opens ZIP save archives, including extensionless files.
+- Reads the `gamesave-sav` entry.
+- Detects and edits both mirrored Newbucks fields.
+- Detects serialized inventory records using the `SRAD` marker.
+- Edits Water (record ID 48) and all other detected inventory records.
+- Rebuilds the archive into a separate output file.
+- Suggests the original save filename for the output.
 
-## Diagnostics captured
+## Compatibility and safety
 
-- App version, Android API level and device model
-- Shizuku Binder connected/disconnected events
-- Permission request and grant/denial result
-- Save directory diagnostic result and shell exit code
-- Shizuku process exceptions and Java stack traces
+This is an early, version-specific prototype, not a universal save editor. The Newbucks signatures and inventory record layout were checked against the paired sample saves supplied for this project. If the expected signatures are missing or ambiguous, the app refuses to write a modified archive.
 
-The app does not log save-file contents or modify save files.
+Unknown inventory records are shown by numeric ID. Known IDs currently labeled in the UI:
+- 59: Honey slimes
+- 16: Chickadoos
+- 48: Water
+
+The app does not upload save files. The original archive is not overwritten. After exporting, place the output in the game's save folder using the exact original filename. Keep a backup of the original.
 
 ## Build
 
-GitHub Actions builds the debug APK on pushes to `main` and manual workflow dispatch.
+GitHub Actions workflow **Build SRML Mobile Save Editor** builds a debug APK on push or manual dispatch.
