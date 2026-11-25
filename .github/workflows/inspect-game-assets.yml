@@ -14,10 +14,12 @@ jobs:
     steps:
       - name: Download release archives
         run: |
-          mkdir -p work/icons work/fonts
+          mkdir -p work/icons work/newicons work/fonts
           curl -L --fail --retry 3 'https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/Icons.zip' -o work/Icons.zip
+          curl -L --fail --retry 3 'https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/newicons.zip' -o work/newicons.zip
           curl -L --fail --retry 3 'https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/Font.Nunito.Full-ver.zip' -o work/Fonts.zip
           unzip -q work/Icons.zip -d work/icons
+          unzip -q work/newicons.zip -d work/newicons
           unzip -q work/Fonts.zip -d work/fonts
       - name: Analyze archive contents
         run: |
@@ -34,7 +36,8 @@ jobs:
           icons=[x for x in files if x['extension'] in ('.png','.webp','.jpg','.jpeg')]
           report={'total_files':len(files),'icon_count':len(icons),'font_count':len(fonts),'fonts':fonts,'icons':icons}
           with open('asset-manifest.json','w',encoding='utf-8') as f: json.dump(report,f,ensure_ascii=False,indent=2)
-          print(json.dumps({'total_files':len(files),'icon_count':len(icons),'font_count':len(fonts),'fonts':fonts,'icon_examples':icons[:40]},ensure_ascii=False,indent=2))
+          new_icon_files=[x for x in icons if x['path'].startswith('newicons/')]
+          print(json.dumps({'total_files':len(files),'icon_count':len(icons),'font_count':len(fonts),'newicons_count':len(new_icon_files),'newicons_files':new_icon_files,'fonts':fonts,'icon_examples':icons[:40]},ensure_ascii=False,indent=2))
           PY
       - name: Upload inspected assets and manifest
         uses: actions/upload-artifact@v4
@@ -43,5 +46,6 @@ jobs:
           path: |
             asset-manifest.json
             work/Icons.zip
+            work/newicons.zip
             work/Fonts.zip
           if-no-files-found: error
