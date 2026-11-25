@@ -38,6 +38,7 @@ object ItemPickerDialog {
         val header = TextView(activity).apply {
             text = if (waterOnly) "CHOOSE WATER TYPE" else "CHOOSE AN ITEM"
             textSize = 13f
+            typeface = GameAssets.typeface(activity, true)
             letterSpacing = .08f
             setTextColor(Color.WHITE)
             setPadding(dp(activity, 14), dp(activity, 12), dp(activity, 8), dp(activity, 12))
@@ -55,6 +56,7 @@ object ItemPickerDialog {
         val search = EditText(activity).apply {
             hint = "Search items…"
             setSingleLine(true)
+            typeface = GameAssets.typeface(activity)
             textSize = 14f
             setPadding(dp(activity, 12), dp(activity, 7), dp(activity, 12), dp(activity, 7))
             background = rounded(activity, Color.rgb(255,253,247), Color.rgb(224,216,204), 14)
@@ -71,6 +73,7 @@ object ItemPickerDialog {
         root.addView(TextView(activity).apply {
             text = if (russian) "Некоторые ID взяты из общего каталога и могут не поддерживаться мобильной версией." else "Some catalog IDs are community references and may not be supported by the mobile build."
             textSize = 10f
+            typeface = GameAssets.typeface(activity)
             setTextColor(Color.rgb(107,123,141))
             setPadding(dp(activity, 3), dp(activity, 2), dp(activity, 3), dp(activity, 4))
         })
@@ -90,6 +93,7 @@ object ItemPickerDialog {
             setText(currentCount.toString())
             gravity = Gravity.CENTER
             textSize = 16f
+            typeface = GameAssets.typeface(activity)
             background = rounded(activity, Color.rgb(255,253,247), Color.rgb(224,216,204), 14)
         }
         var selectedId = currentId
@@ -98,6 +102,7 @@ object ItemPickerDialog {
             text = label
             isAllCaps = false
             textSize = 17f
+            typeface = GameAssets.typeface(activity, true)
             setTextColor(Color.rgb(45,55,72))
             background = rounded(activity, Color.rgb(255,253,247), Color.rgb(179,157,219), 22)
             setOnClickListener { action() }
@@ -181,6 +186,7 @@ object ItemPickerDialog {
                     tile.addView(TextView(activity).apply {
                         text = displayName
                         textSize = 10f
+                        typeface = GameAssets.typeface(activity, true)
                         maxLines = 2
                         gravity = Gravity.CENTER
                         setTextColor(Color.rgb(45,55,72))
@@ -188,6 +194,7 @@ object ItemPickerDialog {
                     tile.addView(TextView(activity).apply {
                         text = "ID: $id"
                         textSize = 9f
+                        typeface = GameAssets.typeface(activity)
                         setTextColor(Color.rgb(155,168,181))
                     })
                     val params = LinearLayout.LayoutParams(0, dp(activity, 102), 1f)
@@ -204,6 +211,7 @@ object ItemPickerDialog {
                 text = label
                 isAllCaps = false
                 textSize = 10f
+                typeface = GameAssets.typeface(activity, true)
                 setTextColor(Color.rgb(45,55,72))
                 background = rounded(activity, Color.rgb(255,253,247), Color.rgb(179,157,219), 20)
                 setPadding(dp(activity, 6), 0, dp(activity, 6), 0)
