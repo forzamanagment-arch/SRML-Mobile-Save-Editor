@@ -4,6 +4,9 @@ on:
   push:
     paths:
       - ".github/workflows/inspect-srse-records.yml"
+  push:
+    paths:
+      - ".github/workflows/inspect-srse-records.yml"
 permissions:
   contents: read
 jobs:
