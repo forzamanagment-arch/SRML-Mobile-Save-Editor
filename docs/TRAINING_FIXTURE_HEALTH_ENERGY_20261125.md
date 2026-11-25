@@ -65,23 +65,20 @@ Values below are little-endian unsigned 32-bit integers relative to the start of
 ### Confirmed
 
 - `SRPL + 0x16` matches Newbucks in all three samples. This independently corroborates the current Newbucks field rule.
-- `SRPL + 0x0A` and `SRPL + 0x0E` are changing player-record values and are worth investigating further.
+- `SRPL + 0x0A` stores **current health at save time**, not maximum health. The 150-max-health sample had 120 current health in the user's pre-save screenshot, matching the binary value 120; the other two samples had full current health (100 and 250), also matching the binary values.
+- `SRPL + 0x0E` is a candidate for **current energy at save time**, but this interpretation is not independently confirmed yet.
 
 ### Not confirmed
 
-- Maximum health and maximum energy are both set to the same value in all three samples. These fixtures cannot distinguish the health field from the energy field.
-- Neither `SRPL + 0x0A` nor `SRPL + 0x0E` maps consistently to the declared maximum values across all three samples. They may represent current health/energy, or other related state. Do not label either as max health or max energy yet.
+- `SRPL + 0x0E` as current energy remains unconfirmed because the matching energy readings at the exact save moments have not yet been independently compared.
+- The maximum-health and maximum-energy capacity fields have **not** been located. Do not confuse these capacity fields with current health/current energy.
 - A scan for exact 8/16/32/64-bit integers and float32 values matching the labelled maxima at a stable relative offset from `SRPL` did not identify a confirmed max-health/max-energy field.
 - The saves differ in world progress, inventory, time, and file size, so whole-file byte diffs are not a valid way to attribute every change to health or energy.
 
 ## Next experiment needed
 
-Create two additional saves from the same world while keeping all other values unchanged:
-1. Max health changes, max energy stays fixed.
-2. Max energy changes, max health stays fixed.
-
-Keep current health and current energy at known values too, and record those separately if the game UI exposes them. This will let the recognizer distinguish capacity fields from current-value fields.
+Create controlled saves from the same world and record the exact current energy shown immediately before saving. To test the capacity fields separately, create two saves where max health and max energy differ (for example 150/100 and 100/150), while recording current health and current energy at save time.
 
 ## Use in the editor
 
-This is a labelled research fixture, not a confirmed editor rule. The editor must not write to `SRPL + 0x0A` or `SRPL + 0x0E` until independent samples confirm their meaning and safe write behavior.
+This is a labelled research fixture, not a confirmed editor rule. `SRPL + 0x0A` may be treated as the confirmed current-health field for analysis; any write support still needs bounds/format validation and a backup-safe test. Do not write `SRPL + 0x0E` as energy until confirmed. Maximum health and maximum energy capacity fields remain unknown.
