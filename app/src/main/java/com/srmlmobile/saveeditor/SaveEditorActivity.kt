@@ -374,10 +374,24 @@ class SaveEditorActivity : Activity() {
             val waterIcon = ImageView(this)
             val waterBitmap = GameAssets.icon(this, "Water", "AncientWater")
             if (waterBitmap != null) waterIcon.setImageBitmap(waterBitmap)
-            else waterIcon.setBackground(rounded(Color.rgb(232,220,200), Color.rgb(203,191,168), dp(12)))
-            waterTile.addView(waterIcon, LinearLayout.LayoutParams(dp(48), dp(48)))
+            else {
+                waterIcon.setImageResource(android.R.drawable.ic_menu_help)
+                waterIcon.setBackground(rounded(Color.rgb(232,220,200), Color.rgb(203,191,168), dp(12)))
+            }
+            val waterFrame = FrameLayout(this)
+            waterFrame.addView(waterIcon, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.CENTER))
+            val waterBadge = TextView(this).apply {
+                text = water.count.toString()
+                textSize = 10f
+                gravity = Gravity.CENTER
+                setTextColor(Color.WHITE)
+                setPadding(dp(6), 0, dp(6), 0)
+                background = rounded(Color.rgb(63,184,173), Color.TRANSPARENT, dp(20))
+            }
+            waterFrame.addView(waterBadge, FrameLayout.LayoutParams(-2, dp(20), Gravity.TOP or Gravity.END))
+            waterTile.addView(waterFrame, LinearLayout.LayoutParams(dp(48), dp(48)))
             val waterText = TextView(this).apply {
-                text = tr("Water slot  •  ", "Слот воды  •  ") + water.count
+                text = tr("Water slot", "Слот воды")
                 textSize = 14f
                 setTextColor(Color.rgb(45,55,72))
                 typeface = GameAssets.typeface(this@SaveEditorActivity)
@@ -387,7 +401,7 @@ class SaveEditorActivity : Activity() {
                 ItemPickerDialog.show(this@SaveEditorActivity, water.id, water.count, true) { selectedId, selectedCount ->
                     spinner.setSelection(when (selectedId) { WATER_ID -> 1; MAGIC_WATER_ID -> 2; else -> 0 })
                     waterCountInput?.setText(selectedCount.toString())
-                    waterText.text = tr("Water slot  •  ", "Слот воды  •  ") + selectedCount
+                    waterBadge.text = selectedCount.toString()
                 }
             }
             waterTile.setOnClickListener { openWaterPicker() }
