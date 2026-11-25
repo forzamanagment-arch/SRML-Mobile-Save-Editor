@@ -87,12 +87,15 @@ public class MainActivity extends Activity {
         LinearLayout root=new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(20),dp(24),dp(20),dp(12));
-        root.setBackgroundColor(CREAM);
+        root.setBackground(new MarshmallowDrawable());
 
-        TextView eyebrow=text("SRML  •  SAVE TOOLS",11,TEAL,true);
-        eyebrow.setLetterSpacing(0.12f);
-        root.addView(eyebrow);
-        pageTitle=text("SRML Save Editor",28,INK,true);
+         View pinkRule=new View(this);
+        pinkRule.setBackground(background(PINK,Color.TRANSPARENT,dp(4)));
+        LinearLayout.LayoutParams ruleParams=new LinearLayout.LayoutParams(dp(46),dp(5));
+        ruleParams.bottomMargin=dp(8);
+        root.addView(pinkRule,ruleParams);
+        pageTitle=text("SRML Save Editor",30,INK,true);
+        pageTitle.setTypeface(GameAssets.typeface(this),Typeface.BOLD);
         pageTitle.setPadding(0,dp(3),0,dp(14));
         root.addView(pageTitle);
 
@@ -121,11 +124,15 @@ public class MainActivity extends Activity {
         output=text("",12,MUTED,false);output.setPadding(dp(4),dp(5),dp(4),dp(5));root.addView(output,new LinearLayout.LayoutParams(-1,-2));
         scroll.setOnTouchListener((v,event)->{
             if(event.getAction()==MotionEvent.ACTION_DOWN){touchStartX=event.getX();touchStartY=event.getY();return false;}
+            if(event.getAction()==MotionEvent.ACTION_MOVE){
+                float dx=event.getX()-touchStartX,dy=event.getY()-touchStartY;
+                if(Math.abs(dx)>dp(12)&&Math.abs(dx)>Math.abs(dy)*1.15f) content.setTranslationX(Math.max(-dp(42),Math.min(dp(42),dx*0.22f)));
+                return false;
+            }
             if(event.getAction()==MotionEvent.ACTION_UP){
                 float dx=event.getX()-touchStartX,dy=event.getY()-touchStartY;
-                if(Math.abs(dx)>dp(72)&&Math.abs(dx)>Math.abs(dy)*1.25f){
-                    setPage(Math.max(0,Math.min(3,selectedPage+(dx<0?1:-1))));return true;
-                }
+                content.animate().translationX(0).setDuration(180).start();
+                if(Math.abs(dx)>dp(54)&&Math.abs(dx)>Math.abs(dy)*1.15f){setPage(Math.max(0,Math.min(3,selectedPage+(dx<0?1:-1))));return true;}
             }
             return false;
         });
@@ -171,6 +178,7 @@ public class MainActivity extends Activity {
         if(content!=null){content.setAlpha(0.82f);content.setTranslationX(dp(page>=previousPage?16:-16));content.animate().alpha(1f).translationX(0).setDuration(300).setInterpolator(new OvershootInterpolator(0.7f)).start();}
         String[] titles={tr("SRML Save Editor","SRML Save Editor"),"Backup",tr("Settings","Настройки"),tr("About","О приложении")};
         pageTitle.setText(titles[page]);
+        if(output!=null)output.setVisibility(page<2?View.VISIBLE:View.GONE);
         shizukuPanel.setVisibility(page<2?View.VISIBLE:View.GONE);
         launchButton.setVisibility(page==0?View.VISIBLE:View.GONE);
         for(int i=0;i<navItems.size();i++){
@@ -197,7 +205,15 @@ public class MainActivity extends Activity {
         ru.setBackground(background(russian?TEAL:Color.rgb(232,224,212),Color.TRANSPARENT,dp(24)));
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(48),1);p.rightMargin=dp(7);choices.addView(en,p);
         choices.addView(ru,new LinearLayout.LayoutParams(0,dp(48),1));content.addView(choices);
-        addEmptyCard(tr("About backups","О резервных копиях"),tr("A backup is created before a save is edited. Restore it from the Backup tab.","Перед редактированием создаётся копия. Восстановить её можно во вкладке Backup."));
+        LinearLayout info=new LinearLayout(this);
+        info.setOrientation(LinearLayout.VERTICAL);
+        info.setPadding(dp(20),dp(18),dp(20),dp(18));
+        info.setBackground(background(Color.rgb(31,41,55),Color.TRANSPARENT,dp(24)));
+        TextView infoTitle=text(tr("BACKUP SAFETY","ЗАЩИТА РЕЗЕРВНЫХ КОПИЙ"),11,Color.rgb(255,154,209),true);
+        infoTitle.setLetterSpacing(0.08f);info.addView(infoTitle);
+        TextView infoBody=text(tr("A backup is created before a save is edited. Restore it at any time from the Backup page.","Перед редактированием создаётся резервная копия. Восстановить её можно во вкладке Backup."),14,Color.WHITE,false);
+        infoBody.setPadding(0,dp(8),0,0);info.addView(infoBody);
+        LinearLayout.LayoutParams infoParams=new LinearLayout.LayoutParams(-1,-2);infoParams.topMargin=dp(14);content.addView(info,infoParams);
     }
     private void setLanguage(boolean ru){
         russian=ru;getSharedPreferences("srml_settings",MODE_PRIVATE).edit().putBoolean("russian",ru).apply();setPage(2);
@@ -211,7 +227,7 @@ public class MainActivity extends Activity {
         card.setGravity(Gravity.CENTER_HORIZONTAL);card.setPadding(dp(24),dp(30),dp(24),dp(30));
         card.setBackground(background(CARD,SAND,dp(28)));
         card.addView(new SlimeLogoView(this),new LinearLayout.LayoutParams(dp(82),dp(82)));
-        TextView name=text("SRML Save Editor",24,INK,true);name.setPadding(0,dp(17),0,dp(4));card.addView(name);
+        TextView name=text("SRML Save Editor",24,INK,true);name.setTypeface(GameAssets.typeface(this),Typeface.BOLD);name.setPadding(0,dp(17),0,dp(4));card.addView(name);
         card.addView(text("Version "+BuildConfig.VERSION_NAME,13,Color.rgb(155,168,181),false));
         TextView description=text(tr("A cozy little tool inspired by the world of Slime Rancher. Built with love and a lot of plorts.","Уютный маленький инструмент, вдохновлённый миром Slime Rancher. Создан с любовью и кучей плортов."),15,MUTED,false);
         description.setGravity(Gravity.CENTER);description.setPadding(0,dp(18),0,0);card.addView(description);
@@ -260,6 +276,25 @@ public class MainActivity extends Activity {
             canvas.restore();
         }
     }
+    private final class MarshmallowDrawable extends android.graphics.drawable.Drawable{
+        private final Paint p=new Paint(3);
+        @Override public void draw(Canvas canvas){
+            android.graphics.Rect b=getBounds();float w=b.width(),h=b.height();
+            p.setShader(new android.graphics.LinearGradient(0,0,w,h,CREAM,Color.rgb(237,232,220),android.graphics.Shader.TileMode.CLAMP));
+            canvas.drawRect(b,p);p.setShader(null);
+            p.setShader(new android.graphics.RadialGradient(w*.88f,h*.08f,w*.48f,new int[]{0x55FF9AD1,0x00FF9AD1},null,android.graphics.Shader.TileMode.CLAMP));
+            canvas.drawRect(b,p);p.setShader(null);
+            p.setShader(new android.graphics.RadialGradient(w*.12f,h*.88f,w*.42f,new int[]{0x554ECDC4,0x004ECDC4},null,android.graphics.Shader.TileMode.CLAMP));
+            canvas.drawRect(b,p);p.setShader(null);
+            p.setShader(new android.graphics.RadialGradient(w*.58f,h*.78f,w*.34f,new int[]{0x44B39DDB,0x00B39DDB},null,android.graphics.Shader.TileMode.CLAMP));
+            canvas.drawRect(b,p);p.setShader(null);
+            p.setColor(0x147B6AA8);p.setStyle(Paint.Style.FILL);
+            for(int y=24;y<h;y+=54)for(int x=20;x<w;x+=58)canvas.drawCircle(x+(y%3)*5,y,1.5f,p);
+        }
+        @Override public void setAlpha(int alpha){}
+        @Override public void setColorFilter(android.graphics.ColorFilter filter){}
+        @Override public int getOpacity(){return android.graphics.PixelFormat.TRANSLUCENT;}
+    }
     private GradientDrawable background(int fill,int stroke,int radius){
         GradientDrawable d=new GradientDrawable();d.setColor(fill);d.setCornerRadius(radius);
         if(stroke!=Color.TRANSPARENT)d.setStroke(dp(1),stroke);return d;
@@ -267,11 +302,11 @@ public class MainActivity extends Activity {
     private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+0.5f);}
     private TextView text(String value,int size,int color,boolean bold){
         TextView t=new TextView(this);t.setText(value);t.setTextSize(size);t.setTextColor(color);
-        if(bold)t.setTypeface(Typeface.create("sans-serif-rounded",Typeface.BOLD));return t;
+        t.setTypeface(GameAssets.typeface(this),bold?Typeface.BOLD:Typeface.NORMAL);return t;
     }
     private Button actionButton(String label,Runnable action){
         Button b=new Button(this);b.setText(label);b.setAllCaps(false);b.setTextSize(14);
-        b.setTextColor(Color.WHITE);b.setTypeface(Typeface.create("sans-serif-rounded",Typeface.BOLD));
+        b.setTextColor(Color.WHITE);b.setTypeface(GameAssets.typeface(this),Typeface.BOLD);
         b.setBackground(background(TEAL,Color.TRANSPARENT,dp(28)));
         b.setMinHeight(dp(46));b.setOnClickListener(v->action.run());return b;
     }
