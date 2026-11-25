@@ -32,23 +32,38 @@ final class SaveSlotReader {
     }
 
     private static byte[] findGamePayload(byte[] file) throws Exception {
+        // Some game builds store the payload directly, others wrap it in a ZIP
+        // archive whose filename has no .zip extension.
         if (startsWith(file, "SRGAME")) return file;
-        ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(file));
-        try {
+
+        try (ZipInputStream zip = new ZipInputStream(new ByteArrayInputStream(file))) {
             ZipEntry entry;
             while ((entry = zip.getNextEntry()) != null) {
                 if (entry.isDirectory() || entry.getName() == null
-                    || !entry.getName().toLowerCase(Locale.ROOT).contains("gamesave-sav")) continue;
+                    || !entry.getName().toLowerCase(Locale.ROOT).endsWith("-sav")) {
+                    zip.closeEntry();
+                    continue;
+                }
+
                 ByteArrayOutputStream out = new ByteArrayOutputStream();
                 byte[] buffer = new byte[8192];
                 int n;
+                boolean tooLarge = false;
                 while ((n = zip.read(buffer)) != -1) {
-                    if (out.size() + n > MAX_PAYLOAD) return null;
+                    if (out.size() + n > MAX_PAYLOAD) {
+                        tooLarge = true;
+                        break;
+                    }
                     out.write(buffer, 0, n);
                 }
-                return out.toByteArray();
+                zip.closeEntry();
+
+                if (!tooLarge) {
+                    byte[] candidate = out.toByteArray();
+                    if (startsWith(candidate, "SRGAME")) return candidate;
+                }
             }
-        } finally { zip.close(); }
+        }
         return null;
     }
 
