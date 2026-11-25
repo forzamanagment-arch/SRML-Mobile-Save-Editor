@@ -132,7 +132,7 @@ object ItemPickerDialog {
                 (waterOnly || ItemCatalog.isAllowedInRegularSlot(id)) &&
                     categoryMatches(id, name) &&
                     (query.isEmpty() || name.lowercase().contains(query) || localized.lowercase().contains(query) || id.toString().contains(query))
-            }.take(240)
+            }
             items.chunked(2).forEach { pair ->
                 val row = LinearLayout(activity).apply { orientation = LinearLayout.HORIZONTAL }
                 pair.forEach { (id, name) ->
