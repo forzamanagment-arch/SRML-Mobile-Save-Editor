@@ -53,6 +53,8 @@ public class MainActivity extends Activity {
         Shizuku.addBinderDeadListener(binderDeadListener);
         buildUi();
         refreshStatus();
+        if (hasPermission()) executor.execute(() -> { try { ShizukuFileAccess.ensureBackup(); } catch (Throwable t) { AppLog.exception(this, "BACKUP", "Backup directory check failed", t); } });
+        else show("Подключи Shizuku и выдай разрешение. После этого приложение проверит папку Backup.");
     }
 
     private void buildUi() {
