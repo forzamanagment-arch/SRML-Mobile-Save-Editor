@@ -10,6 +10,7 @@ import android.text.Editable
 import android.text.InputFilter
 import android.text.InputType
 import android.text.TextWatcher
+import android.view.View
 import android.view.ViewGroup
 import android.widget.ArrayAdapter
 import android.widget.Button
@@ -474,6 +475,14 @@ class SaveEditorActivity : Activity() {
             setPadding(dp(6), 0, dp(6), 0)
             background = rounded(Color.rgb(63,184,173), Color.TRANSPARENT, dp(20))
         }
+        val placeholder = TextView(this).apply {
+            text = "?"
+            textSize = 26f
+            gravity = Gravity.CENTER
+            typeface = GameAssets.typeface(this@SaveEditorActivity, true)
+            setTextColor(Color.rgb(63,184,173))
+            visibility = View.GONE
+        }
         fun refreshTile() {
             val id = idInput.text.toString().toLongOrNull() ?: 0L
             val aliases = ItemCatalog.iconHints(id)
@@ -499,14 +508,6 @@ class SaveEditorActivity : Activity() {
         }
         val frame = FrameLayout(this)
         frame.addView(iconView, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.CENTER))
-        val placeholder = TextView(this).apply {
-            text = "?"
-            textSize = 26f
-            gravity = Gravity.CENTER
-            typeface = GameAssets.typeface(this@SaveEditorActivity, true)
-            setTextColor(Color.rgb(63,184,173))
-            visibility = View.GONE
-        }
         frame.addView(placeholder, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.CENTER))
         frame.addView(badge, FrameLayout.LayoutParams(-2, dp(20), Gravity.TOP or Gravity.END))
         tile.addView(frame, LinearLayout.LayoutParams(-1, dp(54)))
