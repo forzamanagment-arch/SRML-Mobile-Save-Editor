@@ -89,5 +89,23 @@ jobs:
               for p in markers[n]:
                   print(os.path.basename(n.split('!')[0]), 'marker',hex(p))
                   print(d[p:p+512].hex())
+          print('=== SLOT CAPACITY VALUE SCAN ===')
+          caps={'20261122185933-1-1':50,'20261125175309-3-0':20,'20261125171726-2-1':20}
+          for n,(vals,d) in labelled.items():
+              base=os.path.basename(n.split('!')[0])
+              if base not in caps: continue
+              ps=markers[n][0]; cap=caps[base]
+              print('SAVE',base,'expected capacity',cap)
+              for width,fmt in ((1,'B'),(2,'H'),(4,'I')):
+                  pat=struct.pack('<'+fmt,cap); hits=[]; p=0
+                  while True:
+                      p=d.find(pat,p)
+                      if p<0: break
+                      if ps-512 <= p <= ps+20000: hits.append(p)
+                      p+=1
+                  print('width',width,'hits',[(hex(p),hex(p-ps)) for p in hits[:80]])
+              recs=[m.start() for m in re.finditer(b'\\x04SRAD\\x02\\x00\\x00\\x00\\x00\\x30',d)]
+              for p in [x for x in recs if ps<=x<ps+12000][:12]:
+                  print('SRAD',hex(p),'rel',hex(p-ps),'raw',d[p:p+64].hex())
           print('=== END ===')
           PY
