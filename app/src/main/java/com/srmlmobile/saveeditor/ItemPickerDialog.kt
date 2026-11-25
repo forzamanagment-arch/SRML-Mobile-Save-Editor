@@ -24,7 +24,6 @@ object ItemPickerDialog {
         waterOnly: Boolean = false,
         onSelect: (Long, Long) -> Unit
     ) {
-        val russian = activity.getSharedPreferences("srml_settings", Activity.MODE_PRIVATE).getBoolean("russian", false)
         val root = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(activity, 16), dp(activity, 16), dp(activity, 16), dp(activity, 14))
@@ -73,7 +72,7 @@ object ItemPickerDialog {
         }
         root.addView(chipScroll, LinearLayout.LayoutParams(-1, dp(activity, 42)))
         root.addView(TextView(activity).apply {
-            text = if (russian) "Некоторые ID взяты из общего каталога и могут не поддерживаться мобильной версией." else "Some catalog IDs are community references and may not be supported by the mobile build."
+            text = "Some catalog IDs are community references and may not be supported by the mobile build."
             textSize = 10f
             typeface = GameAssets.typeface(activity)
             setTextColor(Color.rgb(107,123,141))
@@ -156,7 +155,7 @@ object ItemPickerDialog {
             results.removeAllViews()
             val query = search.text.toString().trim().lowercase()
             val items = ItemCatalog.names.entries.filter { (id, name) ->
-                val localized = ItemCatalog.localizedName(id, russian)
+                val localized = ItemCatalog.localizedName(id, false)
                 (if (waterOnly) id == 0L || id == 48L || id == 113L else ItemCatalog.isAllowedInRegularSlot(id)) &&
                     categoryMatches(id, name) &&
                     (query.isEmpty() || name.lowercase().contains(query) || localized.lowercase().contains(query) || id.toString().contains(query))
@@ -165,7 +164,7 @@ object ItemPickerDialog {
                 val row = LinearLayout(activity).apply { orientation = LinearLayout.HORIZONTAL }
                 pair.forEach { (id, name) ->
                     val selected = id == selectedId
-                    val displayName = ItemCatalog.localizedName(id, russian)
+                    val displayName = ItemCatalog.localizedName(id, false)
                     val tile = LinearLayout(activity).apply {
                         orientation = LinearLayout.VERTICAL
                         gravity = Gravity.CENTER
@@ -239,7 +238,7 @@ object ItemPickerDialog {
             background = rounded(activity, Color.rgb(255,253,247), Color.TRANSPARENT, 20)
         }
         val cancel = Button(activity).apply {
-            text = if (russian) "Отмена" else "Cancel"
+            text = "Cancel"
             isAllCaps = false
             textSize = 13f
             typeface = GameAssets.typeface(activity, true)
@@ -248,7 +247,7 @@ object ItemPickerDialog {
             setPadding(dp(activity, 18), 0, dp(activity, 18), 0)
         }
         val select = Button(activity).apply {
-            text = if (russian) "Выбрать" else "Select"
+            text = "Select"
             isAllCaps = false
             textSize = 13f
             typeface = GameAssets.typeface(activity, true)
@@ -268,7 +267,7 @@ object ItemPickerDialog {
         select.setOnClickListener {
             val count = quantity.text.toString().toLongOrNull()
             if (count == null || count !in 0..4294967295L) {
-                quantity.error = if (russian) "Введи корректное количество" else "Enter a valid amount"
+                quantity.error = "Enter a valid amount"
             } else {
                 onSelect(selectedId, count)
                 dialog.dismiss()
