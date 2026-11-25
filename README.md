@@ -1,15 +1,25 @@
 # SRML Mobile Save Editor
 
-Android save editor for Slime Rancher Mobile. The first milestone is a safe Shizuku access check and save discovery flow.
+Android save editor for Slime Rancher Mobile.
 
-## Current alpha
+## Current diagnostic alpha
 
-- Shizuku connection and permission status
-- Checks the game's external save directory
-- Read-only listing; no original save is modified
-- Save-format research notes
+- Shizuku Binder and permission checks
+- Read-only check of the game's save directory
+- Persistent internal diagnostic log with timestamps and stack traces
+- Log rotation (current + previous log, 512 KB threshold)
+- In-app log viewer and Android share-sheet export
+- No original save is modified
 
-Currency and inventory editing are intentionally not enabled until their binary fields are verified with controlled differential save samples.
+## Diagnostics captured
+
+- App version, Android API level and device model
+- Shizuku Binder connected/disconnected events
+- Permission request and grant/denial result
+- Save directory diagnostic result and shell exit code
+- Shizuku process exceptions and Java stack traces
+
+The app does not log save-file contents or modify save files.
 
 ## Build
 
