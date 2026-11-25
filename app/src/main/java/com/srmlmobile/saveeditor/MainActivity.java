@@ -505,7 +505,7 @@ public class MainActivity extends Activity {
         headingText.setPadding(dp(10),0,0,0);heading.addView(headingText);
         content.addView(heading);
         TextView hint=text(tr("Choose a world to edit its save.","Выбери мир, чтобы изменить сохранение."),13,MUTED,false);hint.setPadding(0,dp(4),0,dp(12));content.addView(hint);
-        if(found.isEmpty()){addEmptyCard(tr("No worlds found","Миры не найдены"),tr("Make sure the game has created a save.","Проверь, что игра уже создала сохранение."),content);show("Список миров обновлён.");return;}
+        if(found.isEmpty()){addEmptyCard(tr("No worlds found","Миры не найдены"),tr("Make sure the game has created a save.","Проверь, что игра уже создала сохранение."),content);show(tr("Worlds found: 0","Найдено миров: 0"));return;}
         for(SaveSlot slot:found){
             LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
             card.setPadding(dp(14),dp(12),dp(14),dp(12));card.setBackground(background(CARD,SAND,dp(26)));
