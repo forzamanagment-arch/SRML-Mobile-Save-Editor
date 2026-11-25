@@ -137,9 +137,19 @@ object ItemPickerDialog {
                 "Food" -> id in setOf(8L,9L,16L,17L,18L,19L,20L,26L,27L,28L,29L,49L,50L,68L,69L,70L,71L,88L,100L,110L,111L,148L,149L,165L)
                 "Plorts" -> n.contains("плорт")
                 "Resources" -> id in 11000L..11999L
-                "Gadgets" -> id in 12000L..13999L || id == 175L
-                "Decorations" -> id in 14000L..14999L
+                "Fashion Pod" -> id in 12000L..12099L
+                "Ornament" -> id in 14000L..14999L
                 else -> true
+            }
+        }
+        fun updateChipAppearance() {
+            for (index in 0 until chips.childCount) {
+                val chip = chips.getChildAt(index) as? Button ?: continue
+                val active = chip.text.toString() == category
+                chip.setTextColor(if (active) Color.WHITE else Color.rgb(45,55,72))
+                chip.background = rounded(activity,
+                    if (active) Color.rgb(232,76,138) else Color.rgb(255,253,247),
+                    if (active) Color.TRANSPARENT else Color.rgb(224,216,204), 999)
             }
         }
         fun render() {
@@ -199,23 +209,23 @@ object ItemPickerDialog {
                 results.addView(row)
             }
         }
-        val categories = if (waterOnly) listOf("All") else listOf("All", "Food", "Plorts", "Resources", "Gadgets", "Decorations")
+        val categories = if (waterOnly) listOf("All") else listOf("All", "Food", "Plorts", "Resources", "Fashion Pod", "Ornament")
         categories.forEach { label ->
             val chip = Button(activity).apply {
                 text = label
                 isAllCaps = false
                 textSize = 10f
                 typeface = GameAssets.typeface(activity, true)
-                setTextColor(Color.rgb(45,55,72))
                 setTextColor(if (category == label) Color.WHITE else Color.rgb(45,55,72))
-                background = rounded(activity, if (category == label) Color.rgb(232,76,138) else Color.rgb(255,253,247), Color.rgb(179,157,219), 20)
-                setPadding(dp(activity, 6), 0, dp(activity, 6), 0)
-                setOnClickListener { category = label; render() }
+                background = rounded(activity, if (category == label) Color.rgb(232,76,138) else Color.rgb(255,253,247), if (category == label) Color.TRANSPARENT else Color.rgb(224,216,204), 999)
+                setPadding(dp(activity, 16), 0, dp(activity, 16), 0)
+                setOnClickListener { category = label; updateChipAppearance(); render() }
             }
             val params = LinearLayout.LayoutParams(-2, dp(activity, 32))
             params.setMargins(dp(activity, 2), dp(activity, 5), dp(activity, 2), dp(activity, 2))
             chips.addView(chip, params)
         }
+        updateChipAppearance()
         search.addTextChangedListener(object : TextWatcher {
             override fun beforeTextChanged(s: CharSequence?, start: Int, count: Int, after: Int) {}
             override fun onTextChanged(s: CharSequence?, start: Int, before: Int, count: Int) { render() }
