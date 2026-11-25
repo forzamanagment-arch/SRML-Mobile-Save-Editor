@@ -54,6 +54,12 @@ object ItemPickerDialog {
             addView(chips)
         }
         root.addView(chipScroll, LinearLayout.LayoutParams(-1, dp(activity, 42)))
+        root.addView(TextView(activity).apply {
+            text = if (russian) "Некоторые ID взяты из общего каталога и могут не поддерживаться мобильной версией." else "Some catalog IDs are community references and may not be supported by the mobile build."
+            textSize = 10f
+            setTextColor(Color.rgb(107,123,141))
+            setPadding(dp(activity, 3), dp(activity, 2), dp(activity, 3), dp(activity, 4))
+        })
         val results = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         val scroll = ScrollView(activity).apply { addView(results) }
         val scrollParams = LinearLayout.LayoutParams(-1, dp(activity, 280))
