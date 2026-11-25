@@ -54,6 +54,10 @@ jobs:
                   s=m.group().decode('ascii','replace')
                   if any(ch.isalpha() for ch in s):
                       print(hex(m.start()),repr(s[:180]))
+              print('--- GORDO IDENTIFIER RECORD CONTEXT ---')
+              for m in re.finditer(rb'gordo[A-Za-z0-9]+',d):
+                  p=m.start(); end=m.end()
+                  print(hex(p),m.group().decode('ascii','replace'),d[max(0,p-8):min(len(d),end+24)].hex())
               print('--- PLAYER SRPL FIELD WINDOW ---')
               for m in re.finditer(b'SRPL',d):
                   p=m.start()
