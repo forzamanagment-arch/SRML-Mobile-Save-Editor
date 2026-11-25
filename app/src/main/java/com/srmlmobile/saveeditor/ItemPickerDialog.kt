@@ -30,15 +30,28 @@ object ItemPickerDialog {
             setPadding(dp(activity, 12), dp(activity, 12), dp(activity, 12), dp(activity, 10))
             background = rounded(activity, Color.rgb(230,233,242), Color.rgb(179,157,219), 22)
         }
+        val headerBar = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.CENTER_VERTICAL
+            background = rounded(activity, Color.rgb(232,76,138), Color.TRANSPARENT, 16)
+        }
         val header = TextView(activity).apply {
             text = if (waterOnly) "CHOOSE WATER TYPE" else "CHOOSE AN ITEM"
             textSize = 13f
             letterSpacing = .08f
             setTextColor(Color.WHITE)
-            setPadding(dp(activity, 14), dp(activity, 12), dp(activity, 14), dp(activity, 12))
-            background = rounded(activity, Color.rgb(232,76,138), Color.TRANSPARENT, 16)
+            setPadding(dp(activity, 14), dp(activity, 12), dp(activity, 8), dp(activity, 12))
         }
-        root.addView(header)
+        headerBar.addView(header, LinearLayout.LayoutParams(0, -2, 1f))
+        val closeButton = TextView(activity).apply {
+            text = "×"
+            textSize = 25f
+            gravity = Gravity.CENTER
+            setTextColor(Color.WHITE)
+            setPadding(dp(activity, 10), 0, dp(activity, 12), dp(activity, 2))
+        }
+        headerBar.addView(closeButton, LinearLayout.LayoutParams(dp(activity, 44), dp(activity, 44)))
+        root.addView(headerBar)
         val search = EditText(activity).apply {
             hint = "Search items…"
             setSingleLine(true)
@@ -211,6 +224,7 @@ object ItemPickerDialog {
             .setNegativeButton("Cancel", null)
             .setPositiveButton("Select", null)
             .create()
+        closeButton.setOnClickListener { dialog.dismiss() }
         dialog.setOnShowListener {
             dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
                 val count = quantity.text.toString().toLongOrNull()
