@@ -481,6 +481,25 @@ class SaveEditorActivity : Activity() {
         }
     }
 
+    override fun onBackPressed() {
+        val target = remoteTargetPath
+        val staged = stageFile
+        if (target != null && staged != null && !saveCompleted && staged.exists()) {
+            status.text = "Возвращаю исходное сохранение без изменений…"
+            Thread {
+                try {
+                    ShizukuFileAccess.writeAtomic(target, staged.readBytes())
+                    staged.delete()
+                    runOnUiThread { finish() }
+                } catch (e: Exception) {
+                    runOnUiThread { status.text = "Не удалось восстановить оригинал: " + (e.message ?: "ошибка") + ". Резервная копия находится в Backup." }
+                }
+            }.start()
+        } else {
+            super.onBackPressed()
+        }
+    }
+
     private fun parseUnsigned(text: String?, label: String): Long {
         val value = text?.trim()?.toLongOrNull() ?: error("$label: введи целое число")
         if (value < 0 || value > MAX_U32) error("$label: допустимый диапазон 0–4294967295")
