@@ -62,23 +62,28 @@ jobs:
               for p in locs:
                   print('  context:',d[max(0,p-24):p+160].hex())
           for label in ('health','energy'):
-              rows=[(n,v[label],d) for n,(v,d) in labelled.items() if label in v]
+              rows=[(n,v[label],d) for n,(v,d) in labelled.items() if label in v and markers.get(n)]
               print(f'=== EXACT CANDIDATES {label}: {[(os.path.basename(n.split("!")[0]),v) for n,v,_ in rows]} ===')
               if len(rows)<2: continue
-              common=set.intersection(*[set(markers[n]) for n,_,_ in rows]) if all(markers[n] for n,_,_ in rows) else set()
-              for anchor in sorted(common):
-                  limit=min(len(d) for _,_,d in rows)
-                  for width,fmt in [(1,'B'),(2,'H'),(4,'I'),(8,'Q')]:
-                      hits=[]
-                      for off in range(anchor, min(anchor+8192,limit-width+1)):
-                          vals=[struct.unpack_from('<'+fmt,d,off)[0] for _,_,d in rows]
-                          if vals==[v for _,v,_ in rows]: hits.append(off-anchor)
-                      for rel in hits[:100]: print(f'  SRPL+0x{rel:X} uint{width*8} LE => {[v for _,v,_ in rows]}')
-                  fhits=[]
-                  for off in range(anchor,min(anchor+8192,limit-3)):
-                      vals=[struct.unpack_from('<f',d,off)[0] for _,_,d in rows]
-                      if all(abs(x-v)<1e-4 for x,(_,v,_) in zip(vals,rows)): fhits.append(off-anchor)
-                  for rel in fhits[:100]: print(f'  SRPL+0x{rel:X} float32 => {[v for _,v,_ in rows]}')
+              for width,fmt in [(1,'B'),(2,'H'),(4,'I'),(8,'Q')]:
+                  hits=[]
+                  for rel in range(0,8192-width+1):
+                      vals=[]
+                      for n,_,d in rows:
+                          anchor=markers[n][0]
+                          if anchor+rel+width>len(d): break
+                          vals.append(struct.unpack_from('<'+fmt,d,anchor+rel)[0])
+                      if len(vals)==len(rows) and vals==[v for _,v,_ in rows]: hits.append(rel)
+                  for rel in hits[:100]: print(f'  SRPL+0x{rel:X} uint{width*8} LE => {[v for _,v,_ in rows]}')
+              fhits=[]
+              for rel in range(0,8192-3):
+                  vals=[]
+                  for n,_,d in rows:
+                      anchor=markers[n][0]
+                      if anchor+rel+4>len(d): break
+                      vals.append(struct.unpack_from('<f',d,anchor+rel)[0])
+                  if len(vals)==len(rows) and all(abs(x-v)<1e-4 for x,(_,v,_) in zip(vals,rows)): fhits.append(rel)
+              for rel in fhits[:100]: print(f'  SRPL+0x{rel:X} float32 => {[v for _,v,_ in rows]}')
           print('=== PLAYER-REGION LENGTH / FIRST 512 BYTES ===')
           for n,(vals,d) in labelled.items():
               for p in markers[n]:
