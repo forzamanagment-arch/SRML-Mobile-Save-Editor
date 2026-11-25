@@ -81,6 +81,7 @@ public class MainActivity extends Activity {
 
         addButton(root, "Подключить / проверить Shizuku", this::requestShizuku);
         addButton(root, "Обновить список миров", this::scanSaves);
+        addButton(root, "Открыть редактор сохранения", () -> startActivity(new Intent(this, SaveEditorActivity.class)));
 
         TextView header = new TextView(this);
         header.setText("ТВОИ СОХРАНЕНИЯ");
