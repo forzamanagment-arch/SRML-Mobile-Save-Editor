@@ -252,6 +252,10 @@ public class MainActivity extends Activity {
                                 fileOut.getFD().sync();
                             }
                             byte[] copiedBytes = readLocalFile(temporaryZip);
+                            AppLog.i(this, "SAVE_SCAN", "Read sizes for " + sourcePath
+                                + ": remote=" + sourceBytes.length + " cache=" + copiedBytes.length);
+                            AppLog.i(this, "SAVE_SCAN", "Archive probe " + sourcePath + ": "
+                                + SaveSlotReader.diagnosticSummary(copiedBytes));
                             SaveSlot slot = SaveSlotReader.inspect(sourcePath, copiedBytes);
                             if (slot != null) {
                                 found.add(slot);
