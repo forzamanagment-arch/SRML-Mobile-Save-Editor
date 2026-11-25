@@ -436,6 +436,7 @@ public class MainActivity extends Activity {
             card.addView(titleRow);
             TextView date=text(item.stamp,13,MUTED,false);date.setPadding(0,dp(3),0,dp(8));card.addView(date);
             Button restore=actionButton(tr("Restore backup","Восстановить"),()->confirmRestore(item));
+            restore.setBackground(background(PINK,Color.TRANSPARENT,dp(28)));
             card.addView(restore,new LinearLayout.LayoutParams(-1,dp(46)));
         }
         if(backupNotice!=null){show(backupNotice);backupNotice=null;}else show(tr("Backups: ","Резервных копий: ")+items.size());
