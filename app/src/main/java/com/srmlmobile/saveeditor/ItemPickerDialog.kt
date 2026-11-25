@@ -27,8 +27,8 @@ object ItemPickerDialog {
         val russian = activity.getSharedPreferences("srml_settings", Activity.MODE_PRIVATE).getBoolean("russian", false)
         val root = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(activity, 12), dp(activity, 12), dp(activity, 12), dp(activity, 10))
-            background = rounded(activity, Color.rgb(230,233,242), Color.rgb(179,157,219), 22)
+            setPadding(dp(activity, 16), dp(activity, 16), dp(activity, 16), dp(activity, 14))
+            background = rounded(activity, Color.rgb(255,253,247), Color.rgb(224,216,204), 28)
         }
         val headerBar = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -59,7 +59,9 @@ object ItemPickerDialog {
             typeface = GameAssets.typeface(activity)
             textSize = 14f
             setPadding(dp(activity, 12), dp(activity, 7), dp(activity, 12), dp(activity, 7))
-            background = rounded(activity, Color.rgb(255,253,247), Color.rgb(224,216,204), 14)
+            setTextColor(Color.rgb(45,55,72))
+            setHintTextColor(Color.rgb(155,168,181))
+            background = rounded(activity, Color.rgb(255,253,247), Color.rgb(224,216,204), 999)
         }
         val searchParams = LinearLayout.LayoutParams(-1, dp(activity, 44))
         searchParams.topMargin = dp(activity, 9)
@@ -78,7 +80,11 @@ object ItemPickerDialog {
             setPadding(dp(activity, 3), dp(activity, 2), dp(activity, 3), dp(activity, 4))
         })
         val results = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
-        val scroll = ScrollView(activity).apply { addView(results) }
+        val scroll = ScrollView(activity).apply {
+            isVerticalScrollBarEnabled = false
+            setBackgroundColor(Color.TRANSPARENT)
+            addView(results)
+        }
         val scrollParams = LinearLayout.LayoutParams(-1, dp(activity, 280))
         scrollParams.topMargin = dp(activity, 5)
         root.addView(scroll, scrollParams)
@@ -93,8 +99,10 @@ object ItemPickerDialog {
             setText(currentCount.toString())
             gravity = Gravity.CENTER
             textSize = 16f
-            typeface = GameAssets.typeface(activity)
-            background = rounded(activity, Color.rgb(255,253,247), Color.rgb(224,216,204), 14)
+            typeface = GameAssets.typeface(activity, true)
+            setTextColor(Color.rgb(45,55,72))
+            setHintTextColor(Color.rgb(155,168,181))
+            background = rounded(activity, Color.rgb(255,253,247), Color.rgb(224,216,204), 999)
         }
         var selectedId = currentId
         var category = "All"
@@ -104,7 +112,7 @@ object ItemPickerDialog {
             textSize = 17f
             typeface = GameAssets.typeface(activity, true)
             setTextColor(Color.rgb(45,55,72))
-            background = rounded(activity, Color.rgb(255,253,247), Color.rgb(179,157,219), 22)
+            background = rounded(activity, Color.rgb(255,253,247), Color.rgb(63,184,173), 999)
             setOnClickListener { action() }
         }
         quantityRow.addView(qtyButton("−") {
@@ -126,34 +134,20 @@ object ItemPickerDialog {
             if (waterOnly) return id == 0L || id == 48L || id == 113L
             val n = name.lowercase()
             return when (category) {
-                "Food" -> listOf("куриц", "морков", "фрукт", "манго", "лук", "имбир", "тофу", "груш", "свёкл").any { n.contains(it) }
-                "Slimes" -> n.contains("слайм") || n.contains("ларго") || n.contains("гордо")
+                "Food" -> id in setOf(8L,9L,16L,17L,18L,19L,20L,26L,27L,28L,29L,49L,50L,68L,69L,70L,71L,88L,100L,110L,111L,148L,149L,165L)
                 "Plorts" -> n.contains("плорт")
                 "Resources" -> id in 11000L..11999L
-                "Gadgets" -> id >= 12000L || n.contains("ящик")
+                "Gadgets" -> id in 12000L..13999L || id == 175L
+                "Decorations" -> id in 14000L..14999L
                 else -> true
             }
-        }
-        fun aliases(id: Long, name: String): List<String> {
-            val exact = when (id) {
-                1L -> "RadSlime"; 2L -> "RockSlime"; 3L -> "Pink_Slime"; 8L -> "Cuberry"
-                9L -> "Mint_mango"; 16L -> "Hen_hen"; 17L -> "Roostro"; 19L -> "Carrot"
-                21L -> "Boom_Slime"; 27L -> "Pogo_fruit"; 29L -> "Heart_Beet"
-                31L -> "PhosphorSlime"; 37L -> "TabbySlime"; 48L -> "PlortWATER"
-                51L -> "SlimeChasseur"; 59L -> "HoneySlime"; 72L -> "SlimeAqueux"
-                76L -> "Key"; 79L -> "SlimeDeCristal"; 89L -> "Quantum_Slime"
-                100L -> "PhaseLemon"; 102L -> "DervishSlime"; 104L -> "MosaicSlime"
-                106L -> "Tangle_Slime"; 108L -> "FireSlime"; 148L -> "GildedGinger"
-                150L -> "Saber_Slime"; else -> name
-            }
-            return listOf(exact, name)
         }
         fun render() {
             results.removeAllViews()
             val query = search.text.toString().trim().lowercase()
             val items = ItemCatalog.names.entries.filter { (id, name) ->
                 val localized = ItemCatalog.localizedName(id, russian)
-                (waterOnly || ItemCatalog.isAllowedInRegularSlot(id)) &&
+                (if (waterOnly) id == 0L || id == 48L || id == 113L else ItemCatalog.isAllowedInRegularSlot(id)) &&
                     categoryMatches(id, name) &&
                     (query.isEmpty() || name.lowercase().contains(query) || localized.lowercase().contains(query) || id.toString().contains(query))
             }
@@ -170,7 +164,7 @@ object ItemPickerDialog {
                             if (selected) Color.rgb(63,184,173) else Color.rgb(224,216,204), 14)
                         setOnClickListener { selectedId = id; render() }
                     }
-                    val bitmap = GameAssets.icon(activity, *aliases(id, name).toTypedArray())
+                    val bitmap = GameAssets.icon(activity, *ItemCatalog.iconHints(id).toTypedArray())
                     if (bitmap != null) {
                         tile.addView(ImageView(activity).apply { setImageBitmap(bitmap) },
                             LinearLayout.LayoutParams(dp(activity, 46), dp(activity, 46)))
@@ -205,7 +199,7 @@ object ItemPickerDialog {
                 results.addView(row)
             }
         }
-        val categories = if (waterOnly) listOf("All") else listOf("All", "Food", "Slimes", "Plorts", "Resources", "Gadgets")
+        val categories = if (waterOnly) listOf("All") else listOf("All", "Food", "Plorts", "Resources", "Gadgets", "Decorations")
         categories.forEach { label ->
             val chip = Button(activity).apply {
                 text = label
@@ -213,7 +207,8 @@ object ItemPickerDialog {
                 textSize = 10f
                 typeface = GameAssets.typeface(activity, true)
                 setTextColor(Color.rgb(45,55,72))
-                background = rounded(activity, Color.rgb(255,253,247), Color.rgb(179,157,219), 20)
+                setTextColor(if (category == label) Color.WHITE else Color.rgb(45,55,72))
+                background = rounded(activity, if (category == label) Color.rgb(232,76,138) else Color.rgb(255,253,247), Color.rgb(179,157,219), 20)
                 setPadding(dp(activity, 6), 0, dp(activity, 6), 0)
                 setOnClickListener { category = label; render() }
             }
@@ -227,24 +222,56 @@ object ItemPickerDialog {
             override fun afterTextChanged(s: Editable?) {}
         })
         render()
-        val dialog = AlertDialog.Builder(activity)
-            .setView(root)
-            .setNegativeButton("Cancel", null)
-            .setPositiveButton("Select", null)
-            .create()
+        val footer = LinearLayout(activity).apply {
+            orientation = LinearLayout.HORIZONTAL
+            gravity = Gravity.END or Gravity.CENTER_VERTICAL
+            setPadding(dp(activity, 4), dp(activity, 12), dp(activity, 4), dp(activity, 2))
+            background = rounded(activity, Color.rgb(255,253,247), Color.TRANSPARENT, 20)
+        }
+        val cancel = Button(activity).apply {
+            text = if (russian) "Отмена" else "Cancel"
+            isAllCaps = false
+            textSize = 13f
+            typeface = GameAssets.typeface(activity, true)
+            setTextColor(Color.rgb(63,184,173))
+            background = rounded(activity, Color.TRANSPARENT, Color.rgb(63,184,173), 999)
+            setPadding(dp(activity, 18), 0, dp(activity, 18), 0)
+        }
+        val select = Button(activity).apply {
+            text = if (russian) "Выбрать" else "Select"
+            isAllCaps = false
+            textSize = 13f
+            typeface = GameAssets.typeface(activity, true)
+            setTextColor(Color.WHITE)
+            background = rounded(activity, Color.rgb(63,184,173), Color.TRANSPARENT, 999)
+            setPadding(dp(activity, 20), 0, dp(activity, 20), 0)
+        }
+        val cancelParams = LinearLayout.LayoutParams(-2, dp(activity, 42))
+        cancelParams.marginEnd = dp(activity, 9)
+        footer.addView(cancel, cancelParams)
+        footer.addView(select, LinearLayout.LayoutParams(-2, dp(activity, 42)))
+        root.addView(footer)
+
+        val dialog = AlertDialog.Builder(activity).setView(root).create()
         closeButton.setOnClickListener { dialog.dismiss() }
-        dialog.setOnShowListener {
-            dialog.getButton(AlertDialog.BUTTON_POSITIVE).setOnClickListener {
-                val count = quantity.text.toString().toLongOrNull()
-                if (count == null || count !in 0..4294967295L) {
-                    quantity.error = "Enter a valid amount"
-                } else {
-                    onSelect(selectedId, count)
-                    dialog.dismiss()
-                }
+        cancel.setOnClickListener { dialog.dismiss() }
+        select.setOnClickListener {
+            val count = quantity.text.toString().toLongOrNull()
+            if (count == null || count !in 0..4294967295L) {
+                quantity.error = if (russian) "Введи корректное количество" else "Enter a valid amount"
+            } else {
+                onSelect(selectedId, count)
+                dialog.dismiss()
             }
         }
         dialog.show()
+        dialog.window?.setBackgroundDrawableResource(android.R.color.transparent)
+        dialog.window?.addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND)
+        dialog.window?.setDimAmount(0.45f)
+        dialog.window?.setLayout(
+            activity.resources.displayMetrics.widthPixels - dp(activity, 28),
+            android.view.WindowManager.LayoutParams.WRAP_CONTENT
+        )
     }
 
     private fun dp(activity: Activity, value: Int) =
