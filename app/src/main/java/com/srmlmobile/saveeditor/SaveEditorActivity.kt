@@ -368,6 +368,19 @@ class SaveEditorActivity : Activity() {
         return SlotEditor(idInput, countInput, nameLabel, field)
     }
 
+    private fun showTestPicker(current: Int) {
+        val values = arrayOf("0", "1", "2", "3")
+        AlertDialog.Builder(this)
+            .setTitle("Тест • SRGA + 0x4A")
+            .setSingleChoiceItems(values, current) { dialog, which ->
+                testValue = which
+                dialog.dismiss()
+                status.text = "Для функции Тест выбрано значение " + which + ". Оно будет записано после нажатия «Сохранить изменения»."
+            }
+            .setNegativeButton("Отмена", null)
+            .show()
+    }
+
     private fun prepareOutput() {
         try {
             val data = parsed ?: error("Сначала выбери сохранение")
