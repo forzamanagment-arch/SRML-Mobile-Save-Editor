@@ -7,10 +7,14 @@ android {
     namespace 'com.srmlmobile.saveeditor'
     compileSdk 35
 
+    buildFeatures {
+        buildConfig true
+    }
+
     defaultConfig {
         applicationId 'com.srmlmobile.saveeditor'
         minSdk 24
-        targetSdk 28
+        targetSdk 35
         versionCode 3
         versionName '0.1-prototype'
     }
@@ -23,4 +27,9 @@ android {
     kotlinOptions {
         jvmTarget = '17'
     }
+}
+
+dependencies {
+    implementation 'dev.rikka.shizuku:api:13.1.5'
+    implementation 'dev.rikka.shizuku:provider:13.1.5'
 }
