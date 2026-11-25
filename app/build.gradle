@@ -1,0 +1,19 @@
+plugins { id 'com.android.application' }
+
+android {
+    namespace 'com.srmlmobile.saveeditor'
+    compileSdk 35
+
+    defaultConfig {
+        applicationId 'com.srmlmobile.saveeditor'
+        minSdk 24
+        targetSdk 35
+        versionCode 1
+        versionName '0.1.0-alpha'
+    }
+}
+
+dependencies {
+    implementation 'dev.rikka.shizuku:api:13.1.5'
+    implementation 'dev.rikka.shizuku:provider:13.1.5'
+}
