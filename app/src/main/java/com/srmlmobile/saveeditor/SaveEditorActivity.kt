@@ -28,6 +28,7 @@ class SaveEditorActivity : Activity() {
     companion object {
         private const val PICK_SAVE = 1001
         private const val CREATE_SAVE = 1002
+        private const val EMPTY_SLOT_ID = 0L
         private const val WATER_ID = 48L
         private const val MAGIC_WATER_ID = 113L
         private const val MAX_U32 = 4294967295L
@@ -227,7 +228,7 @@ class SaveEditorActivity : Activity() {
         if (records.size < 4) error("Не удалось прочитать четыре основных слота")
         val regularSlots = records.take(4)
         val fifth = records.getOrNull(4)
-        val waterSlot = fifth?.takeIf { it.id == WATER_ID || it.id == MAGIC_WATER_ID }
+        val waterSlot = fifth?.takeIf { it.id == EMPTY_SLOT_ID || it.id == WATER_ID || it.id == MAGIC_WATER_ID }
 
         return ParsedSave(
             entries, gameIndex, payload, newbucksOffset,
@@ -278,9 +279,13 @@ class SaveEditorActivity : Activity() {
         } else {
             addHint("Слот воды обнаружен. Здесь разрешены только ID 48 (вода) и ID 113 (древняя вода).")
             val spinner = Spinner(this)
-            val options = listOf("48 — Вода", "113 — Древняя вода")
+            val options = listOf("0 — Пусто", "48 — Вода", "113 — Древняя вода")
             spinner.adapter = ArrayAdapter(this, android.R.layout.simple_spinner_dropdown_item, options)
-            spinner.setSelection(if (water.id == MAGIC_WATER_ID) 1 else 0)
+            spinner.setSelection(when (water.id) {
+                WATER_ID -> 1
+                MAGIC_WATER_ID -> 2
+                else -> 0
+            })
             page.addView(spinner)
             waterTypeSpinner = spinner
             waterCountInput = addNumberField("Количество", water.count.toString())
@@ -365,7 +370,11 @@ class SaveEditorActivity : Activity() {
 
             val water = data.waterSlot
             if (water != null) {
-                val selectedId = if ((waterTypeSpinner?.selectedItemPosition ?: 0) == 1) MAGIC_WATER_ID else WATER_ID
+                val selectedId = when (waterTypeSpinner?.selectedItemPosition ?: 0) {
+                    1 -> WATER_ID
+                    2 -> MAGIC_WATER_ID
+                    else -> EMPTY_SLOT_ID
+                }
                 val count = parseUnsigned(waterCountInput?.text?.toString(), "Количество воды")
                 writeU32(payload, water.idOffset, selectedId)
                 writeU32(payload, water.countOffset, count)
