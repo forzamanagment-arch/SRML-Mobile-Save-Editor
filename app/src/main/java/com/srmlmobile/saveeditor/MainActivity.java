@@ -97,6 +97,9 @@ public class MainActivity extends Activity {
         status.setPadding(dp(13),dp(10),dp(13),dp(10));
         status.setBackground(background(CARD,SAND,dp(16)));
         root.addView(status,new LinearLayout.LayoutParams(-1,-2));
+        shizukuButton=actionButton("Подключить Shizuku",this::requestShizuku);
+        LinearLayout.LayoutParams shizukuParams=new LinearLayout.LayoutParams(-1,dp(44));
+        shizukuParams.topMargin=dp(8);root.addView(shizukuButton,shizukuParams);
 
         LinearLayout tabs=new LinearLayout(this);
         tabs.setOrientation(LinearLayout.HORIZONTAL);
@@ -132,6 +135,11 @@ public class MainActivity extends Activity {
         b.setTextColor(active?Color.WHITE:INK);b.setBackground(background(active?TEAL:SAND,Color.TRANSPARENT,dp(18)));
         return b;
     }
+    private void setTabState(boolean backups){
+        showingBackups=backups;
+        if(worldsTab!=null){worldsTab.setBackground(background(backups?SAND:TEAL,Color.TRANSPARENT,dp(18)));worldsTab.setTextColor(backups?INK:Color.WHITE);}
+        if(backupTab!=null){backupTab.setBackground(background(backups?TEAL:SAND,Color.TRANSPARENT,dp(18)));backupTab.setTextColor(backups?Color.WHITE:INK);}
+    }
     private GradientDrawable background(int fill,int stroke,int radius){
         GradientDrawable d=new GradientDrawable();d.setColor(fill);d.setCornerRadius(radius);
         if(stroke!=Color.TRANSPARENT)d.setStroke(dp(1),stroke);return d;
@@ -157,6 +165,7 @@ public class MainActivity extends Activity {
         try{binder=Shizuku.pingBinder();granted=binder&&Shizuku.checkSelfPermission()==PackageManager.PERMISSION_GRANTED;}
         catch(Throwable ignored){}
         if(status!=null)status.setText(binder?(granted?"● Shizuku подключён":"● Shizuku: нужно разрешение"):"● Shizuku не подключён");
+        if(shizukuButton!=null)shizukuButton.setVisibility(granted?View.GONE:View.VISIBLE);
     }
     private void requestShizuku(){
         try{
@@ -184,10 +193,10 @@ public class MainActivity extends Activity {
         }
     }
     private void showWorlds(){
-        showingBackups=false;scanSaves();
+        setTabState(false);scanSaves();
     }
     private void showBackups(){
-        showingBackups=true;
+        setTabState(true);
         if(!hasPermission()){show("Подключи Shizuku для просмотра резервных копий.");refreshStatus();return;}
         show("Загружаю резервные копии…");
         executor.execute(()->{
