@@ -20,6 +20,9 @@ import android.view.animation.OvershootInterpolator;
 import android.view.View;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.content.pm.ResolveInfo;
+import android.text.InputType;
+import android.widget.EditText;
 import android.widget.Button;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -191,10 +194,158 @@ public class MainActivity extends Activity {
     }
 
     private String tr(String en,String ru){return russian?ru:en;}
+    private static final String GAME_PACKAGE = "com.playdigious.slimerancher";
+
     private void launchGame(){
-        Intent intent=getPackageManager().getLaunchIntentForPackage("com.playdigious.slimerancher");
-        if(intent==null){Toast.makeText(this,tr("Game app was not found on this device.","Игра не найдена на этом устройстве."),Toast.LENGTH_LONG).show();return;}
-        try{startActivity(intent);}catch(Throwable t){Toast.makeText(this,tr("Could not launch the game.","Не удалось запустить игру."),Toast.LENGTH_LONG).show();}
+        AppLog.i(this,"GAME_LAUNCH","Checking native game package: "+GAME_PACKAGE);
+        try{
+            getPackageManager().getPackageInfo(GAME_PACKAGE,0);
+            Intent intent=getPackageManager().getLaunchIntentForPackage(GAME_PACKAGE);
+            if(intent!=null){
+                AppLog.i(this,"GAME_LAUNCH","Found installed game package "+GAME_PACKAGE+"; launching");
+                startActivity(intent);
+                return;
+            }
+            AppLog.e(this,"GAME_LAUNCH","Package is installed but has no launcher intent: "+GAME_PACKAGE);
+            showLaunchTargetDialog(tr("The game package is installed, but Android did not return a launch activity.","Пакет игры установлен, но Android не вернул экран запуска."));
+        }catch(PackageManager.NameNotFoundException e){
+            AppLog.exception(this,"GAME_LAUNCH","PackageNotFound: "+GAME_PACKAGE,e);
+            showLaunchTargetDialog(tr("The default game package was not visible or was not installed. Choose an installed app or enter its package name.","Пакет игры не найден или скрыт Android. Выбери установленное приложение либо введи имя пакета."));
+        }catch(SecurityException e){
+            AppLog.exception(this,"GAME_LAUNCH","PermissionDenied while checking "+GAME_PACKAGE,e);
+            showLaunchTargetDialog(tr("Android denied access to the app information. Check app visibility settings.","Android запретил доступ к сведениям приложения. Проверь видимость пакетов."));
+        }catch(Throwable t){
+            AppLog.exception(this,"GAME_LAUNCH","Unexpected launch error for "+GAME_PACKAGE,t);
+            showLaunchTargetDialog(tr("Could not launch the game: ","Не удалось запустить игру: ")+t.getClass().getSimpleName());
+        }
+    }
+
+    private void launchPackage(String packageName){
+        String target=packageName==null?"":packageName.trim();
+        if(target.isEmpty()){
+            showLaunchTargetDialog(tr("Enter a package name first.","Сначала введи имя пакета."));
+            return;
+        }
+        try{
+            getPackageManager().getPackageInfo(target,0);
+            Intent intent=getPackageManager().getLaunchIntentForPackage(target);
+            if(intent==null){
+                AppLog.e(this,"GAME_LAUNCH","Installed package has no launch intent: "+target);
+                showLaunchTargetDialog(tr("This package is installed but has no launcher activity.","Этот пакет установлен, но у него нет экрана запуска."));
+                return;
+            }
+            AppLog.i(this,"GAME_LAUNCH","Launching manually selected package: "+target);
+            startActivity(intent);
+        }catch(PackageManager.NameNotFoundException e){
+            AppLog.exception(this,"GAME_LAUNCH","PackageNotFound for manual target: "+target,e);
+            showLaunchTargetDialog(tr("Package not found: ","Пакет не найден: ")+target);
+        }catch(SecurityException e){
+            AppLog.exception(this,"GAME_LAUNCH","PermissionDenied for manual target: "+target,e);
+            showLaunchTargetDialog(tr("Permission denied for package: ","Нет доступа к пакету: ")+target);
+        }catch(Throwable t){
+            AppLog.exception(this,"GAME_LAUNCH","Manual launch failed for "+target,t);
+            showLaunchTargetDialog(tr("Launch failed: ","Ошибка запуска: ")+t.getClass().getSimpleName());
+        }
+    }
+
+    private void showLaunchTargetDialog(String reason){
+        LinearLayout card=new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(18),dp(8),dp(18),dp(18));
+        card.setBackground(background(CARD,SAND,dp(28)));
+        View pinkBar=new View(this);
+        pinkBar.setBackground(background(PINK,Color.TRANSPARENT,dp(8)));
+        card.addView(pinkBar,new LinearLayout.LayoutParams(-1,dp(6)));
+        TextView title=text(tr("Choose game app","Выбрать приложение игры"),21,INK,true);
+        title.setPadding(0,dp(14),0,dp(6));
+        card.addView(title);
+        TextView message=text(reason,13,MUTED,false);
+        message.setPadding(0,0,0,dp(10));
+        card.addView(message);
+        TextView packageLabel=text(tr("Package name","Имя пакета"),12,INK,true);
+        card.addView(packageLabel);
+        EditText packageInput=new EditText(this);
+        packageInput.setSingleLine(true);
+        packageInput.setText(GAME_PACKAGE);
+        packageInput.setTextSize(14);
+        packageInput.setInputType(InputType.TYPE_CLASS_TEXT);
+        packageInput.setTextColor(INK);
+        packageInput.setHintTextColor(MUTED);
+        packageInput.setPadding(dp(12),dp(8),dp(12),dp(8));
+        packageInput.setBackground(background(CARD,SAND,dp(14)));
+        LinearLayout.LayoutParams inputParams=new LinearLayout.LayoutParams(-1,dp(46));
+        inputParams.topMargin=dp(5);
+        card.addView(packageInput,inputParams);
+
+        TextView appsTitle=text(tr("Matching installed apps","Подходящие установленные приложения"),12,INK,true);
+        appsTitle.setPadding(0,dp(12),0,dp(5));
+        card.addView(appsTitle);
+        LinearLayout appList=new LinearLayout(this);
+        appList.setOrientation(LinearLayout.VERTICAL);
+        Intent launcherQuery=new Intent(Intent.ACTION_MAIN);
+        launcherQuery.addCategory(Intent.CATEGORY_LAUNCHER);
+        List<ResolveInfo> launchables=getPackageManager().queryIntentActivities(launcherQuery,0);
+        int shown=0;
+        for(ResolveInfo candidate:launchables){
+            String pkg=candidate.activityInfo.packageName;
+            String label=String.valueOf(candidate.loadLabel(getPackageManager()));
+            String searchable=(pkg+" "+label).toLowerCase(java.util.Locale.ROOT);
+            if(!(searchable.contains("slime")||searchable.contains("rancher")||
+                 searchable.contains("monomi")||searchable.contains("playdigious")||
+                 searchable.contains("winlator")||searchable.contains("mobox")||
+                 searchable.contains("exagear"))) continue;
+            TextView app=text(label+"  ·  "+pkg,12,INK,false);
+            app.setPadding(dp(10),dp(8),dp(10),dp(8));
+            app.setBackground(background(Color.rgb(245,240,232),SAND,dp(12)));
+            LinearLayout.LayoutParams appParams=new LinearLayout.LayoutParams(-1,-2);
+            appParams.bottomMargin=dp(4);
+            appList.addView(app,appParams);
+            app.setOnClickListener(v->packageInput.setText(pkg));
+            shown++;
+        }
+        if(shown==0){
+            TextView none=text(tr("No matching launcher apps were found. You can still enter a package above.","Подходящие приложения не найдены. Имя пакета всё равно можно ввести вручную."),11,MUTED,false);
+            appList.addView(none);
+        }
+        ScrollView appScroll=new ScrollView(this);
+        appScroll.setFillViewport(false);
+        appScroll.addView(appList);
+        card.addView(appScroll,new LinearLayout.LayoutParams(-1,dp(112)));
+
+        LinearLayout actions=new LinearLayout(this);
+        actions.setOrientation(LinearLayout.HORIZONTAL);
+        actions.setGravity(Gravity.END|Gravity.CENTER_VERTICAL);
+        Button cancel=new Button(this);
+        cancel.setText(tr("Cancel","Отмена"));
+        cancel.setAllCaps(false);
+        cancel.setTextColor(TEAL);
+        cancel.setTypeface(GameAssets.typeface(this,true));
+        cancel.setBackground(background(Color.TRANSPARENT,TEAL,dp(28)));
+        Button launch=new Button(this);
+        launch.setText(tr("Launch","Запустить"));
+        launch.setAllCaps(false);
+        launch.setTextColor(Color.WHITE);
+        launch.setTypeface(GameAssets.typeface(this,true));
+        launch.setBackground(background(PINK,Color.TRANSPARENT,dp(28)));
+        LinearLayout.LayoutParams cancelParams=new LinearLayout.LayoutParams(0,dp(44),1);
+        cancelParams.rightMargin=dp(8);
+        actions.addView(cancel,cancelParams);
+        actions.addView(launch,new LinearLayout.LayoutParams(0,dp(44),1));
+        LinearLayout.LayoutParams actionParams=new LinearLayout.LayoutParams(-1,-2);
+        actionParams.topMargin=dp(12);
+        card.addView(actions,actionParams);
+        AlertDialog dialog=new AlertDialog.Builder(this).setView(card).create();
+        cancel.setOnClickListener(v->dialog.dismiss());
+        launch.setOnClickListener(v->{String pkg=packageInput.getText().toString();dialog.dismiss();launchPackage(pkg);});
+        dialog.show();
+        if(dialog.getWindow()!=null){
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+            dialog.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            android.view.WindowManager.LayoutParams params=dialog.getWindow().getAttributes();
+            params.dimAmount=0.45f;
+            dialog.getWindow().setAttributes(params);
+            dialog.getWindow().setLayout(getResources().getDisplayMetrics().widthPixels-dp(32),-2);
+        }
     }
     private void setPage(int page){
         page=Math.max(0,Math.min(3,page));
@@ -311,6 +462,28 @@ public class MainActivity extends Activity {
             }else{
                 canvas.drawCircle(13,13,10,paint);canvas.drawLine(13,11,13,18,paint);paint.setStyle(Paint.Style.FILL);canvas.drawCircle(13,7,1.2f,paint);paint.setStyle(Paint.Style.STROKE);
             }
+            canvas.restore();
+        }
+    }
+    private class SaveGlyph extends View{
+        private final Paint paint=new Paint(3);
+        SaveGlyph(Activity activity){super(activity);}
+        @Override protected void onDraw(Canvas canvas){
+            super.onDraw(canvas);
+            float scale=Math.min(getWidth(),getHeight())/26f;
+            canvas.save();
+            canvas.translate((getWidth()-26f*scale)/2f,(getHeight()-26f*scale)/2f);
+            canvas.scale(scale,scale);
+            paint.setColor(TEAL);
+            paint.setStyle(Paint.Style.STROKE);
+            paint.setStrokeWidth(2f);
+            paint.setStrokeCap(Paint.Cap.ROUND);
+            paint.setStrokeJoin(Paint.Join.ROUND);
+            canvas.drawRoundRect(3,3,23,23,2,2,paint);
+            canvas.drawLine(7,3,7,10,paint);
+            canvas.drawLine(17,3,17,10,paint);
+            canvas.drawRoundRect(8,14,18,23,1,1,paint);
+            canvas.drawLine(10,17,16,17,paint);
             canvas.restore();
         }
     }
@@ -541,7 +714,7 @@ public class MainActivity extends Activity {
         LinearLayout content=pageContents[0];
         content.removeAllViews();
         LinearLayout heading=new LinearLayout(this);heading.setOrientation(LinearLayout.HORIZONTAL);heading.setGravity(Gravity.CENTER_VERTICAL);
-        heading.addView(gameIconTile("Conservatory",38),new LinearLayout.LayoutParams(dp(42),dp(42)));
+        heading.addView(new SaveGlyph(this),new LinearLayout.LayoutParams(dp(42),dp(42)));
         TextView headingText=text(tr("Your worlds","Твои миры"),22,INK,true);
         headingText.setPadding(dp(10),0,0,0);heading.addView(headingText);
         content.addView(heading);
