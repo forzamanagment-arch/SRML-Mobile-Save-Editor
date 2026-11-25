@@ -113,10 +113,7 @@ class SaveEditorActivity : Activity() {
         page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(18), dp(22), dp(18), dp(34))
-            background = android.graphics.drawable.GradientDrawable(
-                android.graphics.drawable.GradientDrawable.Orientation.TL_BR,
-                intArrayOf(Color.rgb(245,240,232), Color.rgb(237,232,220))
-            )
+            background = android.graphics.drawable.ColorDrawable(Color.TRANSPARENT)
         }
         scroll.addView(page)
         setContentView(scroll)
@@ -724,6 +721,36 @@ class SaveEditorActivity : Activity() {
             cornerRadius = radius.toFloat()
             if (stroke != Color.TRANSPARENT) setStroke(dp(1), stroke)
         }
+    }
+
+    private inner class MarshmallowBackground : android.graphics.drawable.Drawable() {
+        private val paint = android.graphics.Paint(3)
+        override fun draw(canvas: android.graphics.Canvas) {
+            val b = bounds
+            val w = b.width().toFloat()
+            val h = b.height().toFloat()
+            paint.shader = android.graphics.LinearGradient(0f, 0f, w, h,
+                Color.rgb(245,240,232), Color.rgb(237,232,220), android.graphics.Shader.TileMode.CLAMP)
+            canvas.drawRect(b, paint)
+            paint.shader = android.graphics.RadialGradient(w * .88f, h * .08f, w * .48f,
+                intArrayOf(0x55FF9AD1, 0x00FF9AD1), null, android.graphics.Shader.TileMode.CLAMP)
+            canvas.drawRect(b, paint)
+            paint.shader = android.graphics.RadialGradient(w * .12f, h * .88f, w * .42f,
+                intArrayOf(0x554ECDC4, 0x004ECDC4), null, android.graphics.Shader.TileMode.CLAMP)
+            canvas.drawRect(b, paint)
+            paint.shader = android.graphics.RadialGradient(w * .58f, h * .78f, w * .34f,
+                intArrayOf(0x44B39DDB, 0x00B39DDB), null, android.graphics.Shader.TileMode.CLAMP)
+            canvas.drawRect(b, paint)
+            paint.shader = null
+            paint.color = 0x147B6AA8
+            paint.style = android.graphics.Paint.Style.FILL
+            for (y in 24..h.toInt() step 54) for (x in 20..w.toInt() step 58) {
+                canvas.drawCircle(x + (y % 3) * 5f, y.toFloat(), 1.5f, paint)
+            }
+        }
+        override fun setAlpha(alpha: Int) {}
+        override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {}
+        override fun getOpacity(): Int = android.graphics.PixelFormat.TRANSLUCENT
     }
 
     private fun dp(value: Int): Int = (value * resources.displayMetrics.density).toInt()
