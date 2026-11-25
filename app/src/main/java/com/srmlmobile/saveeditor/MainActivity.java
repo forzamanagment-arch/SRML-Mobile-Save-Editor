@@ -9,6 +9,9 @@ import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
+import android.graphics.drawable.BitmapDrawable;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.animation.ValueAnimator;
@@ -346,6 +349,15 @@ public class MainActivity extends Activity {
         Button b=new Button(this);b.setText(label);b.setAllCaps(false);b.setTextSize(14);
         b.setTextColor(Color.WHITE);b.setTypeface(GameAssets.typeface(this,true));
         b.setBackground(background(TEAL,Color.TRANSPARENT,dp(28)));
+        if(label.equals("Launch game")||label.equals("Запустить игру")){
+            android.graphics.Bitmap gameIcon=GameAssets.icon(this,"PinkSlime","Slime");
+            if(gameIcon!=null){
+                BitmapDrawable drawable=new BitmapDrawable(getResources(),gameIcon);
+                drawable.setBounds(0,0,dp(26),dp(26));
+                b.setCompoundDrawables(drawable,null,null,null);
+                b.setCompoundDrawablePadding(dp(8));
+            }
+        }
         b.setMinHeight(dp(46));b.setOnClickListener(v->action.run());return b;
     }
     private void show(String message){if(output!=null)output.setText(message);}
@@ -402,18 +414,26 @@ public class MainActivity extends Activity {
     private void renderBackups(List<ShizukuFileAccess.BackupItem>items){
         LinearLayout content=pageContents[1];
         content.removeAllViews();
-        content.addView(text(tr("Your backups","Резервные копии"),22,INK,true));
+        LinearLayout heading=new LinearLayout(this);heading.setOrientation(LinearLayout.HORIZONTAL);heading.setGravity(Gravity.CENTER_VERTICAL);
+        heading.addView(gameIconTile("Key",38),new LinearLayout.LayoutParams(dp(42),dp(42)));
+        TextView headingText=text(tr("Your backups","Резервные копии"),22,INK,true);
+        headingText.setPadding(dp(10),0,0,0);heading.addView(headingText);
+        content.addView(heading);
         TextView hint=text(tr("Choose a backup to restore it to your worlds.","Выбери копию, чтобы восстановить её в список миров."),13,MUTED,false);
         hint.setPadding(0,dp(4),0,dp(12));content.addView(hint);
         if(items.isEmpty()){
-            addEmptyCard(tr("No backups yet","Пока нет резервных копий"),tr("Backups appear here after you edit a save.","Копии появятся здесь после редактирования миров."));
+            addEmptyCard(tr("No backups yet","Пока нет резервных копий"),tr("Backups appear here after you edit a save.","Копии появятся здесь после редактирования миров."),content);
             if(backupNotice!=null){show(backupNotice);backupNotice=null;}else show(tr("Backups: 0","Резервных копий: 0"));return;
         }
         for(ShizukuFileAccess.BackupItem item:items){
             LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
             card.setPadding(dp(20),dp(18),dp(20),dp(18));card.setBackground(background(CARD,SAND,dp(26)));
             LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,-2);cp.bottomMargin=dp(10);content.addView(card,cp);
-            card.addView(text(item.originalName,16,INK,true));
+            LinearLayout titleRow=new LinearLayout(this);titleRow.setOrientation(LinearLayout.HORIZONTAL);titleRow.setGravity(Gravity.CENTER_VERTICAL);
+            titleRow.addView(gameIconTile("Key",34),new LinearLayout.LayoutParams(dp(40),dp(40)));
+            TextView backupName=text(item.originalName,16,INK,true);backupName.setPadding(dp(10),0,0,0);
+            titleRow.addView(backupName,new LinearLayout.LayoutParams(0,-2,1));
+            card.addView(titleRow);
             TextView date=text(item.stamp,13,MUTED,false);date.setPadding(0,dp(3),0,dp(8));card.addView(date);
             Button restore=actionButton(tr("Restore backup","Восстановить"),()->confirmRestore(item));
             card.addView(restore,new LinearLayout.LayoutParams(-1,dp(46)));
@@ -478,24 +498,46 @@ public class MainActivity extends Activity {
     private void renderSaves(List<SaveSlot>found){
         LinearLayout content=pageContents[0];
         content.removeAllViews();
-        content.addView(text(tr("Your worlds","Твои миры"),22,INK,true));
+        LinearLayout heading=new LinearLayout(this);heading.setOrientation(LinearLayout.HORIZONTAL);heading.setGravity(Gravity.CENTER_VERTICAL);
+        heading.addView(gameIconTile("Conservatory",38),new LinearLayout.LayoutParams(dp(42),dp(42)));
+        TextView headingText=text(tr("Your worlds","Твои миры"),22,INK,true);
+        headingText.setPadding(dp(10),0,0,0);heading.addView(headingText);
+        content.addView(heading);
         TextView hint=text(tr("Choose a world to edit its save.","Выбери мир, чтобы изменить сохранение."),13,MUTED,false);hint.setPadding(0,dp(4),0,dp(12));content.addView(hint);
         if(found.isEmpty()){addEmptyCard(tr("No worlds found","Миры не найдены"),tr("Make sure the game has created a save.","Проверь, что игра уже создала сохранение."));show("Список миров обновлён.");return;}
         for(SaveSlot slot:found){
             LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
             card.setPadding(dp(14),dp(12),dp(14),dp(12));card.setBackground(background(CARD,SAND,dp(26)));
             LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,-2);cp.bottomMargin=dp(10);content.addView(card,cp);
-            card.addView(text(slot.displayName,16,INK,true));
+            LinearLayout titleRow=new LinearLayout(this);titleRow.setOrientation(LinearLayout.HORIZONTAL);titleRow.setGravity(Gravity.CENTER_VERTICAL);
+            titleRow.addView(gameIconTile("Conservatory",34),new LinearLayout.LayoutParams(dp(40),dp(40)));
+            TextView worldName=text(slot.displayName,16,INK,true);worldName.setPadding(dp(10),0,0,0);
+            titleRow.addView(worldName,new LinearLayout.LayoutParams(0,-2,1));
+            card.addView(titleRow);
             TextView detail=text(slot.fileName+"  •  "+slot.sizeText,12,MUTED,false);detail.setPadding(0,dp(3),0,dp(8));card.addView(detail);
             card.addView(actionButton(tr("Edit save","Редактировать"),()->beginEditing(slot)),new LinearLayout.LayoutParams(-1,dp(46)));
         }
         show(tr("Worlds found: ","Найдено миров: ")+found.size());
     }
-    private void addEmptyCard(String title,String description){
+    private View gameIconTile(String hint,int size){
+        FrameLayout tile=new FrameLayout(this);
+        tile.setBackground(background(Color.rgb(232,220,200),Color.rgb(203,191,168),dp(15)));
+        android.graphics.Bitmap bitmap=GameAssets.icon(this,hint);
+        if(bitmap!=null){
+            ImageView image=new ImageView(this);image.setImageBitmap(bitmap);
+            image.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            tile.addView(image,new FrameLayout.LayoutParams(dp(size),dp(size),Gravity.CENTER));
+        }else{
+            TextView unknown=text("?",22,TEAL,true);unknown.setGravity(Gravity.CENTER);
+            tile.addView(unknown,new FrameLayout.LayoutParams(-1,-1));
+        }
+        return tile;
+    }
+    private void addEmptyCard(String title,String description,LinearLayout parent){
         LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setPadding(dp(20),dp(20),dp(20),dp(20));
         card.setBackground(background(CARD,SAND,dp(18)));
         card.addView(text(title,17,INK,true));TextView d=text(description,13,MUTED,false);d.setPadding(0,dp(5),0,0);card.addView(d);
-        content.addView(card,new LinearLayout.LayoutParams(-1,-2));
+        parent.addView(card,new LinearLayout.LayoutParams(-1,-2));
     }
     private void beginEditing(SaveSlot slot){
         if(!hasPermission()){show("Нет доступа Shizuku.");requestShizuku();return;}
