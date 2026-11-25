@@ -37,7 +37,7 @@ class SaveEditorActivity : Activity() {
         private const val WATER_ID = 48L
         private const val MAGIC_WATER_ID = 113L
         private const val MAX_U32 = 4294967295L
-        private const val MAX_PLAYER_STAT = 100L
+        private const val MAX_PLAYER_STAT = 999999L
         private val INVENTORY_MARKER = byteArrayOf(
             0x04, 0x53, 0x52, 0x41, 0x44, 0x02, 0x00, 0x00, 0x00, 0x00, 0x30
         )
