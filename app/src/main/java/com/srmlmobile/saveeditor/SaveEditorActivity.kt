@@ -276,39 +276,64 @@ class SaveEditorActivity : Activity() {
 
     private fun showEditor() {
         val data = parsed ?: return
-        buildBase(tr("Edit save", "Редактирование"))
-        val currencyOffset = data.newbucksOffset
-        addSection(tr("Newbucks", "Ньюбаксы"))
-        if (currencyOffset != null) {
-            val current = readU32(data.payload, currencyOffset)
-            if (current != null) newbucksInput = addNumberField(tr("Amount", "Количество"), current.toString())
-            else addHint("Поле Ньюбаксов не распознано. Остальные разделы доступны.")
-        } else {
-            addHint("Поле Ньюбаксов не распознано. Остальные разделы доступны.")
+        newbucksInput = null
+        keysInput = null
+        currentHealthInput = null
+        currentEnergyInput = null
+        buildBase(tr("Save dashboard", "Панель сохранения"))
+        addSection(tr("PLAYER HUD", "ПАРАМЕТРЫ ИГРОКА"))
+        val hudGrid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
+        page.addView(hudGrid)
+        val rowA = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val rowB = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        hudGrid.addView(rowA)
+        hudGrid.addView(rowB)
+        fun hudCard(row: LinearLayout, label: String, iconName: String, offset: Int?, save: (EditText) -> Unit) {
+            val card = LinearLayout(this).apply {
+                orientation = LinearLayout.VERTICAL
+                setPadding(dp(9), dp(9), dp(9), dp(9))
+                background = rounded(Color.rgb(230,233,242), Color.rgb(179,157,219), dp(17))
+            }
+            val head = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
+            val icon = ImageView(this)
+            val bitmap = GameAssets.icon(this, iconName)
+            if (bitmap != null) icon.setImageBitmap(bitmap)
+            else {
+                icon.setBackground(rounded(Color.rgb(232,220,200), Color.rgb(203,191,168), dp(10)))
+                icon.contentDescription = "?"
+            }
+            head.addView(icon, LinearLayout.LayoutParams(dp(25), dp(25)))
+            head.addView(TextView(this).apply {
+                text = label
+                textSize = 11f
+                typeface = GameAssets.typeface(this@SaveEditorActivity)
+                setTextColor(Color.rgb(45,55,72))
+                setPadding(dp(5), 0, 0, 0)
+            })
+            card.addView(head)
+            val current = offset?.let { readU32(data.payload, it) }
+            if (current != null) {
+                val input = EditText(this).apply {
+                    setSingleLine(true)
+                    inputType = InputType.TYPE_CLASS_NUMBER
+                    filters = arrayOf(InputFilter.LengthFilter(10))
+                    setText(current.toString())
+                    textSize = 15f
+                    setTextColor(Color.rgb(31,41,55))
+                    setPadding(dp(8), dp(5), dp(8), dp(5))
+                    background = rounded(Color.rgb(255,253,247), Color.rgb(224,216,204), dp(12))
+                }
+                card.addView(input, LinearLayout.LayoutParams(-1, dp(40)))
+                save(input)
+            } else card.addView(TextView(this).apply { text = "?"; setTextColor(Color.rgb(155,168,181)) })
+            val params = LinearLayout.LayoutParams(0, -2, 1f)
+            params.setMargins(dp(3), dp(3), dp(3), dp(6))
+            row.addView(card, params)
         }
-
-        addSection(tr("Keys", "Ключи"))
-        val keyOffset = data.keysOffset
-        if (keyOffset != null) {
-            val current = readU32(data.payload, keyOffset)
-            if (current != null) keysInput = addNumberField(tr("Key count", "Количество ключей"), current.toString())
-            else addHint("Количество ключей не удалось прочитать.")
-        } else addHint("Поле количества ключей не распознано.")
-
-        addSection(tr("Health and energy", "Здоровье и энергия"))
-        addHint(tr("These are current values at the time of saving, not maximum capacity.", "Это текущие значения на момент сохранения, не максимальная ёмкость здоровья или энергии."))
-        val healthOffset = data.currentHealthOffset
-        if (healthOffset != null) {
-            val current = readU32(data.payload, healthOffset)
-            if (current != null) currentHealthInput = addNumberField(tr("Current health", "Текущее здоровье"), current.toString())
-            else addHint("Текущее здоровье не удалось прочитать.")
-        } else addHint("Поле текущего здоровья не распознано.")
-        val energyOffset = data.currentEnergyOffset
-        if (energyOffset != null) {
-            val current = readU32(data.payload, energyOffset)
-            if (current != null) currentEnergyInput = addNumberField(tr("Current energy", "Текущая энергия"), current.toString())
-            else addHint("Текущую энергию не удалось прочитать.")
-        } else addHint("Поле текущей энергии не распознано.")
+        hudCard(rowA, tr("Newbucks", "Ньюбаксы"), "Newbucks", data.newbucksOffset) { newbucksInput = it }
+        hudCard(rowA, tr("Health", "Здоровье"), "Heart", data.currentHealthOffset) { currentHealthInput = it }
+        hudCard(rowB, tr("Energy", "Энергия"), "Battery", data.currentEnergyOffset) { currentEnergyInput = it }
+        hudCard(rowB, tr("Keys", "Ключи"), "Key", data.keysOffset) { keysInput = it }
 
         addSection(tr("INVENTORY", "ИНВЕНТАРЬ"))
         addHint(tr("Four item slots and one dedicated water slot. Tap a tile to choose an item.", "Четыре слота предметов и отдельный слот воды. Нажми на плитку, чтобы выбрать предмет."))
