@@ -1,6 +1,9 @@
 name: Inspect SRGA field layout
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - ".github/workflows/inspect-srga-layout.yml"
 permissions:
   contents: read
 jobs:
