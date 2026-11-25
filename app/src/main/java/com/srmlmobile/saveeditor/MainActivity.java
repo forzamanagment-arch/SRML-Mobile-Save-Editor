@@ -12,6 +12,9 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
@@ -186,6 +189,20 @@ public class MainActivity extends Activity {
         } finally { process.destroy(); }
     }
 
+    private byte[] readLocalFile(File file) throws Exception {
+        try (InputStream in = new FileInputStream(file);
+             ByteArrayOutputStream out = new ByteArrayOutputStream()) {
+            byte[] buffer = new byte[8192];
+            int n;
+            while ((n = in.read(buffer)) != -1) {
+                if (out.size() + n > MAX_FILE_BYTES)
+                    throw new IllegalStateException("Копия архива больше 64 МБ");
+                out.write(buffer, 0, n);
+            }
+            return out.toByteArray();
+        }
+    }
+
     private void scanSaves() {
         if (!hasPermission()) {
             show("Сначала подключи Shizuku и выдай разрешение приложению.");
@@ -215,15 +232,42 @@ public class MainActivity extends Activity {
                     throw new IllegalStateException("pt_saves не найдена или недоступна через Shizuku");
 
                 List<SaveSlot> found = new ArrayList<>();
-                for (String path : listing.split("\\r?\\n")) {
-                    if (path.trim().isEmpty()) continue;
-                    try {
-                        byte[] bytes = readRemoteFile(path.trim());
-                        SaveSlot slot = SaveSlotReader.inspect(path.trim(), bytes);
-                        if (slot != null) found.add(slot);
-                    } catch (Throwable e) {
-                        AppLog.w(this, "SAVE_SCAN", "Skipped " + path + ": " + e);
+                File tempDir = new File(getCacheDir(), "save_scan_tmp");
+                if (!tempDir.exists() && !tempDir.mkdirs())
+                    throw new IllegalStateException("Не удалось создать временную папку сканирования");
+                int index = 0;
+                try {
+                    for (String path : listing.split("\\r?\\n")) {
+                        String sourcePath = path.trim();
+                        if (sourcePath.isEmpty()) continue;
+                        File temporaryZip = new File(tempDir, "slot_" + (index++) + ".zip");
+                        try {
+                            // The game stores ZIP archives without an extension. Copy each
+                            // source file into app cache with .zip appended; never rename originals.
+                            byte[] sourceBytes = readRemoteFile(sourcePath);
+                            try (FileOutputStream fileOut = new FileOutputStream(temporaryZip)) {
+                                fileOut.write(sourceBytes);
+                                fileOut.getFD().sync();
+                            }
+                            byte[] copiedBytes = readLocalFile(temporaryZip);
+                            SaveSlot slot = SaveSlotReader.inspect(sourcePath, copiedBytes);
+                            if (slot != null) {
+                                found.add(slot);
+                                AppLog.i(this, "SAVE_SCAN", "Recognized save archive " + sourcePath);
+                            } else {
+                                AppLog.w(this, "SAVE_SCAN", "No valid *-sav payload in " + sourcePath);
+                            }
+                        } catch (Throwable e) {
+                            AppLog.w(this, "SAVE_SCAN", "Skipped " + sourcePath + ": " + e);
+                        } finally {
+                            if (temporaryZip.exists() && !temporaryZip.delete())
+                                AppLog.w(this, "SAVE_SCAN", "Could not delete temporary copy " + temporaryZip.getName());
+                        }
                     }
+                } finally {
+                    File[] leftovers = tempDir.listFiles();
+                    if (leftovers != null) for (File file : leftovers) file.delete();
+                    tempDir.delete();
                 }
                 runOnUiThread(() -> renderSaves(found));
             } catch (Throwable t) {
