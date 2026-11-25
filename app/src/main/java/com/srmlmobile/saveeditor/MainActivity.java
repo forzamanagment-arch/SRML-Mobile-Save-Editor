@@ -601,8 +601,39 @@ public class MainActivity extends Activity {
     }
     private void showLogs(){
         String logs=AppLog.read(this);
-        new AlertDialog.Builder(this).setTitle("Журнал").setMessage(logs.length()==0?"Журнал пуст.":logs)
-            .setPositiveButton("Закрыть",null).show();
+        LinearLayout card=new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(18),dp(8),dp(18),dp(18));
+        card.setBackground(background(CARD,SAND,dp(26)));
+        View pinkBar=new View(this);
+        pinkBar.setBackground(background(PINK,Color.TRANSPARENT,dp(8)));
+        card.addView(pinkBar,new LinearLayout.LayoutParams(-1,dp(6)));
+        TextView title=text("Журнал приложения",20,INK,true);
+        title.setPadding(0,dp(14),0,dp(10));
+        card.addView(title);
+        ScrollView scroll=new ScrollView(this);
+        TextView body=text(logs.length()==0?"Журнал пуст.":logs,12,MUTED,false);
+        body.setTextIsSelectable(true);
+        body.setPadding(dp(10),dp(10),dp(10),dp(10));
+        body.setBackground(background(Color.rgb(250,246,238),SAND,dp(14)));
+        scroll.addView(body);
+        card.addView(scroll,new LinearLayout.LayoutParams(-1,dp(320)));
+        Button close=actionButton("Закрыть",()->{});
+        close.setBackground(background(TEAL,Color.TRANSPARENT,dp(28)));
+        LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,dp(44));
+        p.topMargin=dp(12);
+        card.addView(close,p);
+        AlertDialog dialog=new AlertDialog.Builder(this).setView(card).create();
+        close.setOnClickListener(v->dialog.dismiss());
+        dialog.show();
+        if(dialog.getWindow()!=null){
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+            dialog.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            android.view.WindowManager.LayoutParams params=dialog.getWindow().getAttributes();
+            params.dimAmount=0.45f;
+            dialog.getWindow().setAttributes(params);
+            dialog.getWindow().setLayout(getResources().getDisplayMetrics().widthPixels-dp(32),-2);
+        }
     }
     private void shareLogs(){
         Intent i=new Intent(Intent.ACTION_SEND);i.setType("text/plain");i.putExtra(Intent.EXTRA_TEXT,AppLog.read(this));
