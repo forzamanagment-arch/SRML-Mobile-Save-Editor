@@ -313,6 +313,29 @@ object ItemCatalog {
     fun displayName(id: Long): String =
         names[id] ?: "Неизвестный ID $id"
 
+    private val englishNames = mapOf(
+        0L to "Empty", 1L to "Rad Slime", 2L to "Rock Slime", 3L to "Pink Slime",
+        4L to "Rad Plort", 5L to "Rock Plort", 6L to "Pink Plort", 7L to "Gold Plort",
+        8L to "Cuberry", 9L to "Mint Mango", 10L to "Tarr", 11L to "Gold Slime",
+        16L to "Hen Hen", 17L to "Roostro", 18L to "Chickadoo", 19L to "Carrot",
+        20L to "Oca Oca", 21L to "Boom Slime", 26L to "Prickle Pear", 27L to "Pogofruit",
+        28L to "Silver Parsnip", 29L to "Heart Beet", 31L to "Phosphor Slime",
+        36L to "Phosphor Plort", 37L to "Tabby Slime", 38L to "Tabby Plort",
+        48L to "Water", 49L to "Elder Hen", 50L to "Elder Roostro",
+        51L to "Hunter Slime", 52L to "Hunter Plort", 59L to "Honey Slime",
+        60L to "Honey Plort", 68L to "Briar Hen", 69L to "Thorny Hen",
+        72L to "Puddle Slime", 73L to "Puddle Plort", 76L to "Slime Key",
+        78L to "Crystal Plort", 79L to "Crystal Slime", 88L to "Odd Onion",
+        89L to "Quantum Slime", 99L to "Quantum Plort", 100L to "Phase Lemon",
+        102L to "Dervish Slime", 103L to "Dervish Plort", 104L to "Mosaic Slime",
+        106L to "Tangle Slime", 108L to "Fire Slime", 109L to "Fire Plort",
+        113L to "Ancient Water", 148L to "Gilded Ginger", 150L to "Saber Slime",
+        16000L to "Glitch Slime", 16001L to "Debug Spray"
+    )
+
+    fun localizedName(id: Long, russian: Boolean): String =
+        if (russian) displayName(id) else englishNames[id] ?: displayName(id)
+
     fun isKnown(id: Long): Boolean = names.containsKey(id)
 
     fun isAllowedInRegularSlot(id: Long): Boolean =
