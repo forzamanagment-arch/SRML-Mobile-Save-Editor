@@ -210,9 +210,7 @@ public class MainActivity extends Activity {
         LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
         card.setGravity(Gravity.CENTER_HORIZONTAL);card.setPadding(dp(24),dp(30),dp(24),dp(30));
         card.setBackground(background(CARD,SAND,dp(28)));
-        TextView logo=text("●",42,Color.WHITE,true);logo.setGravity(Gravity.CENTER);
-        logo.setBackground(background(TEAL,Color.TRANSPARENT,dp(60)));
-        card.addView(logo,new LinearLayout.LayoutParams(dp(82),dp(82)));
+        card.addView(new SlimeLogoView(this),new LinearLayout.LayoutParams(dp(82),dp(82)));
         TextView name=text("SRML Save Editor",24,INK,true);name.setPadding(0,dp(17),0,dp(4));card.addView(name);
         card.addView(text("Version "+BuildConfig.VERSION_NAME,13,Color.rgb(155,168,181),false));
         TextView description=text(tr("A cozy little tool inspired by the world of Slime Rancher. Built with love and a lot of plorts.","Уютный маленький инструмент, вдохновлённый миром Slime Rancher. Создан с любовью и кучей плортов."),15,MUTED,false);
@@ -225,6 +223,21 @@ public class MainActivity extends Activity {
         TextView h=text(title,18,INK,true);card.addView(h);
         TextView s=text(subtitle,13,MUTED,false);s.setPadding(0,dp(5),0,0);card.addView(s);
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.bottomMargin=dp(12);content.addView(card,p);
+    }
+    private class SlimeLogoView extends View{
+        private final Paint p=new Paint(3);
+        SlimeLogoView(Activity a){super(a);}
+        @Override protected void onDraw(Canvas canvas){
+            float s=Math.min(getWidth(),getHeight())/82f;
+            canvas.save();canvas.scale(s,s);
+            p.setStyle(Paint.Style.FILL);p.setColor(Color.rgb(224,248,243));canvas.drawCircle(41,41,40,p);
+            Path blob=new Path();blob.moveTo(15,52);blob.cubicTo(16,34,24,21,41,20);blob.cubicTo(58,20,67,34,68,52);blob.cubicTo(68,62,57,68,41,68);blob.cubicTo(25,68,14,62,15,52);blob.close();
+            p.setColor(TEAL);canvas.drawPath(blob,p);
+            p.setColor(INK);canvas.drawCircle(32,46,2.5f,p);canvas.drawCircle(50,46,2.5f,p);
+            p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(2f);p.setStrokeCap(Paint.Cap.ROUND);
+            canvas.drawArc(35,48,47,57,15,150,false,p);
+            canvas.restore();
+        }
     }
     private class NavIcon extends View{
         private final Paint paint=new Paint(3);private final int type;private boolean active;
