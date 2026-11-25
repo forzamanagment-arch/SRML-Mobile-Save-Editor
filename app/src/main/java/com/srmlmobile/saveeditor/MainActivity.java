@@ -166,8 +166,9 @@ public class MainActivity extends Activity {
         try{startActivity(intent);}catch(Throwable t){Toast.makeText(this,tr("Could not launch the game.","Не удалось запустить игру."),Toast.LENGTH_LONG).show();}
     }
     private void setPage(int page){
+        int previousPage=selectedPage;
         selectedPage=page;
-        if(content!=null){content.setAlpha(0.82f);content.setTranslationX(dp(page>selectedPage?12:12));content.animate().alpha(1f).translationX(0).setDuration(300).setInterpolator(new OvershootInterpolator(0.7f)).start();}
+        if(content!=null){content.setAlpha(0.82f);content.setTranslationX(dp(page>=previousPage?16:-16));content.animate().alpha(1f).translationX(0).setDuration(300).setInterpolator(new OvershootInterpolator(0.7f)).start();}
         String[] titles={tr("SRML Save Editor","SRML Save Editor"),"Backup",tr("Settings","Настройки"),tr("About","О приложении")};
         pageTitle.setText(titles[page]);
         shizukuPanel.setVisibility(page<2?View.VISIBLE:View.GONE);
