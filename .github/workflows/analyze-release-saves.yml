@@ -13,106 +13,76 @@ jobs:
   analyze:
     runs-on: ubuntu-latest
     steps:
-      - name: Download Savefiles release asset
+      - name: Download release archive
         run: |
           curl -fL "https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/Savefiles.zip" -o /tmp/Savefiles.zip
           unzip -l /tmp/Savefiles.zip
-      - name: Analyze paired saves and descriptions
+      - name: Analyze descriptions and player blocks
         run: |
           python3 - <<'PY'
-          import zipfile, io, os, re, hashlib, struct, math
+          import zipfile, io, os, re, hashlib, struct
           from pathlib import Path
-          archive = Path('/tmp/Savefiles.zip')
-          files = {}
-          def collect(zf, prefix=''):
+          files={}
+          def collect(zf,prefix=''):
               for info in zf.infolist():
                   if info.is_dir(): continue
-                  data = zf.read(info.filename)
-                  name = prefix + info.filename
-                  if data[:2] == b'PK':
+                  data=zf.read(info.filename); name=prefix+info.filename
+                  if data[:2]==b'PK':
                       try:
                           with zipfile.ZipFile(io.BytesIO(data)) as inner:
-                              collect(inner, name + '!')
+                              collect(inner,name+'!')
                               continue
-                      except zipfile.BadZipFile:
-                          pass
-                  files[name] = data
-          with zipfile.ZipFile(archive) as z:
-              collect(z)
-          print('=== FILE INVENTORY ===')
-          for n,d in sorted(files.items()):
-              print(f'{n}\t{len(d)} bytes\t{hashlib.sha256(d).hexdigest()[:16]}')
-          texts = {n:d.decode('utf-8', 'replace') for n,d in files.items() if n.lower().endswith('.txt')}
-          saves = {n:d for n,d in files.items() if not n.lower().endswith(('.txt','.md','.json','.xml'))}
-          print('=== USER DESCRIPTIONS ===')
-          for n,t in sorted(texts.items()):
-              print(f'--- {n} ---')
-              print(t[:12000])
-          def norm(n):
-              return re.sub(r'(?i)\.txt$', '', n)
-          print('=== SAVE / TXT PAIRING ===')
-          for n,d in sorted(saves.items()):
-              candidates=[x for x in texts if norm(x)==n or norm(x).endswith('/'+n.split('/')[-1])]
-              print(f'{n}: ' + (', '.join(candidates) if candidates else 'NO MATCHED TXT'))
-          print('=== HEALTH / ENERGY VALUES IN DESCRIPTIONS ===')
-          for n,t in sorted(texts.items()):
-              if re.search(r'health|энерг|здоров|макс', t, re.I):
-                  print(f'[{n}]')
-                  for line in t.splitlines():
-                      if re.search(r'health|энерг|здоров|макс', line, re.I): print(line[:500])
-          print('=== PAIRWISE BINARY DIFFERENCES ===')
-          sn=sorted(saves)
-          for i in range(len(sn)):
-              for j in range(i+1,len(sn)):
-                  a,b=saves[sn[i]],saves[sn[j]]
-                  if len(a)!=len(b):
-                      print(f'{sn[i]} <> {sn[j]}: SIZE {len(a)} vs {len(b)}')
-                      continue
-                  runs=[]; start=None; prev=None
-                  for k,(x,y) in enumerate(zip(a,b)):
-                      if x!=y:
-                          if start is None: start=k
-                          prev=k
-                      elif start is not None:
-                          runs.append((start,prev)); start=None
-                  if start is not None:runs.append((start,prev))
-                  print(f'{sn[i]} <> {sn[j]}: {len(runs)} changed ranges, {sum(e-s+1 for s,e in runs)} changed bytes')
-                  for s,e in runs[:160]:
-                      lo=max(0,s-8); hi=min(len(a),e+9)
-                      print(f'  0x{s:X}-0x{e:X} ({e-s+1}B) A={a[s:e+1].hex()} B={b[s:e+1].hex()} contextA={a[lo:hi].hex()}')
-          print('=== INTEGER / FLOAT CANDIDATES FOR LABELLED HEALTH-ENERGY SAMPLES ===')
-          # For each save, search all byte-aligned 1/2/4/8-byte values and float32
-          # matching explicit numbers found in its paired description; only report offsets
-          # with consistent value-to-label across samples.
+                      except zipfile.BadZipFile: pass
+                  files[name]=data
+          with zipfile.ZipFile('/tmp/Savefiles.zip') as z: collect(z)
+          texts={n:d.decode('utf-8','replace') for n,d in files.items() if n.lower().endswith('.txt')}
+          saves={n:d for n,d in files.items() if '!' in n and not n.lower().endswith('.txt')}
+          print('=== SAMPLE PAIRS / GROUND TRUTH ===')
           labelled={}
-          for n,d in saves.items():
-              base=os.path.basename(n)
-              ts=[t for x,t in texts.items() if os.path.basename(norm(x))==base]
-              if not ts: continue
-              t='\n'.join(ts)
+          for n,d in sorted(saves.items()):
+              savebase=os.path.basename(n.split('!')[0])
+              ts=[(x,t) for x,t in texts.items() if os.path.basename(x[:-4])==savebase]
+              print(f'\nSAVE {savebase}, payload={os.path.basename(n.split("!")[-1])}, bytes={len(d)}, sha256={hashlib.sha256(d).hexdigest()}')
+              t='\n'.join(x[1] for x in ts)
+              for x,txt in ts: print('TXT MATCH:',x)
+              print(t)
               vals={}
-              for label,pat in [('health',r'(?:max(?:imum)?\\s*health|макс\\.?\\s*(?:здоров(?:ье|ья)|хп)|здоров(?:ье|ья))\\D{0,30}(\\d+)'),
-                                ('energy',r'(?:max(?:imum)?\\s*energy|макс\\.?\\s*энерг(?:ия|ии)|энерг(?:ия|ии))\\D{0,30}(\\d+)')]:
+              for label,pat in [
+                ('health',r'(?:макс\\.?\\s*здоров(?:ье|ья)|max(?:imum)?\\s*health)\\D{0,30}(\\d+)'),
+                ('energy',r'(?:макс\\.?\\s*энерг(?:ия|ии)|max(?:imum)?\\s*energy)\\D{0,30}(\\d+)')]:
                   m=re.search(pat,t,re.I)
                   if m: vals[label]=int(m.group(1))
-              if vals: labelled[n]=vals
+              if vals: labelled[n]=(vals,d)
+          print('=== SRPL LOCATIONS ===')
+          markers={}
+          for n,(vals,d) in labelled.items():
+              locs=[m.start() for m in re.finditer(b'SRPL',d)]
+              markers[n]=locs
+              print(os.path.basename(n.split('!')[0]),vals,'SRPL offsets:',[hex(x) for x in locs])
+              for p in locs:
+                  print('  context:',d[max(0,p-24):p+160].hex())
           for label in ('health','energy'):
-              rows=[(n,v[label],saves[n]) for n,v in labelled.items() if label in v]
-              print(f'-- {label}: {[(os.path.basename(n),v) for n,v,_ in rows]}')
+              rows=[(n,v[label],d) for n,(v,d) in labelled.items() if label in v]
+              print(f'=== EXACT CANDIDATES {label}: {[(os.path.basename(n.split("!")[0]),v) for n,v,_ in rows]} ===')
               if len(rows)<2: continue
-              maxlen=min(len(d) for _,_,d in rows)
-              for width,fmt in [(1,'B'),(2,'H'),(4,'I'),(8,'Q')]:
-                  matches=[]
-                  for off in range(0,maxlen-width+1):
-                      vals=[struct.unpack_from('<'+fmt,d,off)[0] for _,_,d in rows]
-                      if vals==[v for _,v,_ in rows] and len(set(vals))>1: matches.append((off,vals,'le'))
-                      vals=[struct.unpack_from('>'+fmt,d,off)[0] for _,_,d in rows]
-                      if vals==[v for _,v,_ in rows] and len(set(vals))>1: matches.append((off,vals,'be'))
-                  for off,vs,end in matches[:100]: print(f'  exact {width}-byte {end} @0x{off:X}: {vs}')
-              matches=[]
-              for off in range(0,maxlen-3):
-                  vs=[struct.unpack_from('<f',d,off)[0] for _,_,d in rows]
-                  if all(math.isfinite(x) for x in vs) and all(abs(x-v)<1e-4 for x,(_,v,_) in zip(vs,rows)) and len(set(vs))>1: matches.append((off,vs))
-              for off,vs in matches[:100]: print(f'  exact float32 @0x{off:X}: {vs}')
+              common=set.intersection(*[set(markers[n]) for n,_,_ in rows]) if all(markers[n] for n,_,_ in rows) else set()
+              for anchor in sorted(common):
+                  limit=min(len(d) for _,_,d in rows)
+                  for width,fmt in [(1,'B'),(2,'H'),(4,'I'),(8,'Q')]:
+                      hits=[]
+                      for off in range(anchor, min(anchor+8192,limit-width+1)):
+                          vals=[struct.unpack_from('<'+fmt,d,off)[0] for _,_,d in rows]
+                          if vals==[v for _,v,_ in rows]: hits.append(off-anchor)
+                      for rel in hits[:100]: print(f'  SRPL+0x{rel:X} uint{width*8} LE => {[v for _,v,_ in rows]}')
+                  fhits=[]
+                  for off in range(anchor,min(anchor+8192,limit-3)):
+                      vals=[struct.unpack_from('<f',d,off)[0] for _,_,d in rows]
+                      if all(abs(x-v)<1e-4 for x,(_,v,_) in zip(vals,rows)): fhits.append(off-anchor)
+                  for rel in fhits[:100]: print(f'  SRPL+0x{rel:X} float32 => {[v for _,v,_ in rows]}')
+          print('=== PLAYER-REGION LENGTH / FIRST 512 BYTES ===')
+          for n,(vals,d) in labelled.items():
+              for p in markers[n]:
+                  print(os.path.basename(n.split('!')[0]), 'marker',hex(p))
+                  print(d[p:p+512].hex())
           print('=== END ===')
           PY
