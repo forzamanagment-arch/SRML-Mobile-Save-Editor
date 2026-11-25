@@ -101,7 +101,7 @@ The binary scan found 69 serialized strings beginning with `gordo` in each sampl
 - `gordo2083992877`
 - `gordo1173217994`
 
-This six-record match is a strong candidate for the six burst Gordos, but the random instance names have not yet been mapped to Pink/Tabby/Honey/Phosphor identities or positions. A seventh record, `gordo1831887310`, has value 2 in the progressed save and 0 in the two zero-Gordo saves; its meaning is unknown and it must not be counted as a burst Gordo.
+This six-record match is a strong candidate for the six burst Gordos, but the random instance names have not yet been mapped to Pink/Tabby/Honey/Phosphor identities or positions. A seventh record, `gordo1831887310`, has value 2 in the progressed save and 0 in the two zero-Gordo saves; its meaning is unknown and it must not be counted as a burst Gordo. Also, `gordo0966530436` has value 1 in the 150/150 sample even though its TXT reports zero Gordos burst, so the field is not a simple 0/1 burst flag; the special `0xFFFFFFFF` value is the current burst-state candidate.
 
 Do not write to guessed offsets. In particular, do not derive key count from Gordo count: the labelled sample explicitly shows 6 Gordos burst, 4 keys earned, 2 spent, and 2 currently held. The `SRPL + 0x1A` key-count candidate is separate from the per-Gordo records.
 
