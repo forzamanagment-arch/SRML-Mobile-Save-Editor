@@ -402,8 +402,10 @@ class SaveEditorActivity : Activity() {
                 8L -> listOf("Cuberry"); 9L -> listOf("MintMango"); 16L -> listOf("HenHen")
                 17L -> listOf("Roostro"); 19L -> listOf("Carrot"); 27L -> listOf("Pogofruit")
                 29L -> listOf("HeartBeet"); 31L -> listOf("PhosphorSlime"); 37L -> listOf("TabbySlime")
-                48L -> listOf("Water"); 51L -> listOf("HunterSlime"); 59L -> listOf("HoneySlime")
-                76L -> listOf("Key"); 89L -> listOf("QuantumSlime"); else -> emptyList()
+                48L -> listOf("PlortWATER", "Water"); 51L -> listOf("SlimeChasseur", "HunterSlime"); 59L -> listOf("HoneySlime")
+                72L -> listOf("SlimeAqueux", "PuddleSlime"); 76L -> listOf("Key"); 79L -> listOf("SlimeDeCristal", "CrystalSlime")
+                89L -> listOf("QuantumSlime"); 102L -> listOf("DervishSlime"); 104L -> listOf("MosaicSlime")
+                106L -> listOf("TangleSlime"); 108L -> listOf("FireSlime"); else -> emptyList()
             } + ItemCatalog.displayName(id)
             val bitmap = GameAssets.icon(this, *aliases.toTypedArray())
             if (bitmap != null) iconView.setImageBitmap(bitmap) else {
