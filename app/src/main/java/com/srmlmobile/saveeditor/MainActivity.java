@@ -312,10 +312,10 @@ public class MainActivity extends Activity {
         }
     }
     private void showWorlds(){
-        setTabState(false);scanSaves();
+        showingBackups=false;scanSaves();
     }
     private void showBackups(){
-        setTabState(true);
+        showingBackups=true;
         if(!hasPermission()){show("Подключи Shizuku для просмотра резервных копий.");refreshStatus();return;}
         show("Загружаю резервные копии…");
         executor.execute(()->{
