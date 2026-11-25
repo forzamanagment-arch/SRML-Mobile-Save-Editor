@@ -456,12 +456,26 @@ class SaveEditorActivity : Activity() {
                 }
             }
             pendingArchive = output.toByteArray()
-            val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
-                addCategory(Intent.CATEGORY_OPENABLE)
-                type = "application/octet-stream"
-                putExtra(Intent.EXTRA_TITLE, data.sourceName)
+            val target = remoteTargetPath
+            if (target != null) {
+                Thread {
+                    try {
+                        ShizukuFileAccess.writeAtomic(target, pendingArchive!!)
+                        stageFile?.delete()
+                        saveCompleted = true
+                        runOnUiThread { status.text = "Сохранение возвращено в pt_saves. Резервная копия осталась в Backup." }
+                    } catch (e: Exception) {
+                        runOnUiThread { status.text = "Ошибка сохранения: " + (e.message ?: "ошибка") + ". Backup сохранён." }
+                    }
+                }.start()
+            } else {
+                val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
+                    addCategory(Intent.CATEGORY_OPENABLE)
+                    type = "application/octet-stream"
+                    putExtra(Intent.EXTRA_TITLE, data.sourceName)
+                }
+                startActivityForResult(intent, CREATE_SAVE)
             }
-            startActivityForResult(intent, CREATE_SAVE)
         } catch (e: Exception) {
             status.text = "Изменения не сохранены: ${e.message ?: "проверь введённые значения"}"
         }
