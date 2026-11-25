@@ -303,18 +303,33 @@ public class MainActivity extends Activity {
             Button item = new Button(this);
             item.setAllCaps(false);
             item.setText(slot.displayName + "\n" + slot.fileName + " · " + slot.sizeText);
-            item.setOnClickListener(v -> {
-                show("Выбран мир: " + slot.displayName
-                    + "\nФайл: " + slot.fileName
-                    + "\nРазмер: " + slot.sizeText
-                    + "\nДень: пока не распознан"
-                    + "\n\nМир выбран для будущего редактирования. Файл не изменялся.");
-                AppLog.i(this, "SAVE_SELECT", "Selected " + slot.fileName);
-            });
+            item.setOnClickListener(v -> beginEditing(slot));
             savesContainer.addView(item);
         }
         show("Найдено миров: " + found.size() + ". Нажми на нужный мир, чтобы выбрать его.");
         AppLog.i(this, "SAVE_SCAN", "Found " + found.size() + " save slots");
+    }
+
+    private void beginEditing(SaveSlot slot) {
+        if (!hasPermission()) { show("Нет разрешения Shizuku. Оригинал не затронут."); requestShizuku(); return; }
+        show("Создаю и проверяю резервную копию…");
+        executor.execute(() -> {
+            try {
+                String path = slot.fileName.startsWith("/") ? slot.fileName : SAVE_DIR + "/" + slot.fileName;
+                ShizukuFileAccess.Stage stage = ShizukuFileAccess.backupStage(this, path);
+                AppLog.i(this, "SAVE_EDIT", "Backup=" + stage.backup + "; staged=" + stage.file);
+                runOnUiThread(() -> {
+                    Intent intent = new Intent(this, SaveEditorActivity.class);
+                    intent.putExtra("stage_path", stage.file.getAbsolutePath());
+                    intent.putExtra("target_path", stage.target);
+                    intent.putExtra("backup_path", stage.backup);
+                    startActivity(intent);
+                });
+            } catch (Throwable t) {
+                AppLog.exception(this, "SAVE_EDIT", "Could not stage save", t);
+                runOnUiThread(() -> show("Не удалось подготовить сохранение: " + t.getMessage() + "\nОригинал не удаляется, если Backup не прошёл проверку."));
+            }
+        });
     }
 
     private void showLogs() {
