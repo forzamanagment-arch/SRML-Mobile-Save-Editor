@@ -14,11 +14,11 @@ object GameAssets {
     @JvmStatic fun typeface(context: Context): Typeface {
         cachedFont?.let { return it }
         val files = allFiles(context, FONT_ROOT)
-        val preferred = listOf("extrabold", "bold", "semibold", "medium", "regular")
+        val preferred = listOf("regular", "medium", "semibold", "bold", "extrabold")
         for (weight in preferred) {
             val file = files.firstOrNull {
                 val n = it.substringAfterLast('/').lowercase()
-                (n.endsWith(".ttf") || n.endsWith(".otf")) && n.contains(weight)
+                (n.endsWith(".ttf") || n.endsWith(".otf")) && n.contains("nunito-") && n.contains(weight)
             }
             if (file != null) {
                 try {
