@@ -110,6 +110,11 @@ class SaveEditorActivity : Activity() {
 
     private fun buildBase(title: String) {
         val scroll = ScrollView(this)
+        scroll.setFillViewport(true)
+        scroll.background = MarshmallowBackground()
+        window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.rgb(245,240,232)))
+        window.statusBarColor = Color.rgb(245,240,232)
+        window.decorView.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
         page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(18), dp(22), dp(18), dp(34))
@@ -117,14 +122,6 @@ class SaveEditorActivity : Activity() {
         }
         scroll.addView(page)
         setContentView(scroll)
-        page.addView(TextView(this).apply {
-            text = tr("SAVE WORKSHOP", "МАСТЕРСКАЯ СОХРАНЕНИЙ")
-            textSize = 11f
-            letterSpacing = 0.12f
-            typeface = GameAssets.typeface(this@SaveEditorActivity)
-            setTextColor(Color.rgb(232, 76, 138))
-            setPadding(0, 0, 0, dp(7))
-        })
         page.addView(TextView(this).apply {
             text = title
             textSize = 30f
@@ -304,7 +301,7 @@ class SaveEditorActivity : Activity() {
             head.addView(TextView(this).apply {
                 text = label
                 textSize = 11f
-                typeface = GameAssets.typeface(this@SaveEditorActivity)
+                typeface = GameAssets.typeface(this@SaveEditorActivity, true)
                 setTextColor(Color.rgb(45,55,72))
                 setPadding(dp(5), 0, 0, 0)
             })
@@ -313,12 +310,12 @@ class SaveEditorActivity : Activity() {
             if (current != null) {
                 val input = EditText(this).apply {
                     setSingleLine(true)
-                    typeface = GameAssets.typeface(this@SaveEditorActivity)
+                    typeface = GameAssets.typeface(this@SaveEditorActivity, true)
                     inputType = InputType.TYPE_CLASS_NUMBER
                     filters = arrayOf(InputFilter.LengthFilter(10))
                     setText(current.toString())
                     textSize = 15f
-                    setTextColor(Color.rgb(31,41,55))
+                    setTextColor(Color.rgb(45,55,72))
                     setPadding(dp(8), dp(5), dp(8), dp(5))
                     background = rounded(Color.rgb(255,253,247), Color.rgb(224,216,204), dp(12))
                 }
@@ -331,7 +328,7 @@ class SaveEditorActivity : Activity() {
         }
         hudCard(rowA, tr("Newbucks", "Ньюбаксы"), "Newbucks", data.newbucksOffset) { newbucksInput = it }
         hudCard(rowA, tr("Health", "Здоровье"), "Heart", data.currentHealthOffset) { currentHealthInput = it }
-        hudCard(rowB, tr("Energy", "Энергия"), "Battery", data.currentEnergyOffset) { currentEnergyInput = it }
+        hudCard(rowB, tr("Energy", "Энергия"), "Energy", data.currentEnergyOffset) { currentEnergyInput = it }
         hudCard(rowB, tr("Keys", "Ключи"), "Key", data.keysOffset) { keysInput = it }
 
         addSection(tr("INVENTORY", "ИНВЕНТАРЬ"))
@@ -371,17 +368,26 @@ class SaveEditorActivity : Activity() {
             }
             val waterIcon = ImageView(this)
             val waterBitmap = when (water.id) {
-                WATER_ID -> GameAssets.icon(this, "Water")
-                MAGIC_WATER_ID -> GameAssets.icon(this, "AncientWater")
+                WATER_ID -> GameAssets.icon(this, "Water_icon")
+                MAGIC_WATER_ID -> GameAssets.icon(this, "Ancient_Water")
                 else -> null
             }
             if (waterBitmap != null) waterIcon.setImageBitmap(waterBitmap)
             else {
-                waterIcon.setImageResource(android.R.drawable.ic_menu_help)
+                waterIcon.setImageDrawable(null)
                 waterIcon.setBackground(rounded(Color.rgb(232,220,200), Color.rgb(203,191,168), dp(12)))
             }
             val waterFrame = FrameLayout(this)
             waterFrame.addView(waterIcon, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.CENTER))
+            val waterPlaceholder = TextView(this).apply {
+                text = "?"
+                textSize = 26f
+                gravity = Gravity.CENTER
+                typeface = GameAssets.typeface(this@SaveEditorActivity, true)
+                setTextColor(Color.rgb(63,184,173))
+                visibility = if (waterBitmap == null) View.VISIBLE else View.GONE
+            }
+            waterFrame.addView(waterPlaceholder, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.CENTER))
             val waterBadge = TextView(this).apply {
                 text = water.count.toString()
                 textSize = 10f
@@ -409,12 +415,17 @@ class SaveEditorActivity : Activity() {
                     waterCountInput?.setText(selectedCount.toString())
                     waterBadge.text = selectedCount.toString()
                     val selectedWaterIcon = when (selectedId) {
-                        WATER_ID -> GameAssets.icon(this@SaveEditorActivity, "Water")
-                        MAGIC_WATER_ID -> GameAssets.icon(this@SaveEditorActivity, "AncientWater")
+                        WATER_ID -> GameAssets.icon(this@SaveEditorActivity, "Water_icon")
+                        MAGIC_WATER_ID -> GameAssets.icon(this@SaveEditorActivity, "Ancient_Water")
                         else -> null
                     }
-                    if (selectedWaterIcon != null) waterIcon.setImageBitmap(selectedWaterIcon)
-                    else waterIcon.setImageResource(android.R.drawable.ic_menu_help)
+                    if (selectedWaterIcon != null) {
+                        waterIcon.setImageBitmap(selectedWaterIcon)
+                        waterPlaceholder.visibility = View.GONE
+                    } else {
+                        waterIcon.setImageDrawable(null)
+                        waterPlaceholder.visibility = View.VISIBLE
+                    }
                     waterText.text = when (selectedId) {
                         WATER_ID -> tr("Water", "Вода")
                         MAGIC_WATER_ID -> tr("Ancient Water", "Древняя вода")
@@ -465,21 +476,17 @@ class SaveEditorActivity : Activity() {
         }
         fun refreshTile() {
             val id = idInput.text.toString().toLongOrNull() ?: 0L
-            val aliases = when (id) {
-                1L -> listOf("RadSlime"); 2L -> listOf("RockSlime"); 3L -> listOf("PinkSlime")
-                8L -> listOf("Cuberry"); 9L -> listOf("MintMango"); 16L -> listOf("HenHen")
-                17L -> listOf("Roostro"); 19L -> listOf("Carrot"); 27L -> listOf("Pogofruit")
-                29L -> listOf("HeartBeet"); 31L -> listOf("PhosphorSlime"); 37L -> listOf("TabbySlime")
-                48L -> listOf("PlortWATER", "Water"); 51L -> listOf("SlimeChasseur", "HunterSlime"); 59L -> listOf("HoneySlime")
-                72L -> listOf("SlimeAqueux", "PuddleSlime"); 76L -> listOf("Key"); 79L -> listOf("SlimeDeCristal", "CrystalSlime")
-                89L -> listOf("QuantumSlime"); 102L -> listOf("DervishSlime"); 104L -> listOf("MosaicSlime")
-                106L -> listOf("TangleSlime"); 108L -> listOf("FireSlime"); else -> emptyList()
-            } + ItemCatalog.localizedName(id, russian)
+            val aliases = ItemCatalog.iconHints(id)
             val bitmap = GameAssets.icon(this, *aliases.toTypedArray())
-            if (bitmap != null) iconView.setImageBitmap(bitmap) else {
-                iconView.setImageResource(android.R.drawable.ic_menu_help)
-                iconView.setBackground(rounded(Color.rgb(232,220,200), Color.rgb(203,191,168), dp(12)))
+            if (bitmap != null) {
+                iconView.setImageBitmap(bitmap)
+                iconView.background = rounded(Color.rgb(255,253,247), Color.TRANSPARENT, dp(12))
+                placeholder.visibility = View.GONE
+            } else {
+                iconView.setImageDrawable(null)
+                iconView.background = rounded(Color.rgb(232,220,200), Color.rgb(203,191,168), dp(12))
                 iconView.contentDescription = "?"
+                placeholder.visibility = View.VISIBLE
             }
             badge.text = countInput.text.toString()
             nameLabel.text = if (id == 0L) "?" else ItemCatalog.localizedName(id, russian)
@@ -492,6 +499,15 @@ class SaveEditorActivity : Activity() {
         }
         val frame = FrameLayout(this)
         frame.addView(iconView, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.CENTER))
+        val placeholder = TextView(this).apply {
+            text = "?"
+            textSize = 26f
+            gravity = Gravity.CENTER
+            typeface = GameAssets.typeface(this@SaveEditorActivity, true)
+            setTextColor(Color.rgb(63,184,173))
+            visibility = View.GONE
+        }
+        frame.addView(placeholder, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.CENTER))
         frame.addView(badge, FrameLayout.LayoutParams(-2, dp(20), Gravity.TOP or Gravity.END))
         tile.addView(frame, LinearLayout.LayoutParams(-1, dp(54)))
         tile.addView(nameLabel, LinearLayout.LayoutParams(-1, dp(34)))
