@@ -262,21 +262,6 @@ public class MainActivity extends Activity {
         b.setBackground(background(TEAL,Color.TRANSPARENT,dp(28)));
         b.setMinHeight(dp(46));b.setOnClickListener(v->action.run());return b;
     }
-    private GradientDrawable background(int fill,int stroke,int radius){
-        GradientDrawable d=new GradientDrawable();d.setColor(fill);d.setCornerRadius(radius);
-        if(stroke!=Color.TRANSPARENT)d.setStroke(dp(1),stroke);return d;
-    }
-    private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+0.5f);}
-    private TextView text(String value,int size,int color,boolean bold){
-        TextView t=new TextView(this);t.setText(value);t.setTextSize(size);t.setTextColor(color);
-        if(bold)t.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));return t;
-    }
-    private Button actionButton(String label,Runnable action){
-        Button b=new Button(this);b.setText(label);b.setAllCaps(false);b.setTextSize(14);
-        b.setTextColor(Color.WHITE);b.setTypeface(Typeface.create("sans-serif",Typeface.BOLD));
-        b.setBackground(background(TEAL,Color.TRANSPARENT,dp(16)));
-        b.setMinHeight(dp(46));b.setOnClickListener(v->action.run());return b;
-    }
     private void show(String message){if(output!=null)output.setText(message);}
     private boolean hasPermission(){
         try{return Shizuku.pingBinder()&&Shizuku.checkSelfPermission()==PackageManager.PERMISSION_GRANTED;}
