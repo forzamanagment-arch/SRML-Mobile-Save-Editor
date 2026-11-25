@@ -122,7 +122,8 @@ object ItemPickerDialog {
             results.removeAllViews()
             val query = search.text.toString().trim().lowercase()
             val items = ItemCatalog.names.entries.filter { (id, name) ->
-                categoryMatches(id, name) &&
+                (waterOnly || ItemCatalog.isAllowedInRegularSlot(id)) &&
+                    categoryMatches(id, name) &&
                     (query.isEmpty() || name.lowercase().contains(query) || id.toString().contains(query))
             }.take(240)
             items.chunked(2).forEach { pair ->
