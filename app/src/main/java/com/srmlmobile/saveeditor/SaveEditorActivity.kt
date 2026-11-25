@@ -111,6 +111,13 @@ class SaveEditorActivity : Activity() {
         scroll.addView(page)
         setContentView(scroll)
         page.addView(TextView(this).apply {
+            text = "SLIME RANCHER 2"
+            textSize = 12f
+            letterSpacing = 0.12f
+            typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
+            setTextColor(Color.rgb(43, 181, 199))
+        })
+        page.addView(TextView(this).apply {
             text = title
             textSize = 27f
             typeface = android.graphics.Typeface.create("sans-serif", android.graphics.Typeface.BOLD)
@@ -127,17 +134,15 @@ class SaveEditorActivity : Activity() {
             textSize = 14f
             setTextColor(Color.rgb(57, 75, 105))
             setPadding(dp(13), dp(11), dp(13), dp(11))
+            background = rounded(Color.rgb(255, 251, 240), Color.rgb(225, 207, 174), dp(16))
         }
         page.addView(status)
     }
 
     private fun buildWelcome() {
-        buildBase("SRML Save Editor")
+        buildBase("Редактор сохранений")
         status.text = "Открой главный экран, обнови список миров и выбери сохранение там. Файл вручную выбирать не требуется."
         addButton("Вернуться к списку миров") { finish() }
-        addButton("Тест распознавания нового сохранения") {
-            startActivity(Intent(this, SaveAnalyzerActivity::class.java))
-        }
         addHint("Резервная копия исходного сохранения хранится во вкладке Backup.")
     }
 
