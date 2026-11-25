@@ -10,6 +10,7 @@ import android.widget.Button
 import android.widget.EditText
 import android.widget.FrameLayout
 import android.widget.ImageView
+import android.widget.HorizontalScrollView
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
@@ -48,7 +49,11 @@ object ItemPickerDialog {
         searchParams.topMargin = dp(activity, 9)
         root.addView(search, searchParams)
         val chips = LinearLayout(activity).apply { orientation = LinearLayout.HORIZONTAL }
-        root.addView(chips)
+        val chipScroll = HorizontalScrollView(activity).apply {
+            isHorizontalScrollBarEnabled = false
+            addView(chips)
+        }
+        root.addView(chipScroll, LinearLayout.LayoutParams(-1, dp(activity, 42)))
         val results = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
         val scroll = ScrollView(activity).apply { addView(results) }
         val scrollParams = LinearLayout.LayoutParams(-1, dp(activity, 280))
@@ -69,6 +74,7 @@ object ItemPickerDialog {
         }
         var selectedId = currentId
         var category = "All"
+        val russian = activity.getSharedPreferences("srml_settings", Activity.MODE_PRIVATE).getBoolean("russian", false)
         fun qtyButton(label: String, action: () -> Unit) = Button(activity).apply {
             text = label
             isAllCaps = false
@@ -122,14 +128,16 @@ object ItemPickerDialog {
             results.removeAllViews()
             val query = search.text.toString().trim().lowercase()
             val items = ItemCatalog.names.entries.filter { (id, name) ->
+                val localized = ItemCatalog.localizedName(id, russian)
                 (waterOnly || ItemCatalog.isAllowedInRegularSlot(id)) &&
                     categoryMatches(id, name) &&
-                    (query.isEmpty() || name.lowercase().contains(query) || id.toString().contains(query))
+                    (query.isEmpty() || name.lowercase().contains(query) || localized.lowercase().contains(query) || id.toString().contains(query))
             }.take(240)
             items.chunked(2).forEach { pair ->
                 val row = LinearLayout(activity).apply { orientation = LinearLayout.HORIZONTAL }
                 pair.forEach { (id, name) ->
                     val selected = id == selectedId
+                    val displayName = ItemCatalog.localizedName(id, russian)
                     val tile = LinearLayout(activity).apply {
                         orientation = LinearLayout.VERTICAL
                         gravity = Gravity.CENTER
@@ -152,7 +160,7 @@ object ItemPickerDialog {
                         }, LinearLayout.LayoutParams(dp(activity, 46), dp(activity, 46)))
                     }
                     tile.addView(TextView(activity).apply {
-                        text = name
+                        text = displayName
                         textSize = 10f
                         maxLines = 2
                         gravity = Gravity.CENTER
