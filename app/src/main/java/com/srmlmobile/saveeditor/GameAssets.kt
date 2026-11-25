@@ -64,6 +64,7 @@ object GameAssets {
             .replace(Regex("[^a-z0-9а-я]+"), "")
         name = name.removePrefix("300px")
         name = name.removePrefix("icon")
+        name = name.removePrefix("plort")
         name = name.removeSuffix("sp").removeSuffix("mp")
         name = name.removeSuffix("sr")
         if (name.endsWith("0")) name = name.dropLast(1)
