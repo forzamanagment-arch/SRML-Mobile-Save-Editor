@@ -400,6 +400,7 @@ public class MainActivity extends Activity {
         });
     }
     private void renderBackups(List<ShizukuFileAccess.BackupItem>items){
+        LinearLayout content=pageContents[1];
         content.removeAllViews();
         content.addView(text(tr("Your backups","Резервные копии"),22,INK,true));
         TextView hint=text(tr("Choose a backup to restore it to your worlds.","Выбери копию, чтобы восстановить её в список миров."),13,MUTED,false);
@@ -475,6 +476,7 @@ public class MainActivity extends Activity {
         });
     }
     private void renderSaves(List<SaveSlot>found){
+        LinearLayout content=pageContents[0];
         content.removeAllViews();
         content.addView(text(tr("Your worlds","Твои миры"),22,INK,true));
         TextView hint=text(tr("Choose a world to edit its save.","Выбери мир, чтобы изменить сохранение."),13,MUTED,false);hint.setPadding(0,dp(4),0,dp(12));content.addView(hint);
