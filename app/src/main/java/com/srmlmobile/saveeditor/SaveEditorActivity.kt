@@ -135,8 +135,8 @@ class SaveEditorActivity : Activity() {
 
     private fun buildWelcome() {
         buildBase("SRML Save Editor")
-        status.text = "Выбери оригинальный файл сохранения. Поддерживаются ZIP-архивы с записью gamesave-sav, в том числе файлы без расширения."
-        addButton("Выбрать сохранение") { openSavePicker() }
+        status.text = "Открой главный экран, обнови список миров и выбери сохранение там. Файл вручную выбирать не требуется."
+        addButton("Вернуться к списку миров") { finish() }
         addButton("Тест распознавания нового сохранения") {
             startActivity(Intent(this, SaveAnalyzerActivity::class.java))
         }
