@@ -313,6 +313,7 @@ class SaveEditorActivity : Activity() {
             if (current != null) {
                 val input = EditText(this).apply {
                     setSingleLine(true)
+                    typeface = GameAssets.typeface(this@SaveEditorActivity)
                     inputType = InputType.TYPE_CLASS_NUMBER
                     filters = arrayOf(InputFilter.LengthFilter(10))
                     setText(current.toString())
@@ -680,7 +681,7 @@ class SaveEditorActivity : Activity() {
             this.text = text
             textSize = 18f
             setTextColor(Color.rgb(45, 55, 72))
-            typeface = GameAssets.typeface(this@SaveEditorActivity)
+            typeface = GameAssets.typeface(this@SaveEditorActivity, true)
             setPadding(0, dp(17), 0, dp(7))
         })
     }
@@ -692,11 +693,13 @@ class SaveEditorActivity : Activity() {
         }
         wrapper.addView(TextView(this).apply {
             text = label
+            typeface = GameAssets.typeface(this@SaveEditorActivity)
             textSize = 13f
             setTextColor(Color.rgb(107, 123, 141))
         })
         val input = EditText(this).apply {
             setSingleLine(true)
+            typeface = GameAssets.typeface(this@SaveEditorActivity)
             inputType = InputType.TYPE_CLASS_NUMBER
             filters = arrayOf(InputFilter.LengthFilter(10))
             setText(value)
