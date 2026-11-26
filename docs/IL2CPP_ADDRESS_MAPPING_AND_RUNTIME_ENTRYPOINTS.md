@@ -148,3 +148,22 @@ New observations:
 The earlier object chain remains valid **after a real SceneContext instance is obtained**, but the static analysis has not yet found a safe global entry point for obtaining that instance. We should not hardcode a guessed static pointer, use the generic singleton blindly, or infer the context from an unrelated registered component.
 
 The next useful static target is the code that constructs/owns the active scene context and the code that populates its PlayerState/GameModel fields. That requires tracing the relevant constructors, setters, scene bootstrap code, and serialized component relationships. The current analyzer's class/field layout output is not reliable enough to infer these relationships from field names alone.
+
+## 9. PlayerModel setters: maximum-value check is not a clamp
+
+A further disassembly pass found the actual bodies of `PlayerModel$$SetHealth` and `PlayerModel$$SetEnergy`.
+
+For health, `SetHealth`:
+1. Stores the incoming float directly at `PlayerModel + 0x64` (100).
+2. Reads the maximum-health integer at `PlayerModel + 0xA8` (168).
+3. Compares the stored current value with that maximum.
+4. Runs an additional timing/recovery-related branch only when the current value is below the maximum.
+
+The setter does **not** replace the incoming value with the maximum and does not clamp the current-health field in the inspected function.
+
+Energy follows the same structure:
+- Current energy is stored at `PlayerModel + 0x60` (96).
+- Maximum energy is read from `PlayerModel + 0xAC` (172).
+- The comparison controls an additional branch, not a clamp of the current-energy field.
+
+This means the static code supports the narrower statement that the setters themselves accept and store a float above the recorded maximum. It does not prove that every later gameplay system, save operation, UI display, or recovery routine preserves an arbitrarily high value. That still needs a controlled in-game test and should not be assumed from this one method.
