@@ -26,12 +26,12 @@ object ItemPickerDialog {
     ) {
         val dark = activity.getSharedPreferences("srml_settings", Activity.MODE_PRIVATE).getBoolean("dark_theme", true)
         val russian = activity.getSharedPreferences("srml_settings", Activity.MODE_PRIVATE).getBoolean("russian", false)
-        val surfaceColor = if (dark) Color.rgb(34,39,46) else surfaceColor
-        val textColor = if (dark) Color.rgb(244,242,236) else textColor
-        val mutedTextColor = if (dark) Color.rgb(177,187,198) else mutedTextColor
-        val borderColor = if (dark) Color.rgb(65,73,83) else borderColor
+        val surfaceColor = if (dark) Color.rgb(34,39,46) else Color.rgb(255,253,247)
+        val textColor = if (dark) Color.rgb(244,242,236) else Color.rgb(45,55,72)
+        val mutedTextColor = if (dark) Color.rgb(177,187,198) else Color.rgb(107,123,141)
+        val borderColor = if (dark) Color.rgb(65,73,83) else Color.rgb(224,216,204)
         val accentColor = Color.rgb(49,73,110)
-        val fallbackColor = if (dark) Color.rgb(43,49,58) else fallbackColor
+        val fallbackColor = if (dark) Color.rgb(43,49,58) else Color.rgb(232,220,200)
         val root = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(activity, 16), dp(activity, 16), dp(activity, 16), dp(activity, 14))
