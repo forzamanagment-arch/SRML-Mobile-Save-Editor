@@ -137,18 +137,21 @@ object ItemPickerDialog {
         quantityParams.topMargin = dp(activity, 7)
         root.addView(quantityRow, quantityParams)
 
-        fun categoryMatches(id: Long, name: String): Boolean {
+        fun categoryMatches(id: Long): Boolean {
             if (waterOnly) return id == 0L || id == 48L || id == 113L
-            val n = name.lowercase()
+            val russianName = ItemCatalog.displayName(id).lowercase()
+            val englishName = ItemCatalog.localizedName(id, false).lowercase()
             return when (category) {
                 "Food" -> id in setOf(8L,9L,16L,17L,18L,19L,20L,26L,27L,28L,29L,49L,50L,68L,69L,70L,71L,88L,100L,110L,111L,148L,149L,165L)
-                "Plorts" -> n.contains("plort")
+                "Plorts" -> englishName.contains("plort") || russianName.contains("плорт")
                 "Resources" -> id in 11000L..11999L
                 "Fashion Pod" -> id in 12000L..12099L
                 "Ornament" -> id in 14000L..14999L
                 else -> true
             }
         }
+        fun normalizeSearch(value: String): String =
+            value.trim().lowercase().replace(Regex("\\s+"), " ")
         fun updateChipAppearance() {
             for (index in 0 until chips.childCount) {
                 val chip = chips.getChildAt(index) as? Button ?: continue
@@ -161,12 +164,27 @@ object ItemPickerDialog {
         }
         fun render() {
             results.removeAllViews()
-            val query = search.text.toString().trim().lowercase()
-            val items = ItemCatalog.names.entries.filter { (id, name) ->
-                val localized = ItemCatalog.localizedName(id, russian)
+            val query = normalizeSearch(search.text.toString())
+            val items = ItemCatalog.names.entries.filter { (id, _) ->
+                val russianName = ItemCatalog.displayName(id)
+                val englishName = ItemCatalog.localizedName(id, false)
+                val currentName = ItemCatalog.localizedName(id, russian)
+                val matchesSearch = query.isEmpty() ||
+                    normalizeSearch(currentName).contains(query) ||
+                    normalizeSearch(russianName).contains(query) ||
+                    normalizeSearch(englishName).contains(query) ||
+                    id.toString().contains(query)
                 (if (waterOnly) id == 0L || id == 48L || id == 113L else ItemCatalog.isAllowedInRegularSlot(id)) &&
-                    categoryMatches(id, localized) &&
-                    (query.isEmpty() || localized.lowercase().contains(query) || id.toString().contains(query))
+                    categoryMatches(id) && matchesSearch
+            }
+            if (items.isEmpty()) {
+                results.addView(TextView(activity).apply {
+                    text = if (russian) "Ничего не найдено" else "No items found"
+                    textSize = 13f
+                    gravity = Gravity.CENTER
+                    setTextColor(mutedTextColor)
+                    setPadding(0, dp(activity, 24), 0, dp(activity, 24))
+                })
             }
             items.chunked(2).forEach { pair ->
                 val row = LinearLayout(activity).apply { orientation = LinearLayout.HORIZONTAL }
