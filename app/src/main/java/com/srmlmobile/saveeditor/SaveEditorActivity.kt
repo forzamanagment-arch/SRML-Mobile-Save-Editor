@@ -338,7 +338,7 @@ class SaveEditorActivity : Activity() {
             val bitmap = GameAssets.icon(this, iconName)
             if (bitmap != null) icon.setImageBitmap(bitmap)
             else {
-                icon.setBackground(rounded(Color.rgb(232,220,200), Color.rgb(203,191,168), dp(10)))
+                icon.setBackground(rounded(hudColor(), borderColor(), dp(10)))
                 icon.contentDescription = "?"
             }
             head.addView(icon, LinearLayout.LayoutParams(dp(25), dp(25)))
@@ -475,7 +475,7 @@ class SaveEditorActivity : Activity() {
             if (waterBitmap != null) waterIcon.setImageBitmap(waterBitmap)
             else {
                 waterIcon.setImageDrawable(null)
-                waterIcon.setBackground(rounded(Color.rgb(232,220,200), Color.rgb(203,191,168), dp(12)))
+                waterIcon.setBackground(rounded(hudColor(), borderColor(), dp(12)))
             }
             val waterFrame = FrameLayout(this)
             waterFrame.addView(waterIcon, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.CENTER))
@@ -644,7 +644,7 @@ class SaveEditorActivity : Activity() {
                 placeholder.visibility = View.GONE
             } else {
                 iconView.setImageDrawable(null)
-                iconView.background = rounded(Color.rgb(232,220,200), Color.rgb(203,191,168), dp(12))
+                iconView.background = rounded(hudColor(), borderColor(), dp(12))
                 iconView.contentDescription = "?"
                 placeholder.visibility = View.VISIBLE
             }
@@ -655,7 +655,7 @@ class SaveEditorActivity : Activity() {
             orientation = LinearLayout.VERTICAL
             gravity = Gravity.CENTER
             setPadding(dp(8), dp(8), dp(8), dp(8))
-            background = rounded(Color.rgb(232,220,200), Color.rgb(203,191,168), dp(16))
+            background = rounded(hudColor(), borderColor(), dp(16))
         }
         val frame = FrameLayout(this)
         frame.addView(iconView, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.CENTER))
@@ -875,8 +875,8 @@ class SaveEditorActivity : Activity() {
             filters = arrayOf(InputFilter.LengthFilter(10))
             setText(value)
             textSize = 16f
-            setTextColor(Color.rgb(57, 75, 105))
-            setHintTextColor(Color.rgb(155, 168, 181))
+            setTextColor(inkColor())
+            setHintTextColor(mutedColor())
             setPadding(dp(12), dp(8), dp(12), dp(8))
             background = rounded(cardColor(), borderColor(), dp(14))
         }
