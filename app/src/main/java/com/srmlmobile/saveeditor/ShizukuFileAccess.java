@@ -79,14 +79,25 @@ public final class ShizukuFileAccess {
    throw new IOException("Не удалось полностью очистить папку Backup");
  }
  public static final class Stage{public final File file;public final String target,backup;Stage(File f,String t,String b){file=f;target=t;backup=b;}}
- public static Stage backupStage(Context c,String path)throws Exception{
-  ensureBackup();String name=path.substring(path.lastIndexOf('/')+1);String backup=backupVerified(path,name);byte[]data=read(path);
+ public static Stage stageForEditing(Context c,String path,boolean createBackup)throws Exception{
+  String name=path.substring(path.lastIndexOf('/')+1);
+  byte[]data=read(path);
+  String backup=null;
+  if(createBackup){ensureBackup();backup=backupVerified(path,name);}
   File staged=new File(c.getFilesDir(),"editing_"+System.currentTimeMillis()+".sav");
   try(FileOutputStream o=new FileOutputStream(staged)){o.write(data);o.getFD().sync();}
-  if(staged.length()!=data.length){staged.delete();throw new IOException("Временная копия не прошла проверку");}
-  if(run("rm -- "+q(path)+" && test ! -e "+q(path))!=0){staged.delete();throw new IOException("Не удалось убрать оригинал из pt_saves. Backup сохранён.");}
+  if(staged.length()!=data.length||!Arrays.equals(data,readLocal(staged))){
+   staged.delete();throw new IOException("Временная копия не прошла проверку");
+  }
+  // Keep the live save in pt_saves throughout editing. The game must never see an empty save folder.
   return new Stage(staged,path,backup);
  }
+ private static byte[] readLocal(File file)throws Exception{
+  ByteArrayOutputStream out=new ByteArrayOutputStream();
+  try(InputStream in=new FileInputStream(file)){byte[]b=new byte[8192];int n;while((n=in.read(b))!=-1)out.write(b,0,n);}
+  return out.toByteArray();
+ }
+ public static Stage backupStage(Context c,String path)throws Exception{return stageForEditing(c,path,true);}
  public static RestoreResult restoreBackup(String backupPath)throws Exception{
   ensureBackup();String filename=backupPath.substring(backupPath.lastIndexOf('/')+1);BackupName parsed=parseBackupName(filename);
   if(parsed==null)throw new IOException("Имя резервной копии имеет неизвестный формат");
