@@ -101,7 +101,36 @@ jobs:
             } > "reports/native/$name.txt"
           done < reports/NATIVE_LIBRARY_LIST.txt
           grep -E 'package: name=|launchable-activity:|sdkVersion:|targetSdkVersion:|native-code:' reports/APK_BADGING.txt || true
-          echo "Manifest, APK inventory and native library reports generated."
+          python3 - <<'PY'
+          import pathlib, re, zipfile
+          apk = next(pathlib.Path("input/extracted").glob("*.apk"))
+          report = []
+          lookup = {
+              "assets/bin/Data/globalgamemanagers": [0x14, 0x30],
+              "assets/bin/Data/data.unity3d": [0x12],
+              "assets/bin/Data/mainData": [0x14],
+          }
+          pattern = re.compile(rb"^\d+\.\d+\.\d+(?:[abcfp]\d+|rc\d+)?$")
+          with zipfile.ZipFile(apk) as z:
+              names = set(z.namelist())
+              for name, offsets in lookup.items():
+                  if name not in names:
+                      report.append(f"{name}: NOT PRESENT")
+                      continue
+                  with z.open(name) as f:
+                      head = f.read(128)
+                  report.append(f"{name}: present, size={z.getinfo(name).file_size}")
+                  report.append(f"  first_64_hex={head[:64].hex()}")
+                  for offset in offsets:
+                      candidate = head[offset:offset+32].split(b"\0", 1)[0]
+                      printable = candidate.decode("ascii", "replace")
+                      valid = bool(pattern.fullmatch(candidate))
+                      report.append(f"  offset_0x{offset:X}: {printable!r}; fusioncore_version_match={valid}")
+          out = "\n".join(report) + "\n"
+          pathlib.Path("reports/UNITY_VERSION_PROBE.txt").write_text(out, encoding="utf-8")
+          print(out)
+          PY
+          echo "Manifest, APK inventory and Unity version probe generated."
 
       - name: Deep-inspect Unity bootstrap and app-specific native wrapper
         run: |
