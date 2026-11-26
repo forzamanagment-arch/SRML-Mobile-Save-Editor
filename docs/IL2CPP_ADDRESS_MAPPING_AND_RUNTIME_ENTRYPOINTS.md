@@ -259,3 +259,30 @@ Updated conclusion:
 3. The startup path uses internal helper calls to obtain the relevant objects; those helper targets still need identification.
 4. `SRSingleton<SceneContext>` exists in generated generic metadata, but its actual role and relation to `SceneContext` remain unconfirmed.
 5. The assignment source for `SceneContext.PlayerState` and `SceneContext.GameModel` remains unresolved. Direct calls to their property setters were not found in the disassembly scan, so serialized-field assignment, indirect invocation, or another initialization path remain possibilities rather than established facts.
+## 12. Managed runtime code generation and assembly loading checks
+
+A targeted scan of the generated function index and disassembly checked whether the player build exposes the usual managed runtime-code-generation APIs.
+
+### Reflection.Emit evidence
+
+The metadata contains a partial `System.Reflection.Emit.DynamicMethod` surface, but the inspected implementations explicitly throw `System.PlatformNotSupportedException`:
+
+- `DynamicMethod$$Invoke` at `0x562FFBC` constructs and throws `PlatformNotSupportedException`.
+- `DynamicMethod$$get_MethodHandle` at `0x562FDA0` constructs and throws `PlatformNotSupportedException`.
+- `TypeBuilder$$get_Assembly` at `0x56322DC` also constructs and throws `PlatformNotSupportedException`.
+
+The generated function index contains no `AssemblyBuilder`, `ModuleBuilder`, or `ILGenerator` owner methods, and no `DefineDynamicAssembly` or `DefineDynamicModule` methods. The `TypeBuilder` surface is limited to reflection/introspection methods in the examined metadata.
+
+### Assembly.Load is present, but its meaning is limited
+
+`System.Reflection.Assembly$$Load` at `0x561DEE4` delegates through `AppDomain.get_CurrentDomain()` to `AppDomain.Load`. `AppDomain.Load` then calls `AppDomain.LoadAssembly`, which reaches an internal runtime helper.
+
+This proves that the standard assembly-name loading API exists in the compiled framework surface. It does **not** prove that arbitrary external DLL files can be loaded into this IL2CPP player. The scanned metadata contains no `Assembly.LoadFrom`, `Assembly.LoadFile`, or `AssemblyLoadContext` implementation, and the Reflection.Emit checks above show that dynamic managed-code generation is explicitly unsupported in the inspected methods.
+
+### Updated mod-loader conclusion
+
+1. Do not design the mod manager around `Assembly.LoadFrom`, `Assembly.LoadFile`, `AssemblyBuilder`, or `DynamicMethod` as if they were supported.
+2. `Assembly.Load` should be treated as an assembly-resolution API whose ability to load new, non-AOT third-party code is unproven.
+3. The inspected evidence makes a conventional PC-style managed DLL mod loader unlikely to work unchanged on this IL2CPP build.
+4. This does not rule out data-driven mods, precompiled code that is already part of the player, or a separately engineered native in-process bridge. Each requires its own verified loading and lifecycle path.
+5. No runtime module was loaded and no game process was modified during this analysis.
