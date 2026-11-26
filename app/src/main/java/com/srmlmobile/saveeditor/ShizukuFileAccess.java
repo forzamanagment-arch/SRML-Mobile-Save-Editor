@@ -21,6 +21,19 @@ public final class ShizukuFileAccess {
  public static void ensureBackup()throws Exception{
   if(run("mkdir -p "+q(BACKUP_DIR)+" && test -d "+q(BACKUP_DIR)+" && test -w "+q(BACKUP_DIR))!=0)throw new IOException("Не удалось создать или открыть папку Backup");
  }
+ public static final String PT_SAVES_BACKUP_ROOT="/storage/emulated/0/BackupPT_SAVES";
+ public static final String PT_SAVES_BACKUP_DIR=PT_SAVES_BACKUP_ROOT+"/pt_saves";
+ public static void backupPtSaves()throws Exception{
+  if(run("test -d "+q(SAVE_DIR))!=0)throw new IOException("Исходная папка pt_saves не найдена: "+SAVE_DIR);
+  String pending=PT_SAVES_BACKUP_ROOT+"/pt_saves.pending";
+  String previous=PT_SAVES_BACKUP_ROOT+"/pt_saves.previous_"+new SimpleDateFormat("yyyyMMdd_HHmmss",Locale.ROOT).format(new Date());
+  if(run("mkdir -p "+q(PT_SAVES_BACKUP_ROOT)+" && rm -rf -- "+q(pending)+" && cp -a -- "+q(SAVE_DIR)+" "+q(pending)+" && diff -qr -- "+q(SAVE_DIR)+" "+q(pending)+" >/dev/null")!=0)
+   throw new IOException("Копия pt_saves не прошла проверку. Исходные данные не изменены.");
+  if(run("if test -d "+q(PT_SAVES_BACKUP_DIR)+"; then mv -- "+q(PT_SAVES_BACKUP_DIR)+" "+q(previous)+"; fi && mv -- "+q(pending)+" "+q(PT_SAVES_BACKUP_DIR))!=0)
+   throw new IOException("Не удалось завершить сохранение pt_saves. Исходная папка игры не изменена.");
+  if(run("diff -qr -- "+q(SAVE_DIR)+" "+q(PT_SAVES_BACKUP_DIR)+" >/dev/null")!=0)
+   throw new IOException("Финальная проверка BackupPT_SAVES не пройдена. Исходные данные игры сохранены.");
+ }
  public static List<String> listSaves()throws Exception{return listFiles(SAVE_DIR);}
  private static List<String> listFiles(String dir)throws Exception{
   Process p=sh("find "+q(dir)+" -maxdepth 1 -type f -print 2>/dev/null");ByteArrayOutputStream o=new ByteArrayOutputStream();
