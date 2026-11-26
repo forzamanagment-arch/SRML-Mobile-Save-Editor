@@ -105,7 +105,7 @@ public class MainActivity extends Activity {
         getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(creamColor()));
         getWindow().setStatusBarColor(creamColor());
         getWindow().getDecorView().setSystemUiVisibility(darkTheme?0:View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
-        pageTitle=text("SRML Save Editor",30,INK,true);
+        pageTitle=text("SRML Save Editor",30,inkColor(),true);
         pageTitle.setTypeface(GameAssets.typeface(this,true));
         pageTitle.setPadding(0,dp(3),0,dp(14));
         root.addView(pageTitle);
@@ -113,8 +113,8 @@ public class MainActivity extends Activity {
         shizukuPanel=new LinearLayout(this);
         shizukuPanel.setOrientation(LinearLayout.VERTICAL);
         shizukuPanel.setPadding(dp(14),dp(10),dp(14),dp(10));
-        shizukuPanel.setBackground(background(CARD,SAND,dp(22)));
-        status=text("",13,MUTED,false);
+        shizukuPanel.setBackground(background(cardColor(),borderColor(),dp(22)));
+        status=text("",13,mutedColor(),false);
         shizukuPanel.addView(status);
         shizukuButton=actionButton(tr("Connect Shizuku","Подключить Shizuku"),this::requestShizuku);
         LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(-1,dp(44));
@@ -277,32 +277,32 @@ public class MainActivity extends Activity {
         LinearLayout card=new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(dp(18),dp(8),dp(18),dp(18));
-        card.setBackground(background(CARD,SAND,dp(28)));
+        card.setBackground(background(cardColor(),borderColor(),dp(28)));
         View pinkBar=new View(this);
         pinkBar.setBackground(background(PINK,Color.TRANSPARENT,dp(8)));
         card.addView(pinkBar,new LinearLayout.LayoutParams(-1,dp(6)));
-        TextView title=text(tr("Choose game app","Выбрать приложение игры"),21,INK,true);
+        TextView title=text(tr("Choose game app","Выбрать приложение игры"),21,inkColor(),true);
         title.setPadding(0,dp(14),0,dp(6));
         card.addView(title);
-        TextView message=text(reason,13,MUTED,false);
+        TextView message=text(reason,13,mutedColor(),false);
         message.setPadding(0,0,0,dp(10));
         card.addView(message);
-        TextView packageLabel=text(tr("Package name","Имя пакета"),12,INK,true);
+        TextView packageLabel=text(tr("Package name","Имя пакета"),12,inkColor(),true);
         card.addView(packageLabel);
         EditText packageInput=new EditText(this);
         packageInput.setSingleLine(true);
         packageInput.setText(GAME_PACKAGE);
         packageInput.setTextSize(14);
         packageInput.setInputType(InputType.TYPE_CLASS_TEXT);
-        packageInput.setTextColor(INK);
-        packageInput.setHintTextColor(MUTED);
+        packageInput.setTextColor(inkColor());
+        packageInput.setHintTextColor(mutedColor());
         packageInput.setPadding(dp(12),dp(8),dp(12),dp(8));
-        packageInput.setBackground(background(CARD,SAND,dp(14)));
+        packageInput.setBackground(background(cardColor(),borderColor(),dp(14)));
         LinearLayout.LayoutParams inputParams=new LinearLayout.LayoutParams(-1,dp(46));
         inputParams.topMargin=dp(5);
         card.addView(packageInput,inputParams);
 
-        TextView appsTitle=text(tr("Matching installed apps","Подходящие установленные приложения"),12,INK,true);
+        TextView appsTitle=text(tr("Matching installed apps","Подходящие установленные приложения"),12,inkColor(),true);
         appsTitle.setPadding(0,dp(12),0,dp(5));
         card.addView(appsTitle);
         LinearLayout appList=new LinearLayout(this);
@@ -319,9 +319,9 @@ public class MainActivity extends Activity {
                  searchable.contains("monomi")||searchable.contains("playdigious")||
                  searchable.contains("winlator")||searchable.contains("mobox")||
                  searchable.contains("exagear"))) continue;
-            TextView app=text(label+"  ·  "+pkg,12,INK,false);
+            TextView app=text(label+"  ·  "+pkg,12,inkColor(),false);
             app.setPadding(dp(10),dp(8),dp(10),dp(8));
-            app.setBackground(background(Color.rgb(245,240,232),SAND,dp(12)));
+            app.setBackground(background(Color.rgb(245,240,232),borderColor(),dp(12)));
             LinearLayout.LayoutParams appParams=new LinearLayout.LayoutParams(-1,-2);
             appParams.bottomMargin=dp(4);
             appList.addView(app,appParams);
@@ -329,7 +329,7 @@ public class MainActivity extends Activity {
             shown++;
         }
         if(shown==0){
-            TextView none=text(tr("No matching launcher apps were found. You can still enter a package above.","Подходящие приложения не найдены. Имя пакета всё равно можно ввести вручную."),11,MUTED,false);
+            TextView none=text(tr("No matching launcher apps were found. You can still enter a package above.","Подходящие приложения не найдены. Имя пакета всё равно можно ввести вручную."),11,mutedColor(),false);
             appList.addView(none);
         }
         ScrollView appScroll=new ScrollView(this);
@@ -401,31 +401,53 @@ public class MainActivity extends Activity {
     private void updateNavVisual(int page){
         for(int i=0;i<navItems.size();i++){
             LinearLayout item=navItems.get(i);
-            Object[] parts=(Object[])item.getTag();
-            NavIcon icon=(NavIcon)parts[0];View dot=(View)parts[1];
+            ImageView icon=(ImageView)item.getTag();
             boolean active=i==page;
-            icon.setActive(active);dot.setVisibility(active?View.VISIBLE:View.INVISIBLE);
-            item.setBackground(active?background(Color.rgb(232,248,245),Color.TRANSPARENT,dp(24)):background(Color.TRANSPARENT,Color.TRANSPARENT,dp(24)));
+            if(icon!=null){
+                if(active){icon.clearColorFilter();icon.setAlpha(1f);}
+                else{ColorMatrix matrix=new ColorMatrix();matrix.setSaturation(0f);icon.setColorFilter(new ColorMatrixColorFilter(matrix));icon.setAlpha(0.72f);}
+            }
+            item.setBackgroundColor(Color.TRANSPARENT);
+        }
+        if(navBar!=null&&navHighlight!=null){
+            navBar.post(()->{
+                if(page<0||page>=navItems.size())return;
+                View target=navItems.get(page);
+                float x=navBar.getX()+target.getX()+target.getWidth()*0.08f;
+                float width=target.getWidth()*0.84f;
+                FrameLayout.LayoutParams lp=(FrameLayout.LayoutParams)navHighlight.getLayoutParams();
+                lp.width=(int)width;lp.height=dp(50);lp.topMargin=dp(6);
+                navHighlight.setLayoutParams(lp);
+                navHighlight.animate().translationX(x-dp(5)).setDuration(280).setInterpolator(new android.view.animation.DecelerateInterpolator()).start();
+            });
         }
     }
     private void renderSettings(){
         content.removeAllViews();
-        addSectionCard(tr("Preferences","Настройки"),tr("Choose how SRML Save Editor is displayed.","Настрой отображение SRML Save Editor."));
+        addHeader(tr("Settings","Настройки"),"SettingsTurquoiseIcon.png");
+        addSectionCard(tr("Appearance","Оформление"),tr("Choose the light or dark look for the whole editor.","Выбери светлое или тёмное оформление всего редактора."));
+        LinearLayout themeChoices=new LinearLayout(this);themeChoices.setOrientation(LinearLayout.HORIZONTAL);
+        Button light=actionButton(tr("Light theme","Светлая тема"),()->setDarkTheme(false));
+        Button dark=actionButton(tr("Dark theme","Тёмная тема"),()->setDarkTheme(true));
+        light.setBackground(gradientBackground(darkTheme?surfaceAlt():TEAL,darkTheme?Color.rgb(34,111,108):Color.rgb(42,166,158),Color.TRANSPARENT,dp(24)));
+        dark.setBackground(gradientBackground(darkTheme?TEAL:surfaceAlt(),darkTheme?Color.rgb(42,166,158):Color.rgb(220,215,207),Color.TRANSPARENT,dp(24)));
+        LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(0,dp(48),1);tp.rightMargin=dp(7);
+        themeChoices.addView(light,tp);themeChoices.addView(dark,new LinearLayout.LayoutParams(0,dp(48),1));content.addView(themeChoices);
         addSectionCard(tr("Language","Язык"),tr("App interface language","Язык интерфейса приложения"));
         LinearLayout choices=new LinearLayout(this);choices.setOrientation(LinearLayout.HORIZONTAL);
         Button en=actionButton("English",()->setLanguage(false));
         Button ru=actionButton("Русский",()->setLanguage(true));
-        en.setBackground(background(russian?Color.rgb(232,224,212):TEAL,Color.TRANSPARENT,dp(24)));
-        ru.setBackground(background(russian?TEAL:Color.rgb(232,224,212),Color.TRANSPARENT,dp(24)));
+        en.setBackground(gradientBackground(russian?surfaceAlt():TEAL,russian?darken(surfaceAlt(),0.08f):Color.rgb(42,166,158),Color.TRANSPARENT,dp(24)));
+        ru.setBackground(gradientBackground(russian?TEAL:surfaceAlt(),russian?Color.rgb(42,166,158):darken(surfaceAlt(),0.08f),Color.TRANSPARENT,dp(24)));
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(48),1);p.rightMargin=dp(7);choices.addView(en,p);
         choices.addView(ru,new LinearLayout.LayoutParams(0,dp(48),1));content.addView(choices);
         LinearLayout info=new LinearLayout(this);
         info.setOrientation(LinearLayout.VERTICAL);
         info.setPadding(dp(20),dp(18),dp(20),dp(18));
-        info.setBackground(background(Color.rgb(31,41,55),Color.TRANSPARENT,dp(24)));
+        info.setBackground(gradientBackground(darkTheme?Color.rgb(38,43,52):Color.rgb(31,41,55),darkTheme?Color.rgb(27,31,38):Color.rgb(24,32,44),Color.TRANSPARENT,dp(24)));
         TextView infoTitle=text(tr("BACKUP SAFETY","ЗАЩИТА РЕЗЕРВНЫХ КОПИЙ"),11,Color.rgb(255,154,209),true);
         infoTitle.setLetterSpacing(0.08f);info.addView(infoTitle);
-        TextView infoBody=text(tr("A backup is created before a save is edited. Restore it at any time from the Backup page.","Перед редактированием создаётся резервная копия. Восстановить её можно во вкладке Backup."),14,Color.WHITE,false);
+        TextView infoBody=text(tr("A backup is optional and is created only when you choose it before editing. The original save stays in the game folder.","Резервная копия создаётся только по твоему выбору перед редактированием. Исходное сохранение остаётся в папке игры."),14,Color.WHITE,false);
         infoBody.setPadding(0,dp(8),0,0);info.addView(infoBody);
         LinearLayout.LayoutParams infoParams=new LinearLayout.LayoutParams(-1,-2);infoParams.topMargin=dp(14);content.addView(info,infoParams);
     }
@@ -437,14 +459,15 @@ public class MainActivity extends Activity {
     }
     private void renderAbout(){
         content.removeAllViews();
+        addHeader(tr("About","О приложении"),"InfoTurquoiseIcon.png");
         LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
-        card.setGravity(Gravity.CENTER_HORIZONTAL);card.setPadding(dp(24),dp(26),dp(24),dp(26));
-        card.setBackground(background(CARD,SAND,dp(28)));
+        card.setGravity(Gravity.CENTER_VERTICAL);card.setPadding(dp(24),dp(26),dp(24),dp(26));
+        card.setBackground(background(cardColor(),borderColor(),dp(28)));
         card.addView(new SlimeLogoView(this),new LinearLayout.LayoutParams(dp(82),dp(82)));
-        TextView name=text("SRML Save Editor",24,INK,true);name.setTypeface(GameAssets.typeface(this,true));name.setPadding(0,dp(17),0,dp(4));card.addView(name);
+        TextView name=text("SRML Save Editor",24,inkColor(),true);name.setTypeface(GameAssets.typeface(this,true));name.setPadding(0,dp(17),0,dp(4));card.addView(name);
         card.addView(text("Version "+BuildConfig.VERSION_NAME,13,Color.rgb(155,168,181),false));
-        TextView description=text(tr("An Android save editor for Slime Rancher Mobile. Manage supported save values and inventory slots, and keep recoverable backups.","Android-редактор сохранений Slime Rancher Mobile. Изменяй поддерживаемые значения и предметы инвентаря, сохраняя резервные копии."),15,MUTED,false);
-        description.setGravity(Gravity.CENTER);description.setPadding(0,dp(16),0,0);card.addView(description);
+        TextView description=text(tr("An Android save editor for Slime Rancher Mobile. Manage supported save values and inventory slots, and keep recoverable backups.","Android-редактор сохранений Slime Rancher Mobile. Изменяй поддерживаемые значения и предметы инвентаря, сохраняя резервные копии."),15,mutedColor(),false);
+        description.setGravity(Gravity.START);description.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);description.setPadding(0,dp(16),0,0);card.addView(description);
         content.addView(card,new LinearLayout.LayoutParams(-1,-2));
 
         addSectionCard(tr("Authors & credits","Авторы и благодарности"),
@@ -455,7 +478,7 @@ public class MainActivity extends Activity {
             tr("Install Slime Rancher Mobile and Shizuku, start the Shizuku service, then grant this app permission. Close the game before editing saves. This app edits save files; it does not modify the game APK or inject code into the game.","Установи Slime Rancher Mobile и Shizuku, запусти службу Shizuku и выдай приложению разрешение. Перед редактированием закрой игру. Приложение изменяет файлы сохранений, а не APK игры и не внедряет код в игру."));
         addSectionCard(tr("Backup location","Где хранятся копии"),
             tr("Backups are stored in the game's files directory under Backup. If a restore would overwrite a save with the same name, the existing file is preserved first.","Резервные копии хранятся в каталоге файлов игры, в папке Backup. Если восстановление заменит сохранение с таким же именем, существующий файл сначала сохраняется отдельно."));
-        TextView shizukuTitle=text(tr("Shizuku fork by thedjchi","Форк Shizuku от thedjchi"),18,INK,true);
+        TextView shizukuTitle=text(tr("Shizuku fork by thedjchi","Форк Shizuku от thedjchi"),18,inkColor(),true);
         shizukuTitle.setPadding(dp(2),dp(4),dp(2),dp(8));content.addView(shizukuTitle);
         Button shizukuLink=actionButton("Open GitHub Releases  ↗",()->openExternalUrl("https://github.com/thedjchi/Shizuku/releases/latest"));
         content.addView(shizukuLink,new LinearLayout.LayoutParams(-1,dp(48)));
@@ -472,9 +495,9 @@ public class MainActivity extends Activity {
     }
     private void addSectionCard(String title,String subtitle){
         LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
-        card.setPadding(dp(18),dp(16),dp(18),dp(16));card.setBackground(background(CARD,SAND,dp(24)));
-        TextView h=text(title,18,INK,true);card.addView(h);
-        TextView s=text(subtitle,13,MUTED,false);s.setPadding(0,dp(5),0,0);card.addView(s);
+        card.setPadding(dp(18),dp(16),dp(18),dp(16));card.setBackground(background(cardColor(),borderColor(),dp(24)));
+        TextView h=text(title,18,inkColor(),true);card.addView(h);
+        TextView s=text(subtitle,13,mutedColor(),false);s.setPadding(0,dp(5),0,0);card.addView(s);
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.bottomMargin=dp(12);content.addView(card,p);
     }
     private class SlimeLogoView extends View{
@@ -485,8 +508,8 @@ public class MainActivity extends Activity {
             canvas.save();canvas.scale(s,s);
             p.setStyle(Paint.Style.FILL);p.setColor(Color.rgb(224,248,243));canvas.drawCircle(41,41,40,p);
             Path blob=new Path();blob.moveTo(15,52);blob.cubicTo(16,34,24,21,41,20);blob.cubicTo(58,20,67,34,68,52);blob.cubicTo(68,62,57,68,41,68);blob.cubicTo(25,68,14,62,15,52);blob.close();
-            p.setColor(TEAL);canvas.drawPath(blob,p);
-            p.setColor(INK);canvas.drawCircle(32,46,2.5f,p);canvas.drawCircle(50,46,2.5f,p);
+            p.setColor(PINK);canvas.drawPath(blob,p);
+            p.setColor(inkColor());canvas.drawCircle(32,46,2.5f,p);canvas.drawCircle(50,46,2.5f,p);
             p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(2f);p.setStrokeCap(Paint.Cap.ROUND);
             canvas.drawArc(35,48,47,57,15,150,false,p);
             canvas.restore();
@@ -569,7 +592,9 @@ public class MainActivity extends Activity {
         private final Paint p=new Paint(3);
         @Override public void draw(Canvas canvas){
             android.graphics.Rect b=getBounds();float w=b.width(),h=b.height();
-            p.setShader(new android.graphics.LinearGradient(0,0,w,h,CREAM,Color.rgb(237,232,220),android.graphics.Shader.TileMode.CLAMP));
+            int base=creamColor();
+            int lower=darkTheme?Color.rgb(13,16,20):Color.rgb(237,232,220);
+            p.setShader(new android.graphics.LinearGradient(0,0,w,h,base,lower,android.graphics.Shader.TileMode.CLAMP));
             canvas.drawRect(b,p);p.setShader(null);
             p.setShader(new android.graphics.RadialGradient(w*.88f,h*.08f,w*.48f,new int[]{0x55FF9AD1,0x00FF9AD1},null,android.graphics.Shader.TileMode.CLAMP));
             canvas.drawRect(b,p);p.setShader(null);
@@ -577,16 +602,27 @@ public class MainActivity extends Activity {
             canvas.drawRect(b,p);p.setShader(null);
             p.setShader(new android.graphics.RadialGradient(w*.58f,h*.78f,w*.34f,new int[]{0x44B39DDB,0x00B39DDB},null,android.graphics.Shader.TileMode.CLAMP));
             canvas.drawRect(b,p);p.setShader(null);
-            p.setColor(0x147B6AA8);p.setStyle(Paint.Style.FILL);
+            p.setColor(darkTheme?0x1679D8CF:0x147B6AA8);p.setStyle(Paint.Style.FILL);
             for(int y=24;y<h;y+=54)for(int x=20;x<w;x+=58)canvas.drawCircle(x+(y%3)*5,y,1.5f,p);
+            p.setShader(new android.graphics.RadialGradient(w*.08f,h*.28f,w*.22f,new int[]{darkTheme?0x263EAAA3:0x20FF8FBE,0x00000000},null,android.graphics.Shader.TileMode.CLAMP));
+            canvas.drawCircle(w*.08f,h*.28f,w*.22f,p);p.setShader(null);
+            p.setShader(new android.graphics.RadialGradient(w*.94f,h*.62f,w*.25f,new int[]{darkTheme?0x224ECDC4:0x1E4ECDC4,0x00000000},null,android.graphics.Shader.TileMode.CLAMP));
+            canvas.drawCircle(w*.94f,h*.62f,w*.25f,p);p.setShader(null);
         }
         @Override public void setAlpha(int alpha){}
         @Override public void setColorFilter(android.graphics.ColorFilter filter){}
         @Override public int getOpacity(){return android.graphics.PixelFormat.TRANSLUCENT;}
     }
     private GradientDrawable background(int fill,int stroke,int radius){
-        GradientDrawable d=new GradientDrawable();d.setColor(fill);d.setCornerRadius(radius);
-        if(stroke!=Color.TRANSPARENT)d.setStroke(dp(1),stroke);return d;
+        if(fill==Color.TRANSPARENT){GradientDrawable plain=new GradientDrawable();plain.setColor(fill);plain.setCornerRadius(radius);if(stroke!=Color.TRANSPARENT)plain.setStroke(dp(1),stroke);return plain;}
+        return gradientBackground(fill,darken(fill,0.055f),stroke,radius);
+    }
+    private GradientDrawable gradientBackground(int top,int bottom,int stroke,int radius){
+        GradientDrawable d=new GradientDrawable(GradientDrawable.Orientation.TOP_BOTTOM,new int[]{top,bottom});
+        d.setCornerRadius(radius);if(stroke!=Color.TRANSPARENT)d.setStroke(dp(1),stroke);return d;
+    }
+    private int darken(int color,float amount){
+        return Color.rgb(Math.max(0,(int)(Color.red(color)*(1f-amount))),Math.max(0,(int)(Color.green(color)*(1f-amount))),Math.max(0,(int)(Color.blue(color)*(1f-amount))));
     }
     private int dp(int n){return (int)(n*getResources().getDisplayMetrics().density+0.5f);}
     private TextView text(String value,int size,int color,boolean bold){
@@ -653,12 +689,8 @@ public class MainActivity extends Activity {
     private void renderBackups(List<ShizukuFileAccess.BackupItem>items){
         LinearLayout content=pageContents[1];
         content.removeAllViews();
-        LinearLayout heading=new LinearLayout(this);heading.setOrientation(LinearLayout.HORIZONTAL);heading.setGravity(Gravity.CENTER_VERTICAL);
-        heading.addView(glyphTile(new BackupGlyph(this),38),new LinearLayout.LayoutParams(dp(42),dp(42)));
-        TextView headingText=text(tr("Your backups","Резервные копии"),22,INK,true);
-        headingText.setPadding(dp(10),0,0,0);heading.addView(headingText);
-        content.addView(heading);
-        TextView hint=text(tr("Choose a backup to restore it to your worlds.","Выбери копию, чтобы восстановить её в список миров."),13,MUTED,false);
+        addHeader(tr("Backups","Резервные копии"),"BackupTurquoiseIcon.png");
+        TextView hint=text(tr("Choose a backup to restore it to your worlds.","Выбери копию, чтобы восстановить её в список миров."),13,mutedColor(),false);
         hint.setPadding(0,dp(4),0,dp(12));content.addView(hint);
         Button clearFolder=actionButton(tr("Clear backup folder","Очистить папку Backup"),this::confirmClearBackups);
         clearFolder.setBackground(background(PINK,Color.TRANSPARENT,dp(28)));
@@ -671,14 +703,14 @@ public class MainActivity extends Activity {
         }
         for(ShizukuFileAccess.BackupItem item:items){
             LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
-            card.setPadding(dp(20),dp(18),dp(20),dp(18));card.setBackground(background(CARD,SAND,dp(26)));
+            card.setPadding(dp(20),dp(18),dp(20),dp(18));card.setBackground(background(cardColor(),borderColor(),dp(26)));
             LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,-2);cp.bottomMargin=dp(10);content.addView(card,cp);
             LinearLayout titleRow=new LinearLayout(this);titleRow.setOrientation(LinearLayout.HORIZONTAL);titleRow.setGravity(Gravity.CENTER_VERTICAL);
             titleRow.addView(glyphTile(new DocumentGlyph(this),34),new LinearLayout.LayoutParams(dp(40),dp(40)));
-            TextView backupName=text(item.originalName,16,INK,true);backupName.setPadding(dp(10),0,0,0);
+            TextView backupName=text(item.originalName,16,inkColor(),true);backupName.setPadding(dp(10),0,0,0);
             titleRow.addView(backupName,new LinearLayout.LayoutParams(0,-2,1));
             card.addView(titleRow);
-            TextView date=text(item.stamp,13,MUTED,false);date.setPadding(0,dp(3),0,dp(8));card.addView(date);
+            TextView date=text(item.stamp,13,mutedColor(),false);date.setPadding(0,dp(3),0,dp(8));card.addView(date);
             Button restore=actionButton(tr("Restore backup","Восстановить"),()->confirmRestore(item));
             restore.setBackground(background(PINK,Color.TRANSPARENT,dp(28)));
             card.addView(restore,new LinearLayout.LayoutParams(-1,dp(46)));
@@ -689,12 +721,12 @@ public class MainActivity extends Activity {
         LinearLayout card=new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(dp(18),dp(8),dp(18),dp(18));
-        card.setBackground(background(CARD,SAND,dp(28)));
+        card.setBackground(background(cardColor(),borderColor(),dp(28)));
         View pinkBar=new View(this);
         pinkBar.setBackground(background(PINK,Color.TRANSPARENT,dp(8)));
         card.addView(pinkBar,new LinearLayout.LayoutParams(-1,dp(6)));
 
-        TextView title=text(tr("Restore this save?","Восстановить сохранение?"),22,INK,true);
+        TextView title=text(tr("Restore this save?","Восстановить сохранение?"),22,inkColor(),true);
         title.setPadding(0,dp(16),0,dp(10));
         card.addView(title);
 
@@ -706,7 +738,7 @@ public class MainActivity extends Activity {
         TextView details=text(
             tr("Copied: ","Дата копирования: ")+item.stamp+
             tr("\n\nThe selected copy will be returned to pt_saves. If a save with the same name already exists, the current file is first preserved in Backup.","\n\nВыбранная копия будет возвращена в pt_saves. Если файл с таким именем уже существует, текущий файл сначала будет сохранён в Backup."),
-            14,MUTED,false);
+            14,mutedColor(),false);
         details.setPadding(0,dp(12),0,dp(16));
         card.addView(details);
 
@@ -829,23 +861,19 @@ public class MainActivity extends Activity {
     private void renderSaves(List<SaveSlot>found){
         LinearLayout content=pageContents[0];
         content.removeAllViews();
-        LinearLayout heading=new LinearLayout(this);heading.setOrientation(LinearLayout.HORIZONTAL);heading.setGravity(Gravity.CENTER_VERTICAL);
-        heading.addView(new SaveGlyph(this),new LinearLayout.LayoutParams(dp(42),dp(42)));
-        TextView headingText=text(tr("Your worlds","Твои миры"),22,INK,true);
-        headingText.setPadding(dp(10),0,0,0);heading.addView(headingText);
-        content.addView(heading);
-        TextView hint=text(tr("Choose a world to edit its save.","Выбери мир, чтобы изменить сохранение."),13,MUTED,false);hint.setPadding(0,dp(4),0,dp(12));content.addView(hint);
+        addHeader(tr("Your worlds","Твои миры"),"SaveTurquoiseIcon.png");
+        TextView hint=text(tr("Choose a world to edit its save.","Выбери мир, чтобы изменить сохранение."),13,mutedColor(),false);hint.setPadding(0,dp(4),0,dp(12));content.addView(hint);
         if(found.isEmpty()){addEmptyCard(tr("No worlds found","Миры не найдены"),tr("Make sure the game has created a save.","Проверь, что игра уже создала сохранение."),content);show(tr("Worlds found: 0","Найдено миров: 0"));return;}
         for(SaveSlot slot:found){
             LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
-            card.setPadding(dp(14),dp(12),dp(14),dp(12));card.setBackground(background(CARD,SAND,dp(26)));
+            card.setPadding(dp(14),dp(12),dp(14),dp(12));card.setBackground(background(cardColor(),borderColor(),dp(26)));
             LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,-2);cp.bottomMargin=dp(10);content.addView(card,cp);
             LinearLayout titleRow=new LinearLayout(this);titleRow.setOrientation(LinearLayout.HORIZONTAL);titleRow.setGravity(Gravity.CENTER_VERTICAL);
             titleRow.addView(glyphTile(new DocumentGlyph(this),34),new LinearLayout.LayoutParams(dp(40),dp(40)));
-            TextView worldName=text(slot.displayName,16,INK,true);worldName.setPadding(dp(10),0,0,0);
+            TextView worldName=text(slot.displayName,16,inkColor(),true);worldName.setPadding(dp(10),0,0,0);
             titleRow.addView(worldName,new LinearLayout.LayoutParams(0,-2,1));
             card.addView(titleRow);
-            TextView detail=text(slot.fileName+"  •  "+slot.sizeText,12,MUTED,false);detail.setPadding(0,dp(3),0,dp(8));card.addView(detail);
+            TextView detail=text(slot.fileName+"  •  "+slot.sizeText,12,mutedColor(),false);detail.setPadding(0,dp(3),0,dp(8));card.addView(detail);
             Button editSave=actionButton(tr("Edit save","Редактировать"),()->confirmBeginEditing(slot));
             editSave.setBackground(background(PINK,Color.TRANSPARENT,dp(28)));
             card.addView(editSave,new LinearLayout.LayoutParams(-1,dp(46)));
@@ -868,25 +896,25 @@ public class MainActivity extends Activity {
     }
     private void addEmptyCard(String title,String description,LinearLayout parent){
         LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);card.setPadding(dp(20),dp(20),dp(20),dp(20));
-        card.setBackground(background(CARD,SAND,dp(18)));
-        card.addView(text(title,17,INK,true));TextView d=text(description,13,MUTED,false);d.setPadding(0,dp(5),0,0);card.addView(d);
+        card.setBackground(background(cardColor(),borderColor(),dp(18)));
+        card.addView(text(title,17,inkColor(),true));TextView d=text(description,13,mutedColor(),false);d.setPadding(0,dp(5),0,0);card.addView(d);
         parent.addView(card,new LinearLayout.LayoutParams(-1,-2));
     }
     private void confirmBeginEditing(SaveSlot slot){
         LinearLayout card=new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(dp(18),dp(8),dp(18),dp(18));
-        card.setBackground(background(CARD,SAND,dp(28)));
+        card.setBackground(background(cardColor(),borderColor(),dp(28)));
         View pinkBar=new View(this);
         pinkBar.setBackground(background(PINK,Color.TRANSPARENT,dp(8)));
         card.addView(pinkBar,new LinearLayout.LayoutParams(-1,dp(6)));
-        TextView title=text(tr("Create a backup?","Создать резервную копию?"),22,INK,true);
+        TextView title=text(tr("Create a backup?","Создать резервную копию?"),22,inkColor(),true);
         title.setPadding(0,dp(16),0,dp(8));
         card.addView(title);
         TextView message=text(tr(
             "Before editing, you can save an untouched copy of this world. The original save will stay in the game folder either way.",
             "Перед редактированием можно сохранить нетронутую копию этого мира. Исходное сохранение в любом случае останется в папке игры."
-        ),14,MUTED,false);
+        ),14,mutedColor(),false);
         message.setPadding(0,0,0,dp(14));
         card.addView(message);
         AlertDialog dialog=new AlertDialog.Builder(this).setView(card).create();
@@ -899,8 +927,8 @@ public class MainActivity extends Activity {
         });
         skip.setBackground(background(TEAL,Color.TRANSPARENT,dp(26)));
         Button cancel=actionButton(tr("Cancel","Отмена"),dialog::dismiss);
-        cancel.setTextColor(INK);
-        cancel.setBackground(background(Color.rgb(245,240,232),SAND,dp(26)));
+        cancel.setTextColor(inkColor());
+        cancel.setBackground(background(Color.rgb(245,240,232),borderColor(),dp(26)));
         for(Button button:new Button[]{create,skip,cancel}){
             LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,dp(44));
             params.topMargin=dp(7);card.addView(button,params);
@@ -938,18 +966,18 @@ public class MainActivity extends Activity {
         LinearLayout card=new LinearLayout(this);
         card.setOrientation(LinearLayout.VERTICAL);
         card.setPadding(dp(18),dp(8),dp(18),dp(18));
-        card.setBackground(background(CARD,SAND,dp(26)));
+        card.setBackground(background(cardColor(),borderColor(),dp(26)));
         View pinkBar=new View(this);
         pinkBar.setBackground(background(PINK,Color.TRANSPARENT,dp(8)));
         card.addView(pinkBar,new LinearLayout.LayoutParams(-1,dp(6)));
-        TextView title=text("Журнал приложения",20,INK,true);
+        TextView title=text("Журнал приложения",20,inkColor(),true);
         title.setPadding(0,dp(14),0,dp(10));
         card.addView(title);
         ScrollView scroll=new ScrollView(this);
-        TextView body=text(logs.length()==0?"Журнал пуст.":logs,12,MUTED,false);
+        TextView body=text(logs.length()==0?"Журнал пуст.":logs,12,mutedColor(),false);
         body.setTextIsSelectable(true);
         body.setPadding(dp(10),dp(10),dp(10),dp(10));
-        body.setBackground(background(Color.rgb(250,246,238),SAND,dp(14)));
+        body.setBackground(background(Color.rgb(250,246,238),borderColor(),dp(14)));
         scroll.addView(body);
         card.addView(scroll,new LinearLayout.LayoutParams(-1,dp(320)));
         Button close=actionButton("Закрыть",()->{});
