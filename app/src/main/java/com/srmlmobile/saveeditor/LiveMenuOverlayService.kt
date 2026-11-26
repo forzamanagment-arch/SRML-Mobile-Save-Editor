@@ -208,8 +208,8 @@ class LiveMenuOverlayService : Service() {
         addNumberRow(body, tr("Max Health", "Макс. здоровье"), "Health", "100")
         addNumberRow(body, tr("Max Energy", "Макс. энергия"), "Energy", "100")
         addNumberRow(body, tr("Keys", "Ключи"), "Key", "2")
-        addToggleRow(body, tr("Infinity Health", "Бесконечное здоровье"))
-        addToggleRow(body, tr("Infinity Energy", "Бесконечная энергия"))
+        addToggleRow(body, tr("Infinity Health", "Бесконечное здоровье"), "Health")
+        addToggleRow(body, tr("Infinity Energy", "Бесконечная энергия"), "Energy")
 
         addSection(body, tr("INVENTORY EDITOR", "РЕДАКТОР ИНВЕНТАРЯ"))
         for (slot in 1..4) addInventorySlot(body, slot, false)
@@ -310,7 +310,7 @@ class LiveMenuOverlayService : Service() {
         parent.addView(row, p)
     }
 
-    private fun addToggleRow(parent: LinearLayout, label: String) {
+    private fun addToggleRow(parent: LinearLayout, label: String, iconHint: String) {
         val row = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -323,6 +323,8 @@ class LiveMenuOverlayService : Service() {
             setTextColor(ink)
             typeface = GameAssets.typeface(this@LiveMenuOverlayService)
         }
+        addAssetIcon(row, iconHint, 28)
+        title.setPadding(dp(8), 0, dp(6), 0)
         row.addView(title, LinearLayout.LayoutParams(0, -2, 1f))
         val toggle = makeButton(tr("Enable", "Включить"), blue)
         toggle.textSize = 11f
