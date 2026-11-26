@@ -1,0 +1,75 @@
+name: FusionCore upstream baseline build
+
+on:
+  workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/fusioncore-baseline-build.yml'
+
+permissions:
+  contents: read
+
+jobs:
+  build-upstream:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Checkout SRML project
+        uses: actions/checkout@v4
+
+      - name: Checkout pinned FusionCore source
+        uses: actions/checkout@v4
+        with:
+          repository: All-Of-Us-Mods/FusionCore
+          ref: bf4c69d9d4724e4eff058664a5be0a1d9cfd4e61
+          path: external/FusionCore
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Install Android build packages
+        run: |
+          set -euo pipefail
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager \
+            "platform-tools" \
+            "platforms;android-37" \
+            "build-tools;37.0.0" \
+            "cmake;3.22.1" \
+            "ndk;27.2.12479018"
+
+      - name: Build unmodified upstream FusionCore
+        working-directory: external/FusionCore
+        run: |
+          set -euo pipefail
+          chmod +x ./gradlew
+          ./gradlew --no-daemon --stacktrace :fusionApp:assembleDebug
+
+      - name: Record build environment
+        if: always()
+        run: |
+          mkdir -p reports
+          {
+            echo "FusionCore upstream commit: bf4c69d9d4724e4eff058664a5be0a1d9cfd4e61"
+            java -version 2>&1
+            ./external/FusionCore/gradlew --version 2>&1 || true
+            sdkmanager --list_installed 2>&1 || true
+          } > reports/FUSIONCORE_BUILD_ENVIRONMENT.txt
+
+      - name: Upload upstream APK and build diagnostics
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fusioncore-upstream-baseline
+          path: |
+            external/FusionCore/fusionApp/build/outputs/apk/debug/*.apk
+            external/FusionCore/fusionApp/build/outputs/logs/
+            reports/FUSIONCORE_BUILD_ENVIRONMENT.txt
+          if-no-files-found: warn
+          retention-days: 14
