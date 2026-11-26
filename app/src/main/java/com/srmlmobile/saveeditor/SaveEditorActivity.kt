@@ -80,6 +80,7 @@ class SaveEditorActivity : Activity() {
     private var keysInput: EditText? = null
     private var currentHealthInput: EditText? = null
     private var currentEnergyInput: EditText? = null
+    private var saveNameInput: EditText? = null
     private val slotEditors = mutableListOf<SlotEditor>()
     private var waterCountInput: EditText? = null
     private var waterTypeSpinner: Spinner? = null
@@ -92,7 +93,14 @@ class SaveEditorActivity : Activity() {
     private lateinit var page: LinearLayout
     private lateinit var status: TextView
     private val russian: Boolean get() = getSharedPreferences("srml_settings", MODE_PRIVATE).getBoolean("russian", false)
+    private val darkTheme: Boolean get() = getSharedPreferences("srml_settings", MODE_PRIVATE).getBoolean("dark_theme", false)
     private fun tr(en: String, ru: String): String = if (russian) ru else en
+    private fun inkColor() = if (darkTheme) Color.rgb(244,242,236) else inkColor()
+    private fun mutedColor() = if (darkTheme) Color.rgb(177,187,198) else mutedColor()
+    private fun creamColor() = if (darkTheme) Color.rgb(17,20,25) else Color.rgb(245,240,232)
+    private fun cardColor() = if (darkTheme) Color.rgb(34,39,46) else cardColor()
+    private fun borderColor() = if (darkTheme) Color.rgb(65,73,83) else borderColor()
+    private fun hudColor() = if (darkTheme) Color.rgb(43,49,58) else hudColor()
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -116,9 +124,9 @@ class SaveEditorActivity : Activity() {
         val scroll = ScrollView(this)
         scroll.setFillViewport(true)
         scroll.background = MarshmallowBackground()
-        window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(Color.rgb(245,240,232)))
-        window.statusBarColor = Color.rgb(245,240,232)
-        window.decorView.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
+        window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(creamColor()))
+        window.statusBarColor = creamColor()
+        window.decorView.systemUiVisibility = if (darkTheme) 0 else android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR
         page = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(18), dp(22), dp(18), dp(34))
@@ -130,13 +138,13 @@ class SaveEditorActivity : Activity() {
             text = title
             textSize = 30f
             typeface = GameAssets.typeface(this@SaveEditorActivity, true)
-            setTextColor(Color.rgb(45, 55, 72))
+            setTextColor(inkColor())
             setPadding(0, dp(3), 0, dp(7))
         })
         page.addView(TextView(this).apply {
             text = tr("World save management", "Управление сохранением мира")
             textSize = 14f
-            setTextColor(Color.rgb(107, 123, 141))
+            setTextColor(mutedColor())
             setPadding(0, 0, 0, dp(18))
         })
         status = TextView(this).apply {
@@ -273,13 +281,45 @@ class SaveEditorActivity : Activity() {
         )
     }
 
+    private fun addSaveNameCard(currentName: String) {
+        val card = LinearLayout(this).apply {
+            orientation = LinearLayout.VERTICAL
+            setPadding(dp(12), dp(10), dp(12), dp(12))
+            background = rounded(hudColor(), if (darkTheme) Color.rgb(99,88,133) else Color.rgb(179,157,219), dp(18))
+        }
+        card.addView(TextView(this).apply {
+            text = tr("SAVE NAME", "ИМЯ СОХРАНЕНИЯ")
+            textSize = 11f
+            typeface = GameAssets.typeface(this@SaveEditorActivity, true)
+            setTextColor(inkColor())
+            letterSpacing = 0.06f
+        })
+        val input = EditText(this).apply {
+            setSingleLine(true)
+            typeface = GameAssets.typeface(this@SaveEditorActivity, true)
+            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
+            filters = arrayOf(InputFilter.LengthFilter(64))
+            setText(currentName)
+            textSize = 15f
+            setTextColor(inkColor())
+            setHintTextColor(mutedColor())
+            setPadding(dp(10), dp(7), dp(10), dp(7))
+            background = rounded(cardColor(), borderColor(), dp(12))
+        }
+        card.addView(input, LinearLayout.LayoutParams(-1, dp(44)).apply { topMargin = dp(7) })
+        page.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
+        saveNameInput = input
+    }
+
     private fun showEditor() {
         val data = parsed ?: return
         newbucksInput = null
         keysInput = null
         currentHealthInput = null
         currentEnergyInput = null
+        saveNameInput = null
         buildBase(tr("Save dashboard", "Панель сохранения"))
+        addSaveNameCard(data.sourceName)
         addSection(tr("PLAYER HUD", "ПАРАМЕТРЫ ИГРОКА"))
         val hudGrid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         page.addView(hudGrid)
@@ -291,7 +331,7 @@ class SaveEditorActivity : Activity() {
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 setPadding(dp(9), dp(9), dp(9), dp(9))
-                background = rounded(Color.rgb(230,233,242), Color.rgb(179,157,219), dp(17))
+                background = rounded(hudColor(), Color.rgb(179,157,219), dp(17))
             }
             val head = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL; gravity = Gravity.CENTER_VERTICAL }
             val icon = ImageView(this)
@@ -306,7 +346,7 @@ class SaveEditorActivity : Activity() {
                 text = label
                 textSize = 11f
                 typeface = GameAssets.typeface(this@SaveEditorActivity, true)
-                setTextColor(Color.rgb(45,55,72))
+                setTextColor(inkColor())
                 setPadding(dp(5), 0, 0, 0)
             })
             card.addView(head)
@@ -319,9 +359,9 @@ class SaveEditorActivity : Activity() {
                     filters = arrayOf(InputFilter.LengthFilter(10))
                     setText(current.toString())
                     textSize = 15f
-                    setTextColor(Color.rgb(45,55,72))
+                    setTextColor(inkColor())
                     setPadding(dp(8), dp(5), dp(8), dp(5))
-                    background = rounded(Color.rgb(255,253,247), Color.rgb(224,216,204), dp(12))
+                    background = rounded(cardColor(), borderColor(), dp(12))
                 }
                 card.addView(input, LinearLayout.LayoutParams(-1, dp(40)))
                 save(input)
@@ -341,7 +381,7 @@ class SaveEditorActivity : Activity() {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
                 setPadding(dp(10), dp(10), dp(10), dp(8))
-                background = rounded(Color.rgb(255, 253, 247), Color.rgb(232, 76, 138), dp(18))
+                background = rounded(cardColor(), Color.rgb(232, 76, 138), dp(18))
             }
             val icon = ImageView(this)
             GameAssets.icon(this, iconName)?.let { icon.setImageBitmap(it) }
@@ -351,7 +391,7 @@ class SaveEditorActivity : Activity() {
                 textSize = 12f
                 gravity = Gravity.CENTER
                 typeface = GameAssets.typeface(this@SaveEditorActivity, true)
-                setTextColor(Color.rgb(45, 55, 72))
+                setTextColor(inkColor())
                 setPadding(0, dp(4), 0, dp(4))
             })
             val toggle = Switch(this).apply {
@@ -386,7 +426,7 @@ class SaveEditorActivity : Activity() {
             )
             textSize = 11f
             typeface = GameAssets.typeface(this@SaveEditorActivity)
-            setTextColor(Color.rgb(107, 123, 141))
+            setTextColor(mutedColor())
             setPadding(dp(2), dp(2), dp(2), dp(8))
         })
 
@@ -424,7 +464,7 @@ class SaveEditorActivity : Activity() {
                 orientation = LinearLayout.HORIZONTAL
                 gravity = Gravity.CENTER_VERTICAL
                 setPadding(dp(14), dp(10), dp(14), dp(10))
-                background = rounded(Color.rgb(230,233,242), Color.rgb(179,157,219), dp(18))
+                background = rounded(hudColor(), Color.rgb(179,157,219), dp(18))
             }
             val waterIcon = ImageView(this)
             val waterBitmap = when (water.id) {
@@ -465,7 +505,7 @@ class SaveEditorActivity : Activity() {
                     else -> tr("Empty water slot", "Пустой слот воды")
                 }
                 textSize = 14f
-                setTextColor(Color.rgb(45,55,72))
+                setTextColor(inkColor())
                 typeface = GameAssets.typeface(this@SaveEditorActivity)
                 setPadding(dp(12), 0, 0, 0)
             }
@@ -574,7 +614,7 @@ class SaveEditorActivity : Activity() {
             textSize = 11f
             gravity = Gravity.CENTER
             maxLines = 2
-            setTextColor(Color.rgb(45,55,72))
+            setTextColor(inkColor())
             typeface = GameAssets.typeface(this@SaveEditorActivity)
         }
         val iconView = ImageView(this)
@@ -600,7 +640,7 @@ class SaveEditorActivity : Activity() {
             val bitmap = GameAssets.icon(this, *aliases.toTypedArray())
             if (bitmap != null) {
                 iconView.setImageBitmap(bitmap)
-                iconView.background = rounded(Color.rgb(255,253,247), Color.TRANSPARENT, dp(12))
+                iconView.background = rounded(cardColor(), Color.TRANSPARENT, dp(12))
                 placeholder.visibility = View.GONE
             } else {
                 iconView.setImageDrawable(null)
@@ -725,10 +765,18 @@ class SaveEditorActivity : Activity() {
             }
             pendingArchive = output.toByteArray()
             val target = remoteTargetPath
+            val requestedName = saveNameInput?.text?.toString()?.trim().orEmpty().ifEmpty { sourceName }
+            if (requestedName == "." || requestedName == ".." || requestedName.contains("/") ||
+                requestedName.contains("\\") || requestedName.any { it.isISOControl() }) {
+                error("Имя сохранения не должно содержать /, \\ или управляющие символы")
+            }
             if (target != null) {
+                val newTarget = target.substringBeforeLast('/') + "/" + requestedName
                 Thread {
                     try {
-                        ShizukuFileAccess.writeAtomic(target, pendingArchive!!)
+                        ShizukuFileAccess.renameSaveAtomic(target, newTarget, pendingArchive!!)
+                        remoteTargetPath = newTarget
+                        sourceName = requestedName
                         stageFile?.delete()
                         saveCompleted = true
                         val backupMessage = if (backupPath != null)
@@ -748,7 +796,7 @@ class SaveEditorActivity : Activity() {
                 val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                     addCategory(Intent.CATEGORY_OPENABLE)
                     type = "application/octet-stream"
-                    putExtra(Intent.EXTRA_TITLE, data.sourceName)
+                    putExtra(Intent.EXTRA_TITLE, requestedName)
                 }
                 startActivityForResult(intent, CREATE_SAVE)
             }
@@ -803,7 +851,7 @@ class SaveEditorActivity : Activity() {
         page.addView(TextView(this).apply {
             this.text = text
             textSize = 18f
-            setTextColor(Color.rgb(45, 55, 72))
+            setTextColor(inkColor())
             typeface = GameAssets.typeface(this@SaveEditorActivity, true)
             setPadding(0, dp(17), 0, dp(7))
         })
@@ -818,7 +866,7 @@ class SaveEditorActivity : Activity() {
             text = label
             typeface = GameAssets.typeface(this@SaveEditorActivity)
             textSize = 13f
-            setTextColor(Color.rgb(107, 123, 141))
+            setTextColor(mutedColor())
         })
         val input = EditText(this).apply {
             setSingleLine(true)
@@ -830,7 +878,7 @@ class SaveEditorActivity : Activity() {
             setTextColor(Color.rgb(57, 75, 105))
             setHintTextColor(Color.rgb(155, 168, 181))
             setPadding(dp(12), dp(8), dp(12), dp(8))
-            background = rounded(Color.rgb(255, 253, 247), Color.rgb(224, 216, 204), dp(14))
+            background = rounded(cardColor(), borderColor(), dp(14))
         }
         wrapper.addView(input, LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(48)))
         page.addView(wrapper)
@@ -856,18 +904,25 @@ class SaveEditorActivity : Activity() {
         page.addView(TextView(this).apply {
             this.text = text
             textSize = 12f
-            setTextColor(Color.rgb(107, 123, 141))
+            setTextColor(mutedColor())
             setPadding(0, dp(12), 0, dp(8))
         })
     }
 
     private fun rounded(fill: Int, stroke: Int, radius: Int): android.graphics.drawable.GradientDrawable {
-        return android.graphics.drawable.GradientDrawable().apply {
-            setColor(fill)
+        return android.graphics.drawable.GradientDrawable(
+            android.graphics.drawable.GradientDrawable.Orientation.TOP_BOTTOM,
+            intArrayOf(fill, darken(fill, 0.055f))
+        ).apply {
             cornerRadius = radius.toFloat()
             if (stroke != Color.TRANSPARENT) setStroke(dp(1), stroke)
         }
     }
+    private fun darken(color: Int, amount: Float): Int = Color.rgb(
+        (Color.red(color) * (1f - amount)).toInt().coerceAtLeast(0),
+        (Color.green(color) * (1f - amount)).toInt().coerceAtLeast(0),
+        (Color.blue(color) * (1f - amount)).toInt().coerceAtLeast(0)
+    )
 
     private inner class MarshmallowBackground : android.graphics.drawable.Drawable() {
         private val paint = android.graphics.Paint(3)
@@ -876,13 +931,13 @@ class SaveEditorActivity : Activity() {
             val w = b.width().toFloat()
             val h = b.height().toFloat()
             paint.shader = android.graphics.LinearGradient(0f, 0f, w, h,
-                Color.rgb(245,240,232), Color.rgb(237,232,220), android.graphics.Shader.TileMode.CLAMP)
+                creamColor(), if (darkTheme) Color.rgb(13,16,20) else Color.rgb(237,232,220), android.graphics.Shader.TileMode.CLAMP)
             canvas.drawRect(b, paint)
             paint.shader = android.graphics.RadialGradient(w * .88f, h * .08f, w * .48f,
-                intArrayOf(0x55FF9AD1, 0x00FF9AD1), null, android.graphics.Shader.TileMode.CLAMP)
+                intArrayOf(if (darkTheme) 0x44B85D91 else 0x55FF9AD1, 0x00FF9AD1), null, android.graphics.Shader.TileMode.CLAMP)
             canvas.drawRect(b, paint)
             paint.shader = android.graphics.RadialGradient(w * .12f, h * .88f, w * .42f,
-                intArrayOf(0x554ECDC4, 0x004ECDC4), null, android.graphics.Shader.TileMode.CLAMP)
+                intArrayOf(if (darkTheme) 0x444ECDC4 else 0x554ECDC4, 0x004ECDC4), null, android.graphics.Shader.TileMode.CLAMP)
             canvas.drawRect(b, paint)
             paint.shader = android.graphics.RadialGradient(w * .58f, h * .78f, w * .34f,
                 intArrayOf(0x44B39DDB, 0x00B39DDB), null, android.graphics.Shader.TileMode.CLAMP)
