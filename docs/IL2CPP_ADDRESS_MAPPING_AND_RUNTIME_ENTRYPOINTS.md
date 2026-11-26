@@ -351,3 +351,22 @@ The static research now narrows the unresolved problem:
 - The GameContext static reference at `0x6EDD000` is not a substitute for SceneContext and must not be treated as one.
 
 No process memory was read or written, no runtime hooks were installed, and no game methods were invoked. The next static pass should inspect Unity scene/bootstrap wiring and the unresolved helper targets around SceneContext startup, while keeping any future runtime integration contingent on a verified, permitted in-process entry point.
+
+
+## 16. Preliminary cross-reference classification of unresolved branch targets
+
+A cross-reference pass over the generated `call_edges.jsonl` file found the following distribution:
+
+| Target VA | BL call sites | Distinct managed callers | Preliminary interpretation |
+|---|---:|---:|---|
+| `0x1F7C350` | 291,342 | 31,213 | Extremely common shared runtime helper; not a SceneContext-specific accessor |
+| `0x1F82300` | 889 | 605 | Shared runtime helper used by many unrelated game systems; exact role pending disassembly |
+| `0x1F88690` | 28 | 28 | Narrower shared helper; exact role pending disassembly |
+| `0x2C5F524` | 131 | 122 | Address falls inside the function range reported for `AutoSaveDirector$$<LoadProfile>b__82_0`; do not classify as a native helper until raw disassembly clarifies function boundaries |
+| `0x2C5F794` | 71 | 68 | Also falls inside the reported range of `AutoSaveDirector$$<LoadProfile>b__82_0`; classification unresolved |
+
+The first result is decisive at the call-graph level: `0x1F7C350` is used by tens of thousands of unrelated managed methods, including framework collections and rendering code. It cannot reasonably be treated as a unique SceneContext or PlayerModel lookup routine. The earlier hypothesis that it might be the specific object-acquisition helper is rejected.
+
+The two `0x2C5Fxxx` targets require special care. The metadata-derived function index reports `AutoSaveDirector$$<LoadProfile>b__82_0` beginning at `0x2C5EDE4` with a reported size of 4,708 bytes, which spans both addresses. This may indicate imprecise function extents, shared/outlined code, or a call-graph/function-boundary artifact. Their purpose must not be inferred from the address alone.
+
+The next disassembly pass is intended to inspect the raw AArch64 instructions at each target and at their callsites, then compare the instruction patterns and register usage. Until that is available, only the cross-reference counts above are treated as confirmed.
