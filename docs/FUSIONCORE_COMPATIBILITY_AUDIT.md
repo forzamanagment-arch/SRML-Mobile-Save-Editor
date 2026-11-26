@@ -40,7 +40,7 @@ Use FusionCore as the candidate foundation for the runtime layer. Do not write a
 |---|---|---|
 | Android API | Likely compatible | FusionCore minimum API 24; upstream README says testing was on API 30+. Target device is Android 16. |
 | ABI | Compatible on paper | Both target and FusionCore build target arm64-v8a. |
-| Unity version | Pending exact probe | The APK has data.unity3d; an automated probe is being added to read the exact version using FusionCore's own offset logic. Metadata v39 alone is not an exact Unity version. |
+| Unity version | Identified | The APK header probe returns Unity 6000.3.0f1 from data.unity3d at offset 0x12, matching FusionCore's detection code. The BepInEx Unity library index lists the corresponding 6000.3.0.zip; runtime compatibility still needs testing. |
 | IL2CPP metadata | Needs runtime validation | Metadata v39 is known, but that alone does not prove the current BepInEx Fusion/interop stack supports this game build. |
 | Launcher Activity | Unverified | The game uses an obfuscated Java Activity and a native-resolved second launcher. FusionCore's dynamic Activity loader may handle it, but only a real launch test can confirm. |
 | Signature check | Must remain intact | The game's Java/native launcher checks its installed package signature. We will not bypass this check. Test whether the official installed package context is preserved by FusionCore. |
@@ -60,7 +60,7 @@ Use FusionCore as the candidate foundation for the runtime layer. Do not write a
 
 ## Immediate blockers / next tests
 
-- Exact Unity version probe from assets/bin/Data/data.unity3d.
+- Unity version probe completed: 6000.3.0f1. The corresponding 6000.3.0 Unity base-library package is listed by the BepInEx Unity library repository; verify runtime loading during the launch test.
 - Verify upstream FusionCore builds with its current Gradle/AGP/NDK requirements.
 - Confirm target launch Activity, package identity/signature behavior, and game-specific native library loading.
 - Determine the actual save path while running through FusionCore before any save migration is implemented.
