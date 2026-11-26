@@ -461,6 +461,7 @@ public class MainActivity extends Activity {
         dark.setBackground(gradientBackground(darkTheme?TEAL:surfaceAlt(),darkTheme?Color.rgb(39,58,88):Color.rgb(220,215,207),Color.TRANSPARENT,dp(24)));
         LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(0,dp(48),1);tp.rightMargin=dp(7);
         themeChoices.addView(light,tp);themeChoices.addView(dark,new LinearLayout.LayoutParams(0,dp(48),1));content.addView(themeChoices);
+        View languageGap=new View(this);content.addView(languageGap,new LinearLayout.LayoutParams(1,dp(14)));
         addSectionCard(tr("Language","Язык"),tr("App interface language","Язык интерфейса приложения"));
         LinearLayout choices=new LinearLayout(this);choices.setOrientation(LinearLayout.HORIZONTAL);
         Button en=actionButton("English",()->setLanguage(false));
@@ -469,7 +470,6 @@ public class MainActivity extends Activity {
         ru.setBackground(gradientBackground(russian?TEAL:surfaceAlt(),russian?Color.rgb(39,58,88):darken(surfaceAlt(),0.08f),Color.TRANSPARENT,dp(24)));
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(48),1);p.rightMargin=dp(7);choices.addView(en,p);
         choices.addView(ru,new LinearLayout.LayoutParams(0,dp(48),1));content.addView(choices);
-        View languageGap=new View(this);content.addView(languageGap,new LinearLayout.LayoutParams(1,dp(14)));
         LinearLayout info=new LinearLayout(this);
         info.setOrientation(LinearLayout.VERTICAL);
         info.setPadding(dp(20),dp(18),dp(20),dp(18));
