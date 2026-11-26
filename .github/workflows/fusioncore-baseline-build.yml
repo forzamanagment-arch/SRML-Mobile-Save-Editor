@@ -39,7 +39,6 @@ jobs:
       - name: Install Android build packages
         run: |
           set -euo pipefail
-          yes | sdkmanager --licenses >/dev/null
           sdkmanager \
             "platform-tools" \
             "platforms;android-37" \
