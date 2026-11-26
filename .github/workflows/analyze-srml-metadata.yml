@@ -40,6 +40,32 @@ jobs:
           echo "Library: $LIB ($(stat -c%s "$LIB") bytes)"
           echo "Metadata: $META ($(stat -c%s "$META") bytes)"
 
+      - name: Inspect libil2cpp ELF layout
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p analysis-output/elf
+          readelf -hW "${{ steps.locate.outputs.lib }}" > analysis-output/elf/ELF_HEADER.txt
+          readelf -lW "${{ steps.locate.outputs.lib }}" > analysis-output/elf/PROGRAM_HEADERS.txt
+          readelf -SW "${{ steps.locate.outputs.lib }}" > analysis-output/elf/SECTION_HEADERS.txt
+          sha256sum "${{ steps.locate.outputs.lib }}" > analysis-output/elf/SHA256.txt
+          {
+            echo "# libil2cpp.so ELF inspection"
+            echo
+            echo "## ELF header"
+            cat analysis-output/elf/ELF_HEADER.txt
+            echo
+            echo "## Program headers (PT_LOAD mapping)"
+            cat analysis-output/elf/PROGRAM_HEADERS.txt
+            echo
+            echo "## Section headers"
+            cat analysis-output/elf/SECTION_HEADERS.txt
+            echo
+            echo "## SHA-256"
+            cat analysis-output/elf/SHA256.txt
+          } > analysis-output/ELF_LAYOUT.txt
+          echo "ELF inspection saved to analysis-output/ELF_LAYOUT.txt"
+
       - name: Set up Go
         uses: actions/setup-go@v6
         with:
