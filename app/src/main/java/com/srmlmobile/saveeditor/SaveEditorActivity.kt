@@ -95,12 +95,12 @@ class SaveEditorActivity : Activity() {
     private val russian: Boolean get() = getSharedPreferences("srml_settings", MODE_PRIVATE).getBoolean("russian", false)
     private val darkTheme: Boolean get() = getSharedPreferences("srml_settings", MODE_PRIVATE).getBoolean("dark_theme", false)
     private fun tr(en: String, ru: String): String = if (russian) ru else en
-    private fun inkColor() = if (darkTheme) Color.rgb(244,242,236) else inkColor()
-    private fun mutedColor() = if (darkTheme) Color.rgb(177,187,198) else mutedColor()
+    private fun inkColor() = if (darkTheme) Color.rgb(244,242,236) else Color.rgb(45,55,72)
+    private fun mutedColor() = if (darkTheme) Color.rgb(177,187,198) else Color.rgb(107,123,141)
     private fun creamColor() = if (darkTheme) Color.rgb(17,20,25) else Color.rgb(245,240,232)
-    private fun cardColor() = if (darkTheme) Color.rgb(34,39,46) else cardColor()
-    private fun borderColor() = if (darkTheme) Color.rgb(65,73,83) else borderColor()
-    private fun hudColor() = if (darkTheme) Color.rgb(43,49,58) else hudColor()
+    private fun cardColor() = if (darkTheme) Color.rgb(34,39,46) else Color.rgb(255,253,247)
+    private fun borderColor() = if (darkTheme) Color.rgb(65,73,83) else Color.rgb(224,216,204)
+    private fun hudColor() = if (darkTheme) Color.rgb(43,49,58) else Color.rgb(230,233,242)
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -767,7 +767,7 @@ class SaveEditorActivity : Activity() {
             val target = remoteTargetPath
             val requestedName = saveNameInput?.text?.toString()?.trim().orEmpty().ifEmpty { sourceName }
             if (requestedName == "." || requestedName == ".." || requestedName.contains("/") ||
-                requestedName.contains("\\") || requestedName.any { it.isISOControl() }) {
+                requestedName.contains("\\") || requestedName.any { Character.isISOControl(it) }) {
                 error("Имя сохранения не должно содержать /, \\ или управляющие символы")
             }
             if (target != null) {
