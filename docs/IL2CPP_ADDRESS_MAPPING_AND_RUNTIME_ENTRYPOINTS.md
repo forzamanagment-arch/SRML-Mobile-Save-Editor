@@ -286,3 +286,68 @@ This proves that the standard assembly-name loading API exists in the compiled f
 3. The inspected evidence makes a conventional PC-style managed DLL mod loader unlikely to work unchanged on this IL2CPP build.
 4. This does not rule out data-driven mods, precompiled code that is already part of the player, or a separately engineered native in-process bridge. Each requires its own verified loading and lifecycle path.
 5. No runtime module was loaded and no game process was modified during this analysis.
+
+## 13. PlayerState model reference: setter and field relationship confirmed
+
+A focused pass over the existing disassembly archive found the full body of `PlayerState$$SetModel` at `0x335FED0`.
+
+The method receives:
+- X0: the `PlayerState` instance;
+- X1: the model reference supplied by its caller;
+- X2: an additional hidden/runtime argument.
+
+It stores X1 at `PlayerState + 0x48` (72 bytes). The same method then reads the stored reference back and uses it to update dependent player/ammo state.
+
+This independently confirms the object relationship previously inferred from `PlayerState$$SetHealth`, `SetEnergy`, and the getters:
+
+`PlayerState + 0x48 → PlayerModel`
+
+The model pointer is therefore not a static address. It is an instance reference assigned during runtime initialization. A tool cannot derive its value from the fixed code address of `PlayerState$$SetModel` alone.
+
+## 14. SceneContext lifecycle and object acquisition: refined result
+
+### SceneContext is a scene-lifecycle component, not a proven singleton
+
+The disassembly for `SceneContext$$Awake` at `0x33DD17C` and `SceneContext$$Start` at `0x33DDB14` confirms Unity-style instance lifecycle methods. Both receive the component instance in X0. `Start` captures that instance into its async state-machine object, which later runs `<Start>d__124$$MoveNext` at `0x33DE724`.
+
+The evidence is consistent with a scene-owned Unity component. It does not establish a static `SceneContext.Instance` property.
+
+### GameContext singleton evidence is separate
+
+`GameContext$$Awake` at `0x32B0AAC` checks a static reference at ELF VA `0x6EDD000` through Unity object equality logic and destroys a duplicate GameObject when an existing object is present. This supports the earlier conclusion that `GameContext` uses singleton-style duplicate prevention.
+
+However, the inspected `GameContext` getters expose directors such as `LookupDirector`, `AutoSaveDirector`, `InputDirector`, and others. No `GameContext.get_SceneContext` accessor was found in the generated function index. The GameContext singleton therefore does not yet provide a demonstrated route to the active SceneContext.
+
+### SceneContext model references remain externally assigned
+
+The property accessors are straightforward instance-field accessors:
+- `SceneContext$$get_PlayerState` reads `SceneContext + 0x28`.
+- `SceneContext$$get_GameModel` reads `SceneContext + 0xB8`.
+- `SceneContext$$set_PlayerState` writes `SceneContext + 0x28`.
+- `SceneContext$$set_GameModel` writes `SceneContext + 0xB8`.
+
+The current disassembly archive contains no direct BL callsite to either `set_PlayerState` or `set_GameModel`. This suggests that ordinary direct calls are not how those references are populated in this build. Serialized Unity component wiring, indirect invocation, or another initialization path remain possible, but none is confirmed.
+
+### Runtime startup relationship
+
+The following parts are independently visible in machine code:
+
+1. `SceneContext$$Start` captures its own instance in the async state machine.
+2. The state machine initializes scene-level systems and calls `PlayerState$$InitForLevel` at `0x3360900`.
+3. `PlayerState$$InitForLevel` obtains a GameModel-like object through unresolved internal runtime helpers and calls `GameModel$$RegisterPlayerParticipant` at `0x329ED1C`.
+4. `GameModel$$RegisterPlayerParticipant` reads `GameModel + 0xB8` and registers the corresponding `PlayerModel`.
+5. `PlayerState$$SetModel` stores its supplied model reference at `PlayerState + 0x48`.
+
+The managed-to-managed relationships are confirmed. The internal helper calls that supply the initial objects are still not identified with enough confidence to name them as specific Unity lookups or singleton accessors.
+
+## 15. Implications for automatic player-model discovery
+
+The static research now narrows the unresolved problem:
+
+- We do not need to discover the layout of PlayerModel from scratch: the GameModel-to-PlayerModel and PlayerState-to-PlayerModel relationships are known for this exact library build.
+- We do need a valid live SceneContext or PlayerState instance. Their object pointers are allocated/assigned at runtime and are not represented by the fixed method addresses.
+- The SceneContext lifecycle methods are candidate observation points for an in-process integration, because Unity invokes them with the live component instance. This is a research lead, not a confirmed or officially supported extension API.
+- Unity component discovery (for example, locating an active component by type) is another possible in-process route, but the current pass has not verified that route in the target runtime or established an external way to call it.
+- The GameContext static reference at `0x6EDD000` is not a substitute for SceneContext and must not be treated as one.
+
+No process memory was read or written, no runtime hooks were installed, and no game methods were invoked. The next static pass should inspect Unity scene/bootstrap wiring and the unresolved helper targets around SceneContext startup, while keeping any future runtime integration contingent on a verified, permitted in-process entry point.
