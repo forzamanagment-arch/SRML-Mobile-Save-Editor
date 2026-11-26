@@ -814,7 +814,7 @@ public class MainActivity extends Activity {
             titleRow.addView(worldName,new LinearLayout.LayoutParams(0,-2,1));
             card.addView(titleRow);
             TextView detail=text(slot.fileName+"  •  "+slot.sizeText,12,MUTED,false);detail.setPadding(0,dp(3),0,dp(8));card.addView(detail);
-            Button editSave=actionButton(tr("Edit save","Редактировать"),()->beginEditing(slot));
+            Button editSave=actionButton(tr("Edit save","Редактировать"),()->confirmBeginEditing(slot));
             editSave.setBackground(background(PINK,Color.TRANSPARENT,dp(28)));
             card.addView(editSave,new LinearLayout.LayoutParams(-1,dp(46)));
         }
@@ -840,22 +840,65 @@ public class MainActivity extends Activity {
         card.addView(text(title,17,INK,true));TextView d=text(description,13,MUTED,false);d.setPadding(0,dp(5),0,0);card.addView(d);
         parent.addView(card,new LinearLayout.LayoutParams(-1,-2));
     }
-    private void beginEditing(SaveSlot slot){
-        if(!hasPermission()){show("Нет доступа Shizuku.");requestShizuku();return;}
-        show("Создаю резервную копию…");
+    private void confirmBeginEditing(SaveSlot slot){
+        LinearLayout card=new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(18),dp(8),dp(18),dp(18));
+        card.setBackground(background(CARD,SAND,dp(28)));
+        View pinkBar=new View(this);
+        pinkBar.setBackground(background(PINK,Color.TRANSPARENT,dp(8)));
+        card.addView(pinkBar,new LinearLayout.LayoutParams(-1,dp(6)));
+        TextView title=text(tr("Create a backup?","Создать резервную копию?"),22,INK,true);
+        title.setPadding(0,dp(16),0,dp(8));
+        card.addView(title);
+        TextView message=text(tr(
+            "Before editing, you can save an untouched copy of this world. The original save will stay in the game folder either way.",
+            "Перед редактированием можно сохранить нетронутую копию этого мира. Исходное сохранение в любом случае останется в папке игры."
+        ),14,MUTED,false);
+        message.setPadding(0,0,0,dp(14));
+        card.addView(message);
+        AlertDialog dialog=new AlertDialog.Builder(this).setView(card).create();
+        Button create=actionButton(tr("Create backup and edit","Создать копию и редактировать"),()->{
+            dialog.dismiss();startEditing(slot,true);
+        });
+        create.setBackground(background(PINK,Color.TRANSPARENT,dp(26)));
+        Button skip=actionButton(tr("Edit without backup","Редактировать без копии"),()->{
+            dialog.dismiss();startEditing(slot,false);
+        });
+        skip.setBackground(background(TEAL,Color.TRANSPARENT,dp(26)));
+        Button cancel=actionButton(tr("Cancel","Отмена"),dialog::dismiss);
+        cancel.setTextColor(INK);
+        cancel.setBackground(background(Color.rgb(245,240,232),SAND,dp(26)));
+        for(Button button:new Button[]{create,skip,cancel}){
+            LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,dp(44));
+            params.topMargin=dp(7);card.addView(button,params);
+        }
+        dialog.show();
+        if(dialog.getWindow()!=null){
+            dialog.getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(Color.TRANSPARENT));
+            dialog.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_DIM_BEHIND);
+            android.view.WindowManager.LayoutParams params=dialog.getWindow().getAttributes();
+            params.dimAmount=0.45f;dialog.getWindow().setAttributes(params);
+            dialog.getWindow().setLayout(getResources().getDisplayMetrics().widthPixels-dp(32),-2);
+        }
+    }
+    private void startEditing(SaveSlot slot,boolean createBackup){
+        if(!hasPermission()){show(tr("Shizuku permission is required.","Нужно разрешение Shizuku."));requestShizuku();return;}
+        show(tr("Preparing save…","Подготавливаю сохранение…"));
         executor.execute(()->{
             try{
                 String path=slot.fileName.startsWith("/")?slot.fileName:ShizukuFileAccess.SAVE_DIR+"/"+slot.fileName;
-                ShizukuFileAccess.Stage stage=ShizukuFileAccess.backupStage(this,path);
-                AppLog.i(this,"SAVE_EDIT","Backup created "+stage.backup);
+                ShizukuFileAccess.Stage stage=ShizukuFileAccess.stageForEditing(this,path,createBackup);
+                if(stage.backup!=null)AppLog.i(this,"SAVE_EDIT","Original backup created "+stage.backup);
+                else AppLog.i(this,"SAVE_EDIT","Editing started without an optional backup");
                 runOnUiThread(()->{
                     Intent intent=new Intent(this,SaveEditorActivity.class);
                     intent.putExtra("stage_path",stage.file.getAbsolutePath());
                     intent.putExtra("target_path",stage.target);
-                    intent.putExtra("backup_path",stage.backup);
+                    if(stage.backup!=null)intent.putExtra("backup_path",stage.backup);
                     startActivity(intent);
                 });
-            }catch(Throwable t){AppLog.exception(this,"SAVE_EDIT","Could not stage save",t);runOnUiThread(()->show("Не удалось подготовить сохранение: "+t.getMessage()));}
+            }catch(Throwable t){AppLog.exception(this,"SAVE_EDIT","Could not stage save",t);runOnUiThread(()->show(tr("Could not prepare save: ","Не удалось подготовить сохранение: ")+t.getMessage()));}
         });
     }
     private void showLogs(){
