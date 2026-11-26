@@ -22,6 +22,8 @@ import android.view.animation.OvershootInterpolator;
 import android.view.View;
 import android.content.Intent;
 import android.net.Uri;
+import android.provider.Settings;
+import android.os.Build;
 import android.content.pm.PackageManager;
 import android.content.pm.ResolveInfo;
 import android.text.InputType;
@@ -57,7 +59,10 @@ public class MainActivity extends Activity {
     private LinearLayout pageStrip;
     private final LinearLayout[] pageContents=new LinearLayout[4];
     private int pageWidth;
-    private Button shizukuButton,launchButton;
+    private Button shizukuButton,overlayPermissionButton;
+    private TextView overlayStatus;
+    private LinearLayout permissionPanel;
+    private int homeMode=0;
     private final android.os.Handler navHandler=new android.os.Handler(android.os.Looper.getMainLooper());
     private final Runnable beginNavDrag=()->navDragging=true;
     private boolean navDragging=false;
@@ -78,8 +83,7 @@ public class MainActivity extends Activity {
             refreshStatus();
             if(result==PackageManager.PERMISSION_GRANTED){
                 executor.execute(()->{try{ShizukuFileAccess.ensureBackup();}catch(Throwable t){AppLog.exception(this,"BACKUP","Backup check failed",t);}});
-                scanSaves();
-            }else show("Нужно разрешение Shizuku для доступа к сохранениям.");
+            }
         }
     });
     private final Shizuku.OnBinderReceivedListener binderReceivedListener=()->runOnUiThread(this::refreshStatus);
@@ -95,7 +99,7 @@ public class MainActivity extends Activity {
         refreshStatus();
         if(hasPermission()){
             executor.execute(()->{try{ShizukuFileAccess.ensureBackup();}catch(Throwable t){AppLog.exception(this,"BACKUP","Backup directory check failed",t);}});
-        }else show(tr("Connect Shizuku to view your saves.","Подключи Shizuku, чтобы увидеть сохранения."));
+        }
     }
 
     private void buildUi(){
@@ -118,11 +122,23 @@ public class MainActivity extends Activity {
         shizukuButton=actionButton(tr("Connect Shizuku","Подключить Shizuku"),this::requestShizuku);
         LinearLayout.LayoutParams sp=new LinearLayout.LayoutParams(-1,dp(44));
         sp.topMargin=dp(8);shizukuPanel.addView(shizukuButton,sp);
-        root.addView(shizukuPanel);
-
-        launchButton=actionButton(tr("Launch game","Запустить игру"),this::launchGame);
-        LinearLayout.LayoutParams lp=new LinearLayout.LayoutParams(-1,dp(48));
-        lp.topMargin=dp(10);root.addView(launchButton,lp);
+        permissionPanel=new LinearLayout(this);
+        permissionPanel.setOrientation(LinearLayout.VERTICAL);
+        permissionPanel.addView(shizukuPanel);
+        LinearLayout overlayPanel=new LinearLayout(this);
+        overlayPanel.setOrientation(LinearLayout.VERTICAL);
+        overlayPanel.setPadding(dp(14),dp(10),dp(14),dp(10));
+        overlayPanel.setBackground(background(cardColor(),borderColor(),dp(22)));
+        overlayStatus=text("",13,mutedColor(),false);
+        overlayPanel.addView(overlayStatus);
+        overlayPermissionButton=actionButton(tr("Grant overlay permission","Выдать разрешение оверлея"),this::requestOverlayPermission);
+        LinearLayout.LayoutParams overlayButtonParams=new LinearLayout.LayoutParams(-1,dp(44));
+        overlayButtonParams.topMargin=dp(8);
+        overlayPanel.addView(overlayPermissionButton,overlayButtonParams);
+        LinearLayout.LayoutParams overlayPanelParams=new LinearLayout.LayoutParams(-1,-2);
+        overlayPanelParams.topMargin=dp(9);
+        permissionPanel.addView(overlayPanel,overlayPanelParams);
+        root.addView(permissionPanel);
 
         pager=new HorizontalScrollView(this);
         pager.setHorizontalScrollBarEnabled(false);
@@ -226,6 +242,14 @@ public class MainActivity extends Activity {
         navParams.bottomMargin=dp(2);root.addView(navContainer,navParams);
         setContentView(root);
         setPage(0);
+        refreshStatus();
+        updateOverlayStatus();
+    }
+
+    @Override protected void onResume(){
+        super.onResume();
+        refreshStatus();
+        updateOverlayStatus();
     }
 
     private int getStatusBarInset(){
@@ -414,8 +438,7 @@ public class MainActivity extends Activity {
         content=pageContents[page];
         if(content!=null)content.removeAllViews();
         if(output!=null)output.setVisibility(page==0?View.VISIBLE:View.GONE);
-        if(shizukuPanel!=null)shizukuPanel.setVisibility(page==0?View.VISIBLE:View.GONE);
-        if(launchButton!=null)launchButton.setVisibility(page==0?View.VISIBLE:View.GONE);
+        if(permissionPanel!=null)permissionPanel.setVisibility(page==0&&homeMode==0?View.VISIBLE:View.GONE);
         updateNavVisual(page);
         if(pager!=null){
             int target=page*pageWidth;
@@ -425,7 +448,11 @@ public class MainActivity extends Activity {
             animator.addUpdateListener(v->pager.scrollTo((Integer)v.getAnimatedValue(),0));
             animator.start();
         }
-        if(page==0)showWorlds();
+        if(page==0){
+            if(homeMode==0)renderHome();
+            else if(homeMode==1)scanSaves();
+            else renderModMenuControls();
+        }
         else if(page==1)showBackups();
         else if(page==2)renderSettings();
         else renderAbout();
@@ -488,7 +515,11 @@ public class MainActivity extends Activity {
         russian=ru;getSharedPreferences("srml_settings",MODE_PRIVATE).edit().putBoolean("russian",ru).apply();setPage(2);
         refreshStatus();
         if(shizukuButton!=null)shizukuButton.setText(tr("Connect Shizuku","Подключить Shizuku"));
-        if(launchButton!=null)launchButton.setText(tr("Launch game","Запустить игру"));
+        updateOverlayStatus();
+        if(selectedPage==0){
+            if(homeMode==0)renderHome();
+            else if(homeMode==2)renderModMenuControls();
+        }
     }
     private void renderAbout(){
         content.removeAllViews();
@@ -678,13 +709,57 @@ public class MainActivity extends Activity {
         catch(Throwable ignored){}
         if(status!=null)status.setText(binder?(granted?tr("● Shizuku connected","● Shizuku подключён"):tr("● Shizuku permission required","● Требуется разрешение Shizuku")):tr("● Shizuku is not connected","● Shizuku не подключён"));
         if(shizukuButton!=null)shizukuButton.setVisibility(granted?View.GONE:View.VISIBLE);
+        updateOverlayStatus();
     }
     private void requestShizuku(){
         try{
-            if(!Shizuku.pingBinder()){show("Запусти Shizuku и повтори подключение.");refreshStatus();}
-            else if(Shizuku.checkSelfPermission()==PackageManager.PERMISSION_GRANTED){scanSaves();}
+            if(!Shizuku.pingBinder()){show(tr("Start the Shizuku service, then try again.","Запусти службу Shizuku и повтори попытку."));refreshStatus();}
+            else if(Shizuku.checkSelfPermission()==PackageManager.PERMISSION_GRANTED){refreshStatus();}
             else Shizuku.requestPermission(REQUEST_CODE);
-        }catch(Throwable t){show("Не удалось подключить Shizuku: "+t.getClass().getSimpleName());}
+        }catch(Throwable t){show(tr("Could not connect Shizuku: ","Не удалось подключить Shizuku: ")+t.getClass().getSimpleName());}
+    }
+
+    private boolean canDrawOverlay(){
+        return Build.VERSION.SDK_INT<23 || Settings.canDrawOverlays(this);
+    }
+
+    private void requestOverlayPermission(){
+        if(canDrawOverlay()){updateOverlayStatus();return;}
+        try{
+            Intent intent=new Intent(Settings.ACTION_MANAGE_OVERLAY_PERMISSION,Uri.parse("package:"+getPackageName()));
+            startActivity(intent);
+        }catch(Throwable t){show(tr("Could not open overlay settings.","Не удалось открыть настройки оверлея."));}
+    }
+
+    private void updateOverlayStatus(){
+        boolean granted=canDrawOverlay();
+        if(overlayStatus!=null)overlayStatus.setText(granted
+            ?tr("● Overlay permission granted","● Разрешение оверлея выдано")
+            :tr("● Overlay permission required","● Требуется разрешение оверлея"));
+        if(overlayPermissionButton!=null){
+            overlayPermissionButton.setText(granted?tr("Overlay permission granted","Разрешение оверлея выдано"):tr("Grant overlay permission","Выдать разрешение оверлея"));
+            overlayPermissionButton.setEnabled(!granted);
+            overlayPermissionButton.setAlpha(granted?0.65f:1f);
+        }
+    }
+
+    private void startLiveMenu(){
+        if(!canDrawOverlay()){
+            requestOverlayPermission();
+            return;
+        }
+        try{
+            Intent intent=new Intent(this,LiveMenuOverlayService.class);
+            if(Build.VERSION.SDK_INT>=26)startForegroundService(intent);else startService(intent);
+            Toast.makeText(this,tr("Mod Menu started","Mod Menu запущено"),Toast.LENGTH_SHORT).show();
+        }catch(Throwable t){
+            show(tr("Could not start Mod Menu: ","Не удалось запустить Mod Menu: ")+t.getClass().getSimpleName());
+        }
+    }
+
+    private void stopLiveMenu(){
+        stopService(new Intent(this,LiveMenuOverlayService.class));
+        Toast.makeText(this,tr("Mod Menu stopped","Mod Menu остановлено"),Toast.LENGTH_SHORT).show();
     }
     private Process startShell(String command)throws Exception{
         java.lang.reflect.Method m=Shizuku.class.getDeclaredMethod("newProcess",String[].class,String[].class,String.class);
@@ -705,7 +780,72 @@ public class MainActivity extends Activity {
         }
     }
     private void showWorlds(){
-        showingBackups=false;scanSaves();
+        homeMode=1;
+        scanSaves();
+    }
+
+    private void renderHome(){
+        content.removeAllViews();
+        addHeader(tr("Game Tools","Инструменты игры"),"HomeIcon.png");
+        addToolCard("SRML Save Editor",
+            tr("Browse your existing worlds and edit supported save data, inventory and player values.","Открой список миров и редактируй поддерживаемые данные сохранения, инвентарь и параметры игрока."),
+            "SaveTurquoiseIcon.png",tr("Open Save Editor","Открыть Save Editor"),()->{
+                homeMode=1;
+                scanSaves();
+                if(permissionPanel!=null)permissionPanel.setVisibility(View.GONE);
+            });
+        addToolCard("SRML Mod Menu (Cheat)",
+            tr("Open a floating prototype menu with editable player values, inventory fields and toggle controls. Game changes are not connected yet.","Открой плавающее меню-прототип с полями параметров игрока, редактором инвентаря и переключателями. Изменение игры пока не подключено."),
+            "SettingsTurquoiseIcon.png",tr("Open Mod Menu","Открыть Mod Menu"),()->{
+                homeMode=2;
+                if(permissionPanel!=null)permissionPanel.setVisibility(View.GONE);
+                renderModMenuControls();
+            });
+    }
+
+    private void addToolCard(String title,String description,String iconName,String buttonLabel,Runnable action){
+        LinearLayout card=new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(17),dp(16),dp(17),dp(16));
+        card.setBackground(background(cardColor(),borderColor(),dp(24)));
+        LinearLayout heading=new LinearLayout(this);
+        heading.setOrientation(LinearLayout.HORIZONTAL);
+        heading.setGravity(Gravity.CENTER_VERTICAL);
+        heading.addView(assetIconTile(iconName,30),new LinearLayout.LayoutParams(dp(42),dp(42)));
+        TextView name=text(title,17,inkColor(),true);
+        name.setPadding(dp(11),0,0,0);
+        heading.addView(name,new LinearLayout.LayoutParams(0,-2,1));
+        card.addView(heading);
+        TextView detail=text(description,13,mutedColor(),false);
+        detail.setPadding(0,dp(11),0,dp(13));
+        card.addView(detail);
+        Button open=actionButton(buttonLabel,action);
+        open.setBackground(background(PINK,Color.TRANSPARENT,dp(25)));
+        card.addView(open,new LinearLayout.LayoutParams(-1,dp(47)));
+        LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,-2);
+        params.bottomMargin=dp(12);
+        content.addView(card,params);
+    }
+
+    private void renderModMenuControls(){
+        content.removeAllViews();
+        addHeader("SRML Mod Menu (Cheat)","SettingsTurquoiseIcon.png");
+        Button back=actionButton(tr("Back","Назад"),()->{homeMode=0;setPage(0);});
+        back.setBackground(background(TEAL,Color.TRANSPARENT,dp(25)));
+        LinearLayout.LayoutParams backParams=new LinearLayout.LayoutParams(-1,dp(44));
+        backParams.bottomMargin=dp(14);
+        content.addView(back,backParams);
+        addSectionCard(tr("Floating Mod Menu","Плавающее Mod Menu"),
+            tr("Start the prototype overlay over Slime Rancher Mobile. Stop it here when you are finished. The controls are visual only and do not change game values.","Запусти прототип оверлея поверх Slime Rancher Mobile. Здесь же его можно остановить. Элементы управления пока только визуальные и не меняют игровые значения."));
+        Button start=actionButton(tr("Start Mod Menu","Запустить Mod Menu"),this::startLiveMenu);
+        start.setBackground(background(PINK,Color.TRANSPARENT,dp(26)));
+        content.addView(start,new LinearLayout.LayoutParams(-1,dp(50)));
+        Button stop=actionButton(tr("Stop Mod Menu","Остановить Mod Menu"),this::stopLiveMenu);
+        LinearLayout.LayoutParams stopParams=new LinearLayout.LayoutParams(-1,dp(50));
+        stopParams.topMargin=dp(9);
+        content.addView(stop,stopParams);
+        addSectionCard(tr("Prototype status","Состояние прототипа"),
+            tr("All fields, buttons and switches in the floating menu are interactive, but are not connected to the game runtime yet.","Все поля, кнопки и переключатели плавающего меню интерактивны, но пока не связаны с игровым процессом."));
     }
     private void showBackups(){
         showingBackups=true;
@@ -861,6 +1001,7 @@ public class MainActivity extends Activity {
         });
     }
     private void scanSaves(){
+        if(homeMode!=1)return;
         if(!hasPermission()){show("Сначала подключи Shizuku и выдай разрешение.");refreshStatus();return;}
         showingBackups=false;show(tr("Loading worlds…","Загружаю список миров…"));
         executor.execute(()->{
@@ -894,6 +1035,11 @@ public class MainActivity extends Activity {
         LinearLayout content=pageContents[0];
         content.removeAllViews();
         addHeader(tr("Your worlds","Твои миры"),"SaveTurquoiseIcon.png");
+        Button back=actionButton(tr("Back","Назад"),()->{homeMode=0;setPage(0);});
+        back.setBackground(background(TEAL,Color.TRANSPARENT,dp(25)));
+        LinearLayout.LayoutParams backParams=new LinearLayout.LayoutParams(-1,dp(44));
+        backParams.bottomMargin=dp(10);
+        content.addView(back,backParams);
         TextView hint=text(tr("Choose a world to edit its save.","Выбери мир, чтобы изменить сохранение."),13,mutedColor(),false);hint.setPadding(0,dp(4),0,dp(12));content.addView(hint);
         if(found.isEmpty()){addEmptyCard(tr("No worlds found","Миры не найдены"),tr("Make sure the game has created a save.","Проверь, что игра уже создала сохранение."),content);show(tr("Worlds found: 0","Найдено миров: 0"));return;}
         for(SaveSlot slot:found){
@@ -1033,6 +1179,11 @@ public class MainActivity extends Activity {
         Intent i=new Intent(Intent.ACTION_SEND);i.setType("text/plain");i.putExtra(Intent.EXTRA_TEXT,AppLog.read(this));
         startActivity(Intent.createChooser(i,"Поделиться журналом"));
     }
+    @Override public void onBackPressed(){
+        if(selectedPage==0&&homeMode!=0){homeMode=0;setPage(0);return;}
+        super.onBackPressed();
+    }
+
     @Override protected void onDestroy(){
         Shizuku.removeRequestPermissionResultListener(permissionListener);
         Shizuku.removeBinderReceivedListener(binderReceivedListener);
