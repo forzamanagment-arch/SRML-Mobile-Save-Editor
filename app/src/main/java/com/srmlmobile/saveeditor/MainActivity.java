@@ -407,8 +407,6 @@ public class MainActivity extends Activity {
         selectedPage=page;
         content=pageContents[page];
         if(content!=null)content.removeAllViews();
-        if(pageTitle!=null){
-        }
         if(output!=null)output.setVisibility(page<2?View.VISIBLE:View.GONE);
         if(shizukuPanel!=null)shizukuPanel.setVisibility(page<2?View.VISIBLE:View.GONE);
         if(launchButton!=null)launchButton.setVisibility(page==0?View.VISIBLE:View.GONE);
@@ -542,21 +540,6 @@ public class MainActivity extends Activity {
         TextView h=text(title,18,inkColor(),true);card.addView(h);
         TextView s=text(subtitle,13,mutedColor(),false);s.setPadding(0,dp(5),0,0);card.addView(s);
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(-1,-2);p.bottomMargin=dp(12);content.addView(card,p);
-    }
-    private class SlimeLogoView extends View{
-        private final Paint p=new Paint(3);
-        SlimeLogoView(Activity a){super(a);}
-        @Override protected void onDraw(Canvas canvas){
-            float s=Math.min(getWidth(),getHeight())/82f;
-            canvas.save();canvas.scale(s,s);
-            p.setStyle(Paint.Style.FILL);p.setColor(Color.rgb(224,248,243));canvas.drawCircle(41,41,40,p);
-            Path blob=new Path();blob.moveTo(15,52);blob.cubicTo(16,34,24,21,41,20);blob.cubicTo(58,20,67,34,68,52);blob.cubicTo(68,62,57,68,41,68);blob.cubicTo(25,68,14,62,15,52);blob.close();
-            p.setColor(PINK);canvas.drawPath(blob,p);
-            p.setColor(inkColor());canvas.drawCircle(32,46,2.5f,p);canvas.drawCircle(50,46,2.5f,p);
-            p.setStyle(Paint.Style.STROKE);p.setStrokeWidth(2f);p.setStrokeCap(Paint.Cap.ROUND);
-            canvas.drawArc(35,48,47,57,15,150,false,p);
-            canvas.restore();
-        }
     }
     private class DocumentGlyph extends View{
         private final Paint paint=new Paint(3);
