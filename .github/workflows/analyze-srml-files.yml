@@ -1,0 +1,103 @@
+name: Analyze SRML Game Files
+
+on:
+  push:
+    paths:
+      - ".github/workflows/analyze-srml-files.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  inspect:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Download release archive
+        run: |
+          curl -L --fail --retry 3 \
+            "https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/FilesSRML.zip" \
+            -o FilesSRML.zip
+          sha256sum FilesSRML.zip
+          unzip -q FilesSRML.zip -d extracted
+      - name: Inspect files without executing them
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import os, struct, hashlib, zipfile
+          from pathlib import Path
+
+          root = Path("extracted")
+          report = []
+          files = sorted(p for p in root.rglob("*") if p.is_file())
+          report.append(f"Files found: {len(files)}")
+          report.append("")
+          report.append("FILE INVENTORY")
+          for p in files:
+              rel = p.relative_to(root).as_posix()
+              size = p.stat().st_size
+              h = hashlib.sha256()
+              with p.open("rb") as f:
+                  for chunk in iter(lambda: f.read(1024*1024), b""):
+                      h.update(chunk)
+              report.append(f"{size}\t{h.hexdigest()}\t{rel}")
+
+          report.append("")
+          report.append("ELF LIBRARY HEADERS")
+          elf_count = 0
+          for p in files:
+              if p.suffix != ".so":
+                  continue
+              with p.open("rb") as f:
+                  head = f.read(64)
+              if len(head) < 20 or head[:4] != b"\\x7fELF":
+                  report.append(f"NOT_ELF\t{p.relative_to(root)}")
+                  continue
+              elf_count += 1
+              bits = {1:"ELF32", 2:"ELF64"}.get(head[4], f"class={head[4]}")
+              endian = "<" if head[5] == 1 else ">" if head[5] == 2 else None
+              machine = struct.unpack(endian+"H", head[18:20])[0] if endian else -1
+              arch = {183:"AArch64", 40:"ARM", 62:"x86_64", 3:"x86"}.get(machine, f"machine={machine}")
+              report.append(f"{bits}\t{arch}\t{p.stat().st_size}\t{p.relative_to(root)}")
+          report.append(f"ELF shared libraries identified: {elf_count}")
+
+          report.append("")
+          report.append("IL2CPP METADATA HEADERS")
+          for p in files:
+              if p.name == "global-metadata.dat":
+                  with p.open("rb") as f:
+                      head = f.read(64)
+                  report.append(f"path={p.relative_to(root)}")
+                  report.append(f"size={p.stat().st_size}")
+                  report.append(f"first64={head.hex(' ')}")
+                  if len(head) >= 8:
+                      magic, version = struct.unpack("<II", head[:8])
+                      report.append(f"magic=0x{magic:08X}; metadata_version={version}")
+
+          report.append("")
+          report.append("UNITY VERSION FILES")
+          for p in files:
+              if p.name == "unity.ver":
+                  raw = p.read_bytes()[:256]
+                  report.append(f"{p.relative_to(root)}: {raw.decode('utf-8','replace').strip()}")
+
+          report.append("")
+          report.append("LOG FILE SUMMARY (content intentionally not printed)")
+          for p in files:
+              if "log" in p.name.lower() and p.stat().st_size < 20_000_000:
+                  data = p.read_bytes().decode("utf-8","replace")
+                  lines = data.splitlines()
+                  report.append(f"{p.relative_to(root)}: {len(lines)} lines; "
+                                f"errors={sum('error' in x.lower() for x in lines)}; "
+                                f'exceptions={sum("exception" in x.lower() for x in lines)}; '
+                                f'crashes={sum(("fatal" in x.lower() or "crash" in x.lower()) for x in lines)}')
+
+          Path("analysis-report.txt").write_text("\n".join(report), encoding="utf-8")
+          print("\n".join(report))
+          PY
+      - name: Upload inspection report
+        uses: actions/upload-artifact@v4
+        with:
+          name: srml-game-file-analysis
+          path: analysis-report.txt
+          retention-days: 14
