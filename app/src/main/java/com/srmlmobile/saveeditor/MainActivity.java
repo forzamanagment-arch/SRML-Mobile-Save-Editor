@@ -83,6 +83,7 @@ public class MainActivity extends Activity {
             refreshStatus();
             if(result==PackageManager.PERMISSION_GRANTED){
                 executor.execute(()->{try{ShizukuFileAccess.ensureBackup();}catch(Throwable t){AppLog.exception(this,"BACKUP","Backup check failed",t);}});
+                if(homeMode==1)scanSaves();
             }
         }
     });
@@ -1002,7 +1003,22 @@ public class MainActivity extends Activity {
     }
     private void scanSaves(){
         if(homeMode!=1)return;
-        if(!hasPermission()){show("Сначала подключи Shizuku и выдай разрешение.");refreshStatus();return;}
+        if(!hasPermission()){
+            LinearLayout list=pageContents[0];
+            list.removeAllViews();
+            addHeader(tr("Save Editor","Редактор сохранений"),"SaveTurquoiseIcon.png");
+            Button back=actionButton(tr("Back","Назад"),()->{homeMode=0;setPage(0);});
+            back.setBackground(background(TEAL,Color.TRANSPARENT,dp(25)));
+            list.addView(back,new LinearLayout.LayoutParams(-1,dp(44)));
+            addEmptyCard(tr("Shizuku permission required","Требуется разрешение Shizuku"),
+                tr("Connect Shizuku to load your worlds. Your saves have not been changed.","Подключи Shizuku, чтобы загрузить список миров. Сохранения не изменялись."),list);
+            Button connect=actionButton(tr("Connect Shizuku","Подключить Shizuku"),this::requestShizuku);
+            LinearLayout.LayoutParams connectParams=new LinearLayout.LayoutParams(-1,dp(46));
+            connectParams.topMargin=dp(10);
+            list.addView(connect,connectParams);
+            refreshStatus();
+            return;
+        }
         showingBackups=false;show(tr("Loading worlds…","Загружаю список миров…"));
         executor.execute(()->{
             try{
