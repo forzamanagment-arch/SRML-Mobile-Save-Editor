@@ -1,4 +1,4 @@
-name: Android Debug APK
+name: SRML Game Tools Android APK
 
 on:
   push:
