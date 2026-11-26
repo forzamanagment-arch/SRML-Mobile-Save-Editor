@@ -70,3 +70,7 @@ Use FusionCore as the candidate foundation for the runtime layer. Do not write a
 
 The existing SRML app currently uses Android Gradle Plugin 8.7.3, Kotlin Android plugin 2.0.21, compileSdk 35, and a Gradle 8.9 CI build. The pinned FusionCore source uses Android Gradle Plugin 9.3.2, Kotlin Android plugin 2.4.10, compileSdk 37, and Gradle wrapper 9.7.1. These projects cannot be combined safely by copying the module folder alone. Before embedding, the build toolchain must be aligned and the FusionCore application module converted or ported into the SRML app architecture. A separate baseline build is being used to distinguish upstream build issues from integration issues.
 
+
+## CI diagnosis
+
+The first baseline build attempt did not reach Gradle compilation. It failed because the custom workflow tried to install SDK package platforms;android-37, which sdkmanager did not expose in that runner setup. This was a workflow setup error, not a FusionCore source compilation error. The workflow has now been changed to mirror the upstream FusionCore CI: JDK 17, gradle/actions/setup-gradle@v5, and the upstream assembleDebug task, relying on the GitHub-hosted Android SDK image instead of forcing an unavailable package install. The next run will provide the first meaningful source-build result.
