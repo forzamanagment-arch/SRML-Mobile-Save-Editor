@@ -65,16 +65,17 @@ jobs:
         with:
           packages: platform-tools
 
-      - name: Install build tools and JADX
+      - name: Install build tools, JADX and LLVM
         run: |
           set -euo pipefail
           sdkmanager "build-tools;35.0.0"
           sudo apt-get update
-          sudo apt-get install -y binutils unzip
+          sudo apt-get install -y binutils llvm unzip
           curl -fL --retry 3 https://github.com/skylot/jadx/releases/download/v1.5.1/jadx-1.5.1.zip -o /tmp/jadx.zip
           mkdir -p /tmp/jadx
           unzip -q /tmp/jadx.zip -d /tmp/jadx
           chmod +x /tmp/jadx/bin/jadx
+          llvm-objdump --version | head -n 2
 
       - name: Inspect APK manifest, DEX and native libraries
         run: |
@@ -101,6 +102,69 @@ jobs:
           done < reports/NATIVE_LIBRARY_LIST.txt
           grep -E 'package: name=|launchable-activity:|sdkVersion:|targetSdkVersion:|native-code:' reports/APK_BADGING.txt || true
           echo "Manifest, APK inventory and native library reports generated."
+
+      - name: Deep-inspect Unity bootstrap and app-specific native wrapper
+        run: |
+          set -euo pipefail
+          APK="$(find input/extracted -maxdepth 1 -name '*.apk' -print -quit)"
+          mkdir -p reports/native-deep reports/native-binaries
+          for name in libmain.so libzqc63dn9mh.so; do
+            lib="input/apk-unpacked/lib/arm64-v8a/$name"
+            if [ ! -f "$lib" ]; then
+              echo "Missing expected library: $lib" | tee "reports/native-deep/$name.MISSING.txt"
+              continue
+            fi
+            cp "$lib" "reports/native-binaries/$name"
+            out="reports/native-deep/$name"
+            {
+              echo "## File identity"
+              stat "$lib"
+              sha256sum "$lib"
+              echo
+              echo "## ELF build ID and notes"
+              readelf -n "$lib" || true
+              echo
+              echo "## Dynamic section and dependencies"
+              readelf -d "$lib" || true
+              echo
+              echo "## Dynamic symbols"
+              readelf --dyn-syms -W "$lib" || true
+              echo
+              echo "## Full symbol table"
+              readelf --syms -W "$lib" || true
+              echo
+              echo "## Relocations"
+              readelf -rW "$lib" || true
+              echo
+              echo "## Demangled exported symbols"
+              nm -D -C "$lib" 2>/dev/null || true
+            } > "$out.elf-report.txt"
+            strings -a -n 5 "$lib" > "$out.strings.txt"
+            grep -Ein 'JNI_OnLoad|RegisterNatives|GetMethodID|GetStaticMethodID|signature|certificate|launcher|unity|il2cpp|plugin|mod|loadLibrary|dlopen|dlsym|asset|class' "$out.strings.txt" > "$out.strings-filtered.txt" || true
+            llvm-objdump -d --demangle --symbolize-operands --disassemble-symbols=JNI_OnLoad "$lib" > "$out.JNI_OnLoad.disasm.txt" 2>&1 || true
+          done
+          {
+            echo "# Deep native inspection"
+            echo
+            echo "Target: ARM64 Android native libraries from Slime Rancher Mobile 1.1.1103."
+            echo
+            echo "The two target binaries are included in native-binaries/ so they can be independently inspected."
+            echo
+            echo "## JNI_OnLoad disassembly"
+            for f in reports/native-deep/*.JNI_OnLoad.disasm.txt; do
+              echo
+              echo "### $(basename "$f")"
+              cat "$f"
+            done
+            echo
+            echo "## Filtered strings"
+            for f in reports/native-deep/*.strings-filtered.txt; do
+              echo
+              echo "### $(basename "$f")"
+              cat "$f"
+            done
+          } > reports/NATIVE_DEEP_INSPECTION_INDEX.md
+          du -h reports/native-binaries/* || true
 
       - name: Decompile Java/Kotlin DEX code and index Unity loading paths
         run: |
@@ -133,14 +197,17 @@ jobs:
             echo "## JNI / Unity loading references"
             head -n 250 reports/JAVA_NATIVE_LOADING_REFERENCES.txt 2>/dev/null || true
             echo
+            echo "## Deep native inspection"
+            cat reports/NATIVE_DEEP_INSPECTION_INDEX.md 2>/dev/null || true
+            echo
             echo "## Relevant native exports"
             grep -RhiE 'il2cpp_|JNI_OnLoad|JNI_OnUnload|Java_' reports/native 2>/dev/null | head -n 500 || true
           } > reports/GAME_APK_ANALYSIS_INDEX.md
 
-      - name: Upload APK analysis reports
+      - name: Upload APK analysis reports and selected native binaries
         uses: actions/upload-artifact@v4
         with:
-          name: srml-original-apk-analysis
+          name: srml-original-apk-native-deep-analysis
           path: reports/
           if-no-files-found: error
           retention-days: 14
