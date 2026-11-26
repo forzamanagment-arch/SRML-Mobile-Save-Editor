@@ -748,19 +748,27 @@ public class MainActivity extends Activity {
         });
     }
     private void restore(ShizukuFileAccess.BackupItem item){
-        show("Восстанавливаю сохранение…");
+        show(tr("Restoring save…","Восстанавливаю сохранение…"));
         executor.execute(()->{
             try{
                 ShizukuFileAccess.RestoreResult result=ShizukuFileAccess.restoreBackup(item.path);
                 runOnUiThread(()->{
                     if(result.hadConflict()){
-                        backupNotice="Сохранение «"+result.restoredName+"» успешно восстановлено из Backup.\n\nВ pt_saves уже был файл с таким именем. Он сохранён в Backup под именем:\n"+new File(result.conflictBackupPath).getName()+"\n\nКонфликт имён предотвращён.";
-                    }else backupNotice="Сохранение «"+result.restoredName+"» успешно восстановлено из Backup.";
+                        backupNotice=tr(
+                            "Save \""+result.restoredName+"\" was restored.\n\nA file with the same name already existed in pt_saves. The existing file was preserved in Backup as:\n"+new File(result.conflictBackupPath).getName()+"\n\nNo save was overwritten.",
+                            "Сохранение «"+result.restoredName+"» восстановлено.\n\nВ pt_saves уже был файл с таким именем. Существующий файл сохранён в Backup под именем:\n"+new File(result.conflictBackupPath).getName()+"\n\nДанные не потеряны."
+                        );
+                    }else backupNotice=tr(
+                        "Save \""+result.restoredName+"\" was restored from Backup.",
+                        "Сохранение «"+result.restoredName+"» восстановлено из Backup."
+                    );
                     showBackups();
                 });
             }catch(Throwable t){
                 AppLog.exception(this,"BACKUP_RESTORE","Restore failed",t);
-                runOnUiThread(()->show("Не удалось восстановить сохранение: "+t.getMessage()+"\nИсходная резервная копия не удаляется при ошибке проверки."));
+                runOnUiThread(()->show(tr(
+                    "Could not restore save: ","Не удалось восстановить сохранение: "
+                )+t.getMessage()+tr("\nThe backup is kept if verification fails.","\nПри ошибке проверки резервная копия остаётся на месте.")));
             }
         });
     }
