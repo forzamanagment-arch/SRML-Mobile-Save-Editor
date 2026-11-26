@@ -918,7 +918,8 @@ class SaveEditorActivity : Activity() {
             if (stroke != Color.TRANSPARENT) setStroke(dp(1), stroke)
         }
     }
-    private fun darken(color: Int, amount: Float): Int = Color.rgb(
+    private fun darken(color: Int, amount: Float): Int = Color.argb(
+        Color.alpha(color),
         (Color.red(color) * (1f - amount)).toInt().coerceAtLeast(0),
         (Color.green(color) * (1f - amount)).toInt().coerceAtLeast(0),
         (Color.blue(color) * (1f - amount)).toInt().coerceAtLeast(0)
@@ -943,11 +944,18 @@ class SaveEditorActivity : Activity() {
                 intArrayOf(0x44B39DDB, 0x00B39DDB), null, android.graphics.Shader.TileMode.CLAMP)
             canvas.drawRect(b, paint)
             paint.shader = null
-            paint.color = 0x147B6AA8
+            paint.color = if (darkTheme) 0x1679D8CF else 0x147B6AA8
             paint.style = android.graphics.Paint.Style.FILL
             for (y in 24..h.toInt() step 54) for (x in 20..w.toInt() step 58) {
                 canvas.drawCircle(x + (y % 3) * 5f, y.toFloat(), 1.5f, paint)
             }
+            paint.shader = android.graphics.RadialGradient(w * .08f, h * .30f, w * .22f,
+                intArrayOf(if (darkTheme) 0x263EAAA3 else 0x20FF8FBE, 0x00000000), null, android.graphics.Shader.TileMode.CLAMP)
+            canvas.drawCircle(w * .08f, h * .30f, w * .22f, paint)
+            paint.shader = android.graphics.RadialGradient(w * .94f, h * .62f, w * .25f,
+                intArrayOf(if (darkTheme) 0x224ECDC4 else 0x1E4ECDC4, 0x00000000), null, android.graphics.Shader.TileMode.CLAMP)
+            canvas.drawCircle(w * .94f, h * .62f, w * .25f, paint)
+            paint.shader = null
         }
         override fun setAlpha(alpha: Int) {}
         override fun setColorFilter(colorFilter: android.graphics.ColorFilter?) {}
