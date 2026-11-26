@@ -364,7 +364,7 @@ class SaveEditorActivity : Activity() {
             var previousValue: Long? = null
             val toggle = Button(this).apply {
                 isEnabled = input != null
-                text = tr(if (enabled) "Disable" else "Enable", if (enabled) "Выключить" else "Включить")
+                text = tr(if (enabled) "Disable" else "Enable", if (enabled) "выключить" else "включить")
                 isAllCaps = false
                 textSize = 12f
                 typeface = GameAssets.typeface(this@SaveEditorActivity, true)
@@ -389,7 +389,7 @@ class SaveEditorActivity : Activity() {
                         field.setText(restore.toString())
                         enabled = false
                     }
-                    text = tr(if (enabled) "Disable" else "Enable", if (enabled) "Выключить" else "Включить")
+                    text = tr(if (enabled) "Disable" else "Enable", if (enabled) "выключить" else "включить")
                 }
             }
             card.addView(toggle, LinearLayout.LayoutParams(-1, dp(38)))
@@ -789,7 +789,7 @@ class SaveEditorActivity : Activity() {
     private fun addEditorActions() {
         val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
         val cancel = Button(this).apply {
-            text = tr("Cancel editing", "Отменить редакцию")
+            text = tr("Cancel editing", "Отменить редактирование")
             isAllCaps = false
             textSize = 12f
             typeface = GameAssets.typeface(this@SaveEditorActivity, true)
@@ -946,13 +946,13 @@ class SaveEditorActivity : Activity() {
                 intArrayOf(0x44B39DDB, 0x00B39DDB), null, android.graphics.Shader.TileMode.CLAMP)
             canvas.drawRect(b, paint)
             paint.shader = null
-            paint.color = if (darkTheme) 0x1679D8CF else 0x147B6AA8
+            paint.color = if (darkTheme) 0x1631496E else 0x147B6AA8
             paint.style = android.graphics.Paint.Style.FILL
             for (y in 24..h.toInt() step 54) for (x in 20..w.toInt() step 58) {
                 canvas.drawCircle(x + (y % 3) * 5f, y.toFloat(), 1.5f, paint)
             }
             paint.shader = android.graphics.RadialGradient(w * .08f, h * .30f, w * .22f,
-                intArrayOf(if (darkTheme) 0x263EAAA3 else 0x20FF8FBE, 0x00000000), null, android.graphics.Shader.TileMode.CLAMP)
+                intArrayOf(if (darkTheme) 0x2631496E else 0x20FF8FBE, 0x00000000), null, android.graphics.Shader.TileMode.CLAMP)
             canvas.drawCircle(w * .08f, h * .30f, w * .22f, paint)
             paint.shader = android.graphics.RadialGradient(w * .94f, h * .62f, w * .25f,
                 intArrayOf(if (darkTheme) 0x2231496E else 0x1E31496E, 0x00000000), null, android.graphics.Shader.TileMode.CLAMP)
