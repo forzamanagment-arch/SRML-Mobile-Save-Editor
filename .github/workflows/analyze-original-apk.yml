@@ -1,0 +1,141 @@
+name: SRML Original APK Analysis
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze-apk:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    steps:
+      - name: Download original APK archive from release
+        env:
+          APK_ARCHIVE_URL: https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/SlimeRancherAPK.zip
+        run: |
+          set -euo pipefail
+          mkdir -p input reports
+          curl -fL --retry 5 --retry-delay 3 "$APK_ARCHIVE_URL" -o input/SlimeRancherAPK.zip
+          sha256sum input/SlimeRancherAPK.zip | tee reports/OUTER_ARCHIVE_SHA256.txt
+          ls -lh input/SlimeRancherAPK.zip
+
+      - name: Locate and extract APK from archive
+        run: |
+          python3 - <<'PY'
+          import zipfile, pathlib, sys
+          archive = pathlib.Path("input/SlimeRancherAPK.zip")
+          out = pathlib.Path("input/extracted")
+          out.mkdir(parents=True, exist_ok=True)
+          with zipfile.ZipFile(archive) as z:
+              candidates = [i for i in z.infolist() if i.filename.lower().endswith(".apk") and not i.is_dir()]
+              print("Outer archive entries:", len(z.infolist()))
+              print("APK candidates:")
+              for i in candidates:
+                  print(f"{i.file_size}\t{i.filename}")
+              if not candidates:
+                  print("No APK file found in uploaded ZIP", file=sys.stderr)
+                  sys.exit(2)
+              candidates.sort(key=lambda i: i.file_size, reverse=True)
+              chosen = candidates[0]
+              target = out / pathlib.Path(chosen.filename).name
+              with z.open(chosen) as src, target.open("wb") as dst:
+                  while True:
+                      chunk = src.read(8 * 1024 * 1024)
+                      if not chunk: break
+                      dst.write(chunk)
+              (pathlib.Path("reports") / "APK_ARCHIVE_CONTENTS.txt").write_text(
+                  "\n".join(f"{i.file_size}\t{i.filename}" for i in z.infolist()),
+                  encoding="utf-8"
+              )
+              print("Selected APK:", target, "bytes:", target.stat().st_size)
+              (pathlib.Path("reports") / "SELECTED_APK.txt").write_text(
+                  f"Selected: {chosen.filename}\nUncompressed size: {chosen.file_size}\n",
+                  encoding="utf-8"
+              )
+          PY
+          sha256sum input/extracted/*.apk | tee reports/APK_SHA256.txt
+
+      - name: Install Android inspection tools
+        uses: android-actions/setup-android@v3
+
+      - name: Install build tools and JADX
+        run: |
+          set -euo pipefail
+          sdkmanager "build-tools;35.0.0"
+          sudo apt-get update
+          sudo apt-get install -y binutils unzip
+          curl -fL --retry 3 https://github.com/skylot/jadx/releases/download/v1.5.1/jadx-1.5.1.zip -o /tmp/jadx.zip
+          mkdir -p /tmp/jadx
+          unzip -q /tmp/jadx.zip -d /tmp/jadx
+          chmod +x /tmp/jadx/bin/jadx
+
+      - name: Inspect APK manifest, DEX and native libraries
+        run: |
+          set -euo pipefail
+          APK="$(find input/extracted -maxdepth 1 -name '*.apk' -print -quit)"
+          AAPT="$ANDROID_HOME/build-tools/35.0.0/aapt"
+          "$AAPT" dump badging "$APK" > reports/APK_BADGING.txt
+          "$AAPT" dump xmltree "$APK" AndroidManifest.xml > reports/ANDROID_MANIFEST_XMLTREE.txt
+          unzip -l "$APK" > reports/APK_FILE_INDEX.txt
+          mkdir -p input/apk-unpacked reports/native
+          unzip -q "$APK" 'classes*.dex' 'lib/*/*.so' 'assets/bin/Data/Managed/*' -d input/apk-unpacked || true
+          find input/apk-unpacked -type f -name '*.so' -print | sort > reports/NATIVE_LIBRARY_LIST.txt
+          find input/apk-unpacked -type f -name '*.dex' -print | sort > reports/DEX_LIST.txt
+          while IFS= read -r lib; do
+            [ -f "$lib" ] || continue
+            name="$(basename "$lib")"
+            {
+              echo "===== $lib ====="
+              readelf -h "$lib" || true
+              readelf -l "$lib" || true
+              echo "--- exported il2cpp/JNI/Unity symbols ---"
+              nm -D --defined-only "$lib" 2>/dev/null | grep -Ei 'il2cpp_|JNI_OnLoad|JNI_OnUnload|UnityPlayer|ANativeActivity|Java_' || true
+            } > "reports/native/$name.txt"
+          done < reports/NATIVE_LIBRARY_LIST.txt
+          grep -E 'package: name=|launchable-activity:|sdkVersion:|targetSdkVersion:|native-code:' reports/APK_BADGING.txt || true
+          echo "Manifest, APK inventory and native library reports generated."
+
+      - name: Decompile Java/Kotlin DEX code and index Unity loading paths
+        run: |
+          set -euo pipefail
+          APK="$(find input/extracted -maxdepth 1 -name '*.apk' -print -quit)"
+          /tmp/jadx/bin/jadx --no-res --show-bad-code -d reports/jadx "$APK" > reports/JADX_LOG.txt 2>&1 || true
+          grep -RniE 'System\.loadLibrary|System\.load\(|JNI_OnLoad|UnityPlayerActivity|UnityPlayer|libil2cpp|libunity|native[A-Z_a-z0-9]*\(' reports/jadx --include='*.java' --include='*.kt' > reports/JAVA_NATIVE_LOADING_REFERENCES.txt || true
+          grep -RniE 'com\.unity3d|playdigious|UnityPlayer' reports/jadx --include='*.java' --include='*.kt' | head -n 500 > reports/UNITY_AND_PUBLISHER_REFERENCES.txt || true
+          echo "JADX output files: $(find reports/jadx -type f | wc -l)"
+
+      - name: Create concise analysis index
+        if: always()
+        run: |
+          {
+            echo "# Original Slime Rancher Mobile APK analysis"
+            echo
+            echo "## Input"
+            cat reports/SELECTED_APK.txt 2>/dev/null || true
+            cat reports/APK_SHA256.txt 2>/dev/null || true
+            echo
+            echo "## Package and Android entry points"
+            grep -E 'package: name=|launchable-activity:|sdkVersion:|targetSdkVersion:|native-code:' reports/APK_BADGING.txt 2>/dev/null || true
+            echo
+            echo "## Native libraries"
+            cat reports/NATIVE_LIBRARY_LIST.txt 2>/dev/null || true
+            echo
+            echo "## DEX files"
+            cat reports/DEX_LIST.txt 2>/dev/null || true
+            echo
+            echo "## JNI / Unity loading references"
+            head -n 250 reports/JAVA_NATIVE_LOADING_REFERENCES.txt 2>/dev/null || true
+            echo
+            echo "## Relevant native exports"
+            grep -RhiE 'il2cpp_|JNI_OnLoad|JNI_OnUnload|Java_' reports/native 2>/dev/null | head -n 500 || true
+          } > reports/GAME_APK_ANALYSIS_INDEX.md
+
+      - name: Upload APK analysis reports
+        uses: actions/upload-artifact@v4
+        with:
+          name: srml-original-apk-analysis
+          path: reports/
+          if-no-files-found: error
+          retention-days: 14
