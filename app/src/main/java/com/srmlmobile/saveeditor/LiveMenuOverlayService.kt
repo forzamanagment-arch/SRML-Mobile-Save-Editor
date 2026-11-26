@@ -15,6 +15,7 @@ import android.provider.Settings
 import android.view.Gravity
 import android.view.MotionEvent
 import android.view.View
+import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import android.content.Context
@@ -181,9 +182,9 @@ class LiveMenuOverlayService : Service() {
             clipChildren = true
             clipToPadding = true
         }
-        scroll.addView(body, ScrollView.LayoutParams(
-            WindowManager.LayoutParams.MATCH_PARENT,
-            WindowManager.LayoutParams.WRAP_CONTENT
+        scroll.addView(body, FrameLayout.LayoutParams(
+            ViewGroup.LayoutParams.MATCH_PARENT,
+            ViewGroup.LayoutParams.WRAP_CONTENT
         ))
         val dragHandle = TextView(this).apply {
             text = "•••   " + tr("DRAG TO MOVE MENU", "ПЕРЕМЕСТИТЬ МЕНЮ") + "   •••"
