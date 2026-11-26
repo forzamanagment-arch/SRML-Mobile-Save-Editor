@@ -108,6 +108,16 @@ public final class ShizukuFileAccess {
   if(run("rm -- "+q(backupPath))!=0)throw new IOException("Файл восстановлен, но исходную копию из Backup не удалось удалить");
   return new RestoreResult(parsed.name,conflict);
  }
+ public static void renameSaveAtomic(String oldPath,String newPath,byte[]data)throws Exception{
+  if(oldPath.equals(newPath)){writeAtomic(oldPath,data);return;}
+  if(!newPath.startsWith(SAVE_DIR+"/")||newPath.substring(SAVE_DIR.length()+1).contains("/")||
+     newPath.endsWith("/")||newPath.substring(newPath.lastIndexOf('/')+1).trim().isEmpty())
+   throw new IOException("Недопустимое имя сохранения");
+  if(exists(newPath))throw new IOException("Сохранение с таким именем уже существует");
+  writeAtomic(newPath,data);
+  if(!Arrays.equals(data,read(newPath)))throw new IOException("Проверка нового файла не пройдена");
+  if(run("rm -- "+q(oldPath))!=0)throw new IOException("Новое сохранение записано, но старый файл не удалось удалить. Оба файла сохранены.");
+ }
  public static void writeAtomic(String path,byte[]data)throws Exception{
   String tmp=path+".srml_editor_tmp";Process p=sh("umask 077; cat > "+q(tmp));
   try(OutputStream o=p.getOutputStream()){o.write(data);o.flush();}int x=p.waitFor();p.destroy();
