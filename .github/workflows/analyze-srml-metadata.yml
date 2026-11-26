@@ -1,0 +1,125 @@
+name: SRML IL2CPP Metadata Analysis
+
+on:
+  push:
+    paths:
+      - ".github/workflows/analyze-srml-metadata.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  analyze:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Download uploaded game archive
+        shell: bash
+        run: |
+          set -euo pipefail
+          curl -L --fail --retry 3 \
+            "https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/FilesSRML.zip" \
+            -o FilesSRML.zip
+          unzip -q FilesSRML.zip -d extracted
+          echo "Archive downloaded and extracted."
+
+      - name: Locate IL2CPP inputs
+        id: locate
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIB="$(find extracted -type f -name 'libil2cpp.so' -print -quit)"
+          META="$(find extracted -type f -name 'global-metadata.dat' -print -quit)"
+          if [ -z "$LIB" ] || [ -z "$META" ]; then
+            echo "Required input missing: lib=$LIB metadata=$META"
+            exit 1
+          fi
+          echo "lib=$LIB" >> "$GITHUB_OUTPUT"
+          echo "metadata=$META" >> "$GITHUB_OUTPUT"
+          echo "Library: $LIB ($(stat -c%s "$LIB") bytes)"
+          echo "Metadata: $META ($(stat -c%s "$META") bytes)"
+
+      - name: Set up Go
+        uses: actions/setup-go@v6
+        with:
+          go-version: "1.25.4"
+          cache: false
+
+      - name: Build pinned disunity analyzer
+        shell: bash
+        run: |
+          set -euo pipefail
+          git clone https://github.com/zboralski/disunity.git disunity-src
+          cd disunity-src
+          git checkout d3358416e5e0bf9c60e211d3b8093224d843e4d4
+          go test ./...
+          go build -o ../disunity ./cmd/disunity
+
+      - name: Parse metadata and correlate native methods
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p analysis-output
+          ./disunity meta \
+            "${{ steps.locate.outputs.lib }}" \
+            "${{ steps.locate.outputs.metadata }}" \
+            --out analysis-output --all
+
+      - name: Build readable game explorer index
+        shell: bash
+        run: |
+          python3 - <<'PY'
+          import json, re
+          from pathlib import Path
+
+          root=Path("analysis-output")
+          meta_path=root/"unity_meta.json"
+          script_path=root/"script.json"
+          report=[]
+          report.append("# SRML Game Explorer: IL2CPP analysis")
+          report.append("")
+          if meta_path.exists():
+              data=json.loads(meta_path.read_text(encoding="utf-8"))
+              classes=data.get("classes", [])
+              funcs=data.get("functions", [])
+              report += [
+                  f"- Metadata version: **{data.get('il2cpp_version', 'unknown')}**",
+                  f"- Parsed classes: **{len(classes)}**",
+                  f"- Functions with native addresses: **{len(funcs)}**",
+                  f"- Pointer size: **{data.get('pointer_size', 'unknown')} bytes**",
+                  "",
+                  "## Classes matching game-system keywords",
+              ]
+              pattern=re.compile(r"player|slime|inventory|item|world|zone|spawn|food|plort|vac|ranch|save|health|energy|currency|currency|store|market|gadget|upgrade", re.I)
+              hits=[]
+              for c in classes:
+                  full=(c.get("namespace","")+"."+c.get("class_name","")).strip(".")
+                  if pattern.search(full):
+                      hits.append((full,c.get("parent_class",""),len(c.get("fields",[]))))
+              report += [f"- `{name}`" + (f" : parent `{parent}`" if parent else "") + f" ({fields} fields)" for name,parent,fields in hits[:500]]
+              report.append("")
+              report.append("## Matching methods")
+              method_hits=[]
+              for f in funcs:
+                  name=f.get("name","")
+                  if pattern.search(name):
+                      method_hits.append(f"- `{name}` at `{f.get('addr','?')}`")
+              report += method_hits[:1000]
+              report.append("")
+              report.append("## Notes")
+              report.append("- Class and method names are extracted from metadata and linked to addresses where the analyzer resolved them.")
+              report.append("- A missing address does not mean a method is absent; generic, stripped, or unresolved methods may need separate analysis.")
+          else:
+              report += ["Metadata parser did not produce unity_meta.json.", "See workflow logs for the parser error."]
+          (root/"GAME_EXPLORER_INDEX.md").write_text("\n".join(report),encoding="utf-8")
+          print("\n".join(report[:80]))
+          PY
+
+      - name: Upload complete analysis
+        uses: actions/upload-artifact@v4
+        with:
+          name: srml-il2cpp-metadata-analysis
+          path: analysis-output/
+          if-no-files-found: error
+          retention-days: 14
