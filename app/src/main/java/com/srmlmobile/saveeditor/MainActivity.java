@@ -103,7 +103,7 @@ public class MainActivity extends Activity {
         darkTheme=getSharedPreferences("srml_settings",MODE_PRIVATE).getBoolean("dark_theme",true);
         LinearLayout root=new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(20),dp(16),dp(20),dp(12));
+        root.setPadding(dp(20),dp(16)+getStatusBarInset(),dp(20),dp(12));
         root.setBackground(new MarshmallowDrawable());
         getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(creamColor()));
         getWindow().setStatusBarColor(creamColor());
@@ -160,7 +160,7 @@ public class MainActivity extends Activity {
         navBar.setGravity(Gravity.CENTER);
         navBar.setPadding(dp(5),dp(5),dp(5),dp(5));
         navBar.setBackgroundColor(Color.TRANSPARENT);
-        String[] iconFiles={"SaveTurquoiseIcon.png","BackupTurquoiseIcon.FIXED.png","SettingsTurquoiseIcon.png","InfoTurquoiseIcon.png"};
+        String[] iconFiles={"HomeIcon.png","BackupTurquoiseIcon.FIXED.png","SettingsTurquoiseIcon.png","InfoTurquoiseIcon.png"};
         for(int i=0;i<4;i++){
             final int index=i;
             LinearLayout item=new LinearLayout(this);
@@ -172,7 +172,7 @@ public class MainActivity extends Activity {
             if(bitmap!=null)icon.setImageBitmap(bitmap);
             icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
             icon.setPadding(dp(2),dp(2),dp(2),dp(2));
-            item.addView(icon,new LinearLayout.LayoutParams(dp(30),dp(30)));
+            item.addView(icon,new LinearLayout.LayoutParams(dp(i==1?35:30),dp(i==1?35:30)));
             item.setTag(icon);
             item.setOnClickListener(v->setPage(index));
             item.setOnTouchListener((v,event)->{
@@ -227,6 +227,10 @@ public class MainActivity extends Activity {
         setPage(0);
     }
 
+    private int getStatusBarInset(){
+        int resource=getResources().getIdentifier("status_bar_height","dimen","android");
+        return resource>0?getResources().getDimensionPixelSize(resource):dp(24);
+    }
     private String tr(String en,String ru){return russian?ru:en;}
     private int inkColor(){return darkTheme?Color.rgb(244,242,236):Color.rgb(45,55,72);}
     private int mutedColor(){return darkTheme?Color.rgb(177,187,198):Color.rgb(107,123,141);}
@@ -245,9 +249,10 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,-2);params.bottomMargin=dp(12);content.addView(row,params);
     }
     private void setDarkTheme(boolean enabled){
-        darkTheme=enabled;
         getSharedPreferences("srml_settings",MODE_PRIVATE).edit().putBoolean("dark_theme",enabled).apply();
-        recreate();
+        buildUi();
+        setPage(2);
+        refreshStatus();
     }
     private static final String GAME_PACKAGE = "com.playdigious.slimerancher";
 
@@ -407,8 +412,8 @@ public class MainActivity extends Activity {
         selectedPage=page;
         content=pageContents[page];
         if(content!=null)content.removeAllViews();
-        if(output!=null)output.setVisibility(page<2?View.VISIBLE:View.GONE);
-        if(shizukuPanel!=null)shizukuPanel.setVisibility(page<2?View.VISIBLE:View.GONE);
+        if(output!=null)output.setVisibility(page==0?View.VISIBLE:View.GONE);
+        if(shizukuPanel!=null)shizukuPanel.setVisibility(page==0?View.VISIBLE:View.GONE);
         if(launchButton!=null)launchButton.setVisibility(page==0?View.VISIBLE:View.GONE);
         updateNavVisual(page);
         if(pager!=null){
@@ -430,8 +435,8 @@ public class MainActivity extends Activity {
             ImageView icon=(ImageView)item.getTag();
             boolean active=i==page;
             if(icon!=null){
-                if(active){icon.setColorFilter(TEAL,android.graphics.PorterDuff.Mode.SRC_IN);icon.setAlpha(1f);}
-                else{ColorMatrix matrix=new ColorMatrix();matrix.setSaturation(0f);icon.setColorFilter(new ColorMatrixColorFilter(matrix));icon.setAlpha(0.72f);}
+                if(active){icon.setColorFilter(darkTheme?Color.rgb(64,126,234):TEAL,android.graphics.PorterDuff.Mode.SRC_IN);icon.setAlpha(1f);}
+                else{icon.setColorFilter(Color.rgb(145,151,160),android.graphics.PorterDuff.Mode.SRC_IN);icon.setAlpha(0.88f);}
             }
             item.setBackgroundColor(Color.TRANSPARENT);
         }
@@ -495,9 +500,9 @@ public class MainActivity extends Activity {
         if(saberSlime!=null)slimeIcon.setImageBitmap(saberSlime);
         slimeIcon.setScaleType(ImageView.ScaleType.FIT_CENTER);
         card.addView(slimeIcon,new LinearLayout.LayoutParams(dp(82),dp(82)));
-        TextView name=text("SRML Save Editor",24,inkColor(),true);name.setTypeface(GameAssets.typeface(this,true));name.setPadding(0,dp(17),0,dp(4));card.addView(name);
+        TextView name=text("SRML Game Tools",24,inkColor(),true);name.setTypeface(GameAssets.typeface(this,true));name.setPadding(0,dp(17),0,dp(4));card.addView(name);
         card.addView(text("Version "+BuildConfig.VERSION_NAME,13,Color.rgb(155,168,181),false));
-        TextView description=text(tr("An Android save editor for Slime Rancher Mobile. Manage supported save values and inventory slots, and keep recoverable backups.","Android-редактор сохранений Slime Rancher Mobile. Изменяй поддерживаемые значения и предметы инвентаря, сохраняя резервные копии."),15,mutedColor(),false);
+        TextView description=text(tr("An Android toolkit for Slime Rancher Mobile. Edit saves, manage inventory and backups, and explore game data.","Набор инструментов для Slime Rancher Mobile: редактирование сохранений, инвентаря, резервных копий и исследование игровых данных."),15,mutedColor(),false);
         description.setGravity(Gravity.START);description.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);description.setPadding(0,dp(16),0,0);card.addView(description);
         LinearLayout.LayoutParams aboutCardParams=new LinearLayout.LayoutParams(-1,-2);aboutCardParams.bottomMargin=dp(16);content.addView(card,aboutCardParams);
 
