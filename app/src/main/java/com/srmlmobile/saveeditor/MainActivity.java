@@ -535,7 +535,7 @@ public class MainActivity extends Activity {
         card.addView(slimeIcon,new LinearLayout.LayoutParams(dp(82),dp(82)));
         TextView name=text("SRML Game Tools",24,inkColor(),true);name.setTypeface(GameAssets.typeface(this,true));name.setPadding(0,dp(17),0,dp(4));card.addView(name);
         card.addView(text("Version "+BuildConfig.VERSION_NAME,13,Color.rgb(155,168,181),false));
-        TextView description=text(tr("An Android toolkit for Slime Rancher Mobile. Edit saves, manage inventory and backups, and explore game data.","Набор инструментов для Slime Rancher Mobile: редактирование сохранений, инвентаря, резервных копий и исследование игровых данных."),15,mutedColor(),false);
+        TextView description=text(tr("An Android toolkit for Slime Rancher Mobile. Edit world saves, manage backups, and use the prototype floating Mod Menu.","Набор инструментов для Slime Rancher Mobile: редактирование миров, управление резервными копиями и плавающее Mod Menu в режиме прототипа."),15,mutedColor(),false);
         description.setGravity(Gravity.START);description.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);description.setPadding(0,dp(16),0,0);card.addView(description);
         LinearLayout.LayoutParams aboutCardParams=new LinearLayout.LayoutParams(-1,-2);aboutCardParams.bottomMargin=dp(16);content.addView(card,aboutCardParams);
 
