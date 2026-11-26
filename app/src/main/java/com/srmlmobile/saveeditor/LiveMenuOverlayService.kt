@@ -191,7 +191,6 @@ class LiveMenuOverlayService : Service() {
         header.addView(close, LinearLayout.LayoutParams(dp(42), dp(42)))
         body.addView(header)
         close.setOnClickListener { hidePanel() }
-        attachPanelDrag(header)
 
         val prototype = TextView(this).apply {
             text = tr("INTERFACE PROTOTYPE · GAME VALUES ARE NOT CONNECTED",
@@ -231,6 +230,7 @@ class LiveMenuOverlayService : Service() {
         wm.addView(scroll, lp)
         panel = scroll
         panelParams = lp
+        attachPanelDrag(header)
     }
 
     private fun attachPanelDrag(header: View) {
