@@ -65,3 +65,8 @@ Use FusionCore as the candidate foundation for the runtime layer. Do not write a
 - Confirm target launch Activity, package identity/signature behavior, and game-specific native library loading.
 - Determine the actual save path while running through FusionCore before any save migration is implemented.
 - No APK patcher, injection bypass, signature bypass, or live game-value bridge is implemented by this audit.
+
+## Build-system integration note
+
+The existing SRML app currently uses Android Gradle Plugin 8.7.3, Kotlin Android plugin 2.0.21, compileSdk 35, and a Gradle 8.9 CI build. The pinned FusionCore source uses Android Gradle Plugin 9.3.2, Kotlin Android plugin 2.4.10, compileSdk 37, and Gradle wrapper 9.7.1. These projects cannot be combined safely by copying the module folder alone. Before embedding, the build toolchain must be aligned and the FusionCore application module converted or ported into the SRML app architecture. A separate baseline build is being used to distinguish upstream build issues from integration issues.
+
