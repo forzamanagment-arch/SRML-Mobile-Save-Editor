@@ -1012,7 +1012,15 @@ public class MainActivity extends Activity {
             refreshStatus();
             return;
         }
-        showingBackups=false;show(tr("Loading worlds…","Загружаю список миров…"));
+        showingBackups=false;
+        LinearLayout loadingList=pageContents[0];
+        loadingList.removeAllViews();
+        addHeader(tr("Your worlds","Твои миры"),"SaveTurquoiseIcon.png");
+        Button loadingBack=actionButton(tr("Back","Назад"),()->{homeMode=0;setPage(0);});
+        loadingBack.setBackground(background(TEAL,Color.TRANSPARENT,dp(25)));
+        loadingList.addView(loadingBack,new LinearLayout.LayoutParams(-1,dp(44)));
+        addEmptyCard(tr("Loading worlds…","Загружаю список миров…"),
+            tr("Reading save files. This may take a moment.","Читаю файлы сохранений. Это может занять немного времени."),loadingList);
         executor.execute(()->{
             try{
                 ShizukuFileAccess.ensureBackup();
@@ -1037,10 +1045,28 @@ public class MainActivity extends Activity {
                     }
                 }finally{File[]left=tempDir.listFiles();if(left!=null)for(File x:left)x.delete();tempDir.delete();}
                 runOnUiThread(()->renderSaves(found));
-            }catch(Throwable t){AppLog.exception(this,"SAVE_SCAN","Save scan failed",t);runOnUiThread(()->show("Не удалось прочитать список миров: "+t.getMessage()));}
+            }catch(Throwable t){
+                AppLog.exception(this,"SAVE_SCAN","Save scan failed",t);
+                runOnUiThread(()->{
+                    if(homeMode!=1)return;
+                    LinearLayout list=pageContents[0];
+                    list.removeAllViews();
+                    addHeader(tr("Your worlds","Твои миры"),"SaveTurquoiseIcon.png");
+                    Button back=actionButton(tr("Back","Назад"),()->{homeMode=0;setPage(0);});
+                    back.setBackground(background(TEAL,Color.TRANSPARENT,dp(25)));
+                    list.addView(back,new LinearLayout.LayoutParams(-1,dp(44)));
+                    addEmptyCard(tr("Could not load worlds","Не удалось загрузить миры"),
+                        String.valueOf(t.getMessage()),list);
+                    Button retry=actionButton(tr("Try again","Повторить"),this::scanSaves);
+                    LinearLayout.LayoutParams retryParams=new LinearLayout.LayoutParams(-1,dp(46));
+                    retryParams.topMargin=dp(10);
+                    list.addView(retry,retryParams);
+                });
+            }
         });
     }
     private void renderSaves(List<SaveSlot>found){
+        if(homeMode!=1)return;
         LinearLayout content=pageContents[0];
         content.removeAllViews();
         addHeader(tr("Your worlds","Твои миры"),"SaveTurquoiseIcon.png");
