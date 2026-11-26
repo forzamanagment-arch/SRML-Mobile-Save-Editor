@@ -2,6 +2,9 @@ name: SRML Original APK Analysis
 
 on:
   workflow_dispatch:
+  push:
+    paths:
+      - '.github/workflows/analyze-original-apk.yml'
 
 permissions:
   contents: read
