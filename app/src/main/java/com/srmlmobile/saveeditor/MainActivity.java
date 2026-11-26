@@ -830,16 +830,21 @@ public class MainActivity extends Activity {
         backParams.bottomMargin=dp(14);
         content.addView(back,backParams);
         addSectionCard(tr("Floating Mod Menu","Плавающее Mod Menu"),
-            tr("Start the prototype overlay over Slime Rancher Mobile. Stop it here when you are finished. The controls are visual only and do not change game values.","Запусти прототип оверлея поверх Slime Rancher Mobile. Здесь же его можно остановить. Элементы управления пока только визуальные и не меняют игровые значения."));
-        Button start=actionButton(tr("Start Mod Menu","Запустить Mod Menu"),this::startLiveMenu);
+            tr("Start the floating control bubble, then open Slime Rancher. Tap the SR bubble to show or hide the panel. You can also launch the game from here.","Запусти плавающую кнопку управления, затем открой Slime Rancher. Нажми SR, чтобы открыть или скрыть панель. Игру также можно запустить отсюда."));
+        Button start=actionButton(tr("Start floating menu","Запустить плавающее меню"),this::startLiveMenu);
         start.setBackground(background(PINK,Color.TRANSPARENT,dp(26)));
         content.addView(start,new LinearLayout.LayoutParams(-1,dp(50)));
-        Button stop=actionButton(tr("Stop Mod Menu","Остановить Mod Menu"),this::stopLiveMenu);
+        Button launch=actionButton(tr("Launch Slime Rancher","Запустить Slime Rancher"),this::launchGame);
+        launch.setBackground(background(TEAL,Color.TRANSPARENT,dp(26)));
+        LinearLayout.LayoutParams launchParams=new LinearLayout.LayoutParams(-1,dp(50));
+        launchParams.topMargin=dp(9);
+        content.addView(launch,launchParams);
+        Button stop=actionButton(tr("Stop floating menu","Остановить плавающее меню"),this::stopLiveMenu);
         LinearLayout.LayoutParams stopParams=new LinearLayout.LayoutParams(-1,dp(50));
         stopParams.topMargin=dp(9);
         content.addView(stop,stopParams);
-        addSectionCard(tr("Prototype status","Состояние прототипа"),
-            tr("All fields, buttons and switches in the floating menu are interactive, but are not connected to the game runtime yet.","Все поля, кнопки и переключатели плавающего меню интерактивны, но пока не связаны с игровым процессом."));
+        addSectionCard(tr("Current limitation","Текущее ограничение"),
+            tr("The overlay itself works independently of the game. Its controls are still a UI prototype: live game values are not connected yet. Starting the overlay does not modify the game APK.","Оверлей работает отдельно от игры. Его элементы пока остаются прототипом интерфейса: изменение игровых значений ещё не подключено. Для запуска оверлея APK игры изменять не нужно."));
     }
     private void showBackups(){
         showingBackups=true;
