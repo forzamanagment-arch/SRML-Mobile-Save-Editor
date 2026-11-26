@@ -36,6 +36,12 @@ object GameAssets {
         return Typeface.create("sans-serif-rounded", if (bold) Typeface.BOLD else Typeface.NORMAL)
     }
 
+    @JvmStatic fun exactIcon(context: Context, filename: String): Bitmap? {
+        val files = indexedIcons ?: allFiles(context, ICON_ROOT).also { indexedIcons = it }
+        val match = files.firstOrNull { it.substringAfterLast('/').equals(filename, true) } ?: return null
+        return try { context.assets.open(match).use { BitmapFactory.decodeStream(it) } } catch (_: Exception) { null }
+    }
+
     @JvmStatic fun icon(context: Context, vararg hints: String): Bitmap? {
         val files = indexedIcons ?: allFiles(context, ICON_ROOT).also { indexedIcons = it }
         val keys = hints.map { normalize(it) }.filter { it.length > 1 }
