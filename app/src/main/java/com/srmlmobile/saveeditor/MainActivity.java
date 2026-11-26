@@ -489,8 +489,18 @@ public class MainActivity extends Activity {
     }
     private View glyphTile(View glyph,int size){
         FrameLayout tile=new FrameLayout(this);
-        tile.setBackground(background(Color.rgb(232,220,200),Color.rgb(203,191,168),dp(15)));
+        tile.setBackground(background(surfaceAlt(),borderColor(),dp(15)));
         tile.addView(glyph,new FrameLayout.LayoutParams(dp(size),dp(size),Gravity.CENTER));
+        return tile;
+    }
+    private View assetIconTile(String filename,int size){
+        FrameLayout tile=new FrameLayout(this);
+        tile.setBackground(background(surfaceAlt(),borderColor(),dp(15)));
+        ImageView icon=new ImageView(this);
+        android.graphics.Bitmap bitmap=GameAssets.exactIcon(this,filename);
+        if(bitmap!=null)icon.setImageBitmap(bitmap);
+        icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        tile.addView(icon,new FrameLayout.LayoutParams(dp(size),dp(size),Gravity.CENTER));
         return tile;
     }
     private void addSectionCard(String title,String subtitle){
@@ -706,7 +716,7 @@ public class MainActivity extends Activity {
             card.setPadding(dp(20),dp(18),dp(20),dp(18));card.setBackground(background(cardColor(),borderColor(),dp(26)));
             LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,-2);cp.bottomMargin=dp(10);content.addView(card,cp);
             LinearLayout titleRow=new LinearLayout(this);titleRow.setOrientation(LinearLayout.HORIZONTAL);titleRow.setGravity(Gravity.CENTER_VERTICAL);
-            titleRow.addView(glyphTile(new DocumentGlyph(this),34),new LinearLayout.LayoutParams(dp(40),dp(40)));
+            titleRow.addView(assetIconTile("DocumentsPinkIcon.png",30),new LinearLayout.LayoutParams(dp(40),dp(40)));
             TextView backupName=text(item.originalName,16,inkColor(),true);backupName.setPadding(dp(10),0,0,0);
             titleRow.addView(backupName,new LinearLayout.LayoutParams(0,-2,1));
             card.addView(titleRow);
@@ -869,7 +879,7 @@ public class MainActivity extends Activity {
             card.setPadding(dp(14),dp(12),dp(14),dp(12));card.setBackground(background(cardColor(),borderColor(),dp(26)));
             LinearLayout.LayoutParams cp=new LinearLayout.LayoutParams(-1,-2);cp.bottomMargin=dp(10);content.addView(card,cp);
             LinearLayout titleRow=new LinearLayout(this);titleRow.setOrientation(LinearLayout.HORIZONTAL);titleRow.setGravity(Gravity.CENTER_VERTICAL);
-            titleRow.addView(glyphTile(new DocumentGlyph(this),34),new LinearLayout.LayoutParams(dp(40),dp(40)));
+            titleRow.addView(assetIconTile("DocumentsPinkIcon.png",30),new LinearLayout.LayoutParams(dp(40),dp(40)));
             TextView worldName=text(slot.displayName,16,inkColor(),true);worldName.setPadding(dp(10),0,0,0);
             titleRow.addView(worldName,new LinearLayout.LayoutParams(0,-2,1));
             card.addView(titleRow);
