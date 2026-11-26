@@ -15,7 +15,11 @@ jobs:
       - uses: actions/checkout@v4
       - name: Download and unpack official game UI resources
         run: |
-          mkdir -p app/src/main/assets/game-icons app/src/main/assets/fonts
+          mkdir -p app/src/main/assets/game-icons app/src/main/assets/fonts app/src/main/assets/interface-icons
+          curl -L --fail --retry 3 'https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/IconsInterface.zip' -o /tmp/sr-interface-icons.zip
+          unzip -oq /tmp/sr-interface-icons.zip -d app/src/main/assets/interface-icons
+          echo "Interface icon files:"
+          find app/src/main/assets/interface-icons -type f | sort
           curl -L --fail --retry 3 'https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/Icons.zip' -o /tmp/sr-icons.zip
           curl -L --fail --retry 3 'https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/newicons.zip' -o /tmp/sr-new-icons.zip
           curl -L --fail --retry 3 'https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/PLORTGold.webp' -o app/src/main/assets/game-icons/PLORTGold.webp
