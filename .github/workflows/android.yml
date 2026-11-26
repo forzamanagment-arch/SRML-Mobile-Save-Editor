@@ -20,6 +20,7 @@ jobs:
           unzip -oq /tmp/sr-interface-icons.zip -d app/src/main/assets/interface-icons
           mkdir -p app/src/main/assets/interface-icons/Icons
           curl -L --fail --retry 3 'https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/BackupTurquoiseIcon.FIXED.png' -o app/src/main/assets/interface-icons/Icons/BackupTurquoiseIcon.FIXED.png
+          curl -L --fail --retry 3 'https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/HomeIcon.png' -o app/src/main/assets/interface-icons/Icons/HomeIcon.png
           echo "Interface icon files:"
           find app/src/main/assets/interface-icons -type f | sort
           curl -L --fail --retry 3 'https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/Icons.zip' -o /tmp/sr-icons.zip
