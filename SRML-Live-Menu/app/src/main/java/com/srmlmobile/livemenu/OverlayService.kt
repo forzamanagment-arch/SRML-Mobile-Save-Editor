@@ -176,6 +176,7 @@ class OverlayService : Service() {
         var downY = 0f
         var startX = 0
         var startY = 0
+        val target = if (dragWholeView) panel ?: return else bubble ?: return
         view.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
@@ -188,7 +189,7 @@ class OverlayService : Service() {
                     val dy = (event.rawY - downY).toInt()
                     if (kotlin.math.abs(dx) + kotlin.math.abs(dy) > dp(5)) {
                         lp.x = startX + dx; lp.y = startY + dy
-                        try { wm.updateViewLayout(if (dragWholeView) panel else bubble, lp) } catch (_: Exception) {}
+                        try { wm.updateViewLayout(target, lp) } catch (_: Exception) {}
                     }
                     true
                 }
