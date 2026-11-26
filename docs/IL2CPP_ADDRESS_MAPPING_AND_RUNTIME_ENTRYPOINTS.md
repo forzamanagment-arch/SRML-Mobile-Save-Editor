@@ -128,3 +128,23 @@ Recommended architecture investigation order:
 - Several generated class field layouts and method argument types remain incomplete. The disassembly evidence above is preferred where it directly shows register use and memory offsets.
 - No live process was inspected, no runtime address was measured, and no function was invoked.
 - This report does not claim that runtime modification or third-party DLL loading is already working.
+
+## 8. SceneContext lifecycle: additional disassembly pass
+
+A focused pass over `SceneContext$$Awake`, `Start`, `Register`, `Deregister`, and the generic `SRSingleton<T>` methods did not reveal a direct `SceneContext.Instance` accessor.
+
+New observations:
+
+- `SceneContext$$get_PlayerState`, `get_GameModel`, and `get_ModDirector` are ordinary instance property accessors. Each receives a `SceneContext*` in X0 and returns a reference stored in that object.
+- `SceneContext$$get_ModDirector` reads the reference at `SceneContext + 0x58` (88).
+- `SceneContext$$Register` and `Deregister` operate on a registry-like member at `SceneContext + 0x100` (256) and accept an object argument.
+- The call graph shows `WakeUpDestination$$Awake` calling `SceneContext$$Register`, and `WakeUpDestination$$OnDestroy` calling `SceneContext$$Deregister`. This is consistent with scene objects registering/unregistering themselves with a context-owned registry. It is not evidence that SceneContext is a global singleton.
+- `SceneContext$$OnApplicationQuit` calls `OnSessionEnded`.
+- `SceneContext$$Start` contains an async state-machine setup; the method is not a simple global initialization accessor.
+- `SRSingleton<T>.get_Instance` exists as a generic method, but there is no direct proof in the available evidence that its relevant closed generic type is `SceneContext`.
+
+### Consequence
+
+The earlier object chain remains valid **after a real SceneContext instance is obtained**, but the static analysis has not yet found a safe global entry point for obtaining that instance. We should not hardcode a guessed static pointer, use the generic singleton blindly, or infer the context from an unrelated registered component.
+
+The next useful static target is the code that constructs/owns the active scene context and the code that populates its PlayerState/GameModel fields. That requires tracing the relevant constructors, setters, scene bootstrap code, and serialized component relationships. The current analyzer's class/field layout output is not reliable enough to infer these relationships from field names alone.
