@@ -99,6 +99,7 @@ public class MainActivity extends Activity {
     }
 
     private void buildUi(){
+        navItems.clear();
         russian=getSharedPreferences("srml_settings",MODE_PRIVATE).getBoolean("russian",false);
         darkTheme=getSharedPreferences("srml_settings",MODE_PRIVATE).getBoolean("dark_theme",true);
         LinearLayout root=new LinearLayout(this);
