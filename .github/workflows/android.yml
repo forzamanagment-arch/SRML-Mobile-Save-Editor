@@ -18,6 +18,8 @@ jobs:
           mkdir -p app/src/main/assets/game-icons app/src/main/assets/fonts app/src/main/assets/interface-icons
           curl -L --fail --retry 3 'https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/IconsInterface.zip' -o /tmp/sr-interface-icons.zip
           unzip -oq /tmp/sr-interface-icons.zip -d app/src/main/assets/interface-icons
+          mkdir -p app/src/main/assets/interface-icons/Icons
+          curl -L --fail --retry 3 'https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/BackupTurquoiseIcon.FIXED.png' -o app/src/main/assets/interface-icons/Icons/BackupTurquoiseIcon.FIXED.png
           echo "Interface icon files:"
           find app/src/main/assets/interface-icons -type f | sort
           curl -L --fail --retry 3 'https://github.com/forzamanagment-arch/SRML-Mobile-Save-Editor/releases/download/Saves/Icons.zip' -o /tmp/sr-icons.zip
@@ -28,6 +30,8 @@ jobs:
           unzip -oq /tmp/sr-new-icons.zip -d app/src/main/assets/game-icons
           unzip -q /tmp/sr-fonts.zip -d app/src/main/assets/fonts
           echo "Combined game icon files: $(find app/src/main/assets/game-icons -type f | wc -l)"
+          echo "Saber slime icon lookup:"
+          find app/src/main/assets/game-icons -type f -iname 'Saber_Slime_SP.webp' -print || true
           echo "New icon filenames (sample):"
           find app/src/main/assets/game-icons -type f | sort | grep -iE 'ornament|fashion|echo|chime|scare|key|water' | head -100 || true
           echo "Font files:"
