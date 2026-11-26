@@ -152,7 +152,7 @@ class SaveEditorActivity : Activity() {
         buildBase(tr("Save editor", "Редактор сохранений"))
         status.text = tr("Return to the home screen, refresh your worlds and choose a save there. No manual file selection is needed.", "Открой главный экран, обнови список миров и выбери сохранение там. Файл вручную выбирать не требуется.")
         addButton(tr("Back to worlds", "Вернуться к списку миров")) { finish() }
-        addHint(tr("A backup of the original save is available in the Backup tab.", "Резервная копия исходного сохранения хранится во вкладке Backup."))
+        addHint(tr("A backup is created only if you choose that option before editing.", "Резервная копия создаётся только если ты выберешь этот вариант перед редактированием."))
     }
 
     private fun openSavePicker() {
@@ -563,7 +563,7 @@ class SaveEditorActivity : Activity() {
         page.addView(inventoryActions)
 
         addButton(tr("Save changes", "Сохранить изменения")) { prepareOutput() }
-        addHint(tr("After saving, the file returns to pt_saves with its original name. The backup remains in Backup.", "После сохранения файл вернётся в pt_saves под исходным именем. Резервная копия останется в Backup."))
+        addHint(tr("The original save stays in pt_saves while you edit. A backup is kept only if you chose to create one.", "Исходное сохранение остаётся в pt_saves во время редактирования. Резервная копия хранится только если ты согласился её создать."))
     }
 
     private fun addSlotEditor(slotNumber: Int, field: InventoryField, parent: LinearLayout): SlotEditor {
@@ -731,9 +731,17 @@ class SaveEditorActivity : Activity() {
                         ShizukuFileAccess.writeAtomic(target, pendingArchive!!)
                         stageFile?.delete()
                         saveCompleted = true
-                        runOnUiThread { status.text = "Сохранение возвращено в pt_saves. Резервная копия осталась в Backup." }
+                        val backupMessage = if (backupPath != null)
+                            tr(" The original backup is stored in Backup.", " Исходная копия сохранена в Backup.")
+                        else
+                            tr(" No backup was created.", " Резервная копия не создавалась.")
+                        runOnUiThread { status.text = tr("Save updated in pt_saves.", "Сохранение обновлено в pt_saves.") + backupMessage }
                     } catch (e: Exception) {
-                        runOnUiThread { status.text = "Ошибка сохранения: " + (e.message ?: "ошибка") + ". Backup сохранён." }
+                        val backupMessage = if (backupPath != null)
+                            tr(" The original backup is still in Backup.", " Исходная копия осталась в Backup.")
+                        else
+                            tr(" No backup was created.", " Резервная копия не создавалась.")
+                        runOnUiThread { status.text = tr("Save error: ", "Ошибка сохранения: ") + (e.message ?: tr("unknown error", "неизвестная ошибка")) + "." + backupMessage }
                     }
                 }.start()
             } else {
@@ -750,22 +758,9 @@ class SaveEditorActivity : Activity() {
     }
 
     override fun onBackPressed() {
-        val target = remoteTargetPath
-        val staged = stageFile
-        if (target != null && staged != null && !saveCompleted && staged.exists()) {
-            status.text = "Возвращаю исходное сохранение без изменений…"
-            Thread {
-                try {
-                    ShizukuFileAccess.writeAtomic(target, staged.readBytes())
-                    staged.delete()
-                    runOnUiThread { finish() }
-                } catch (e: Exception) {
-                    runOnUiThread { status.text = "Не удалось восстановить оригинал: " + (e.message ?: "ошибка") + ". Резервная копия находится в Backup." }
-                }
-            }.start()
-        } else {
-            super.onBackPressed()
-        }
+        // The source save is never moved or deleted during editing, so cancelling only removes the temp copy.
+        stageFile?.delete()
+        super.onBackPressed()
     }
 
     private fun parseUnsigned(text: String?, label: String): Long {
