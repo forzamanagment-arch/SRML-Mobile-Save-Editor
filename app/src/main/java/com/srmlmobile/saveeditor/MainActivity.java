@@ -715,7 +715,7 @@ public class MainActivity extends Activity {
     private void requestShizuku(){
         try{
             if(!Shizuku.pingBinder()){show(tr("Start the Shizuku service, then try again.","Запусти службу Shizuku и повтори попытку."));refreshStatus();}
-            else if(Shizuku.checkSelfPermission()==PackageManager.PERMISSION_GRANTED){refreshStatus();}
+            else if(Shizuku.checkSelfPermission()==PackageManager.PERMISSION_GRANTED){refreshStatus();if(homeMode==1)scanSaves();}
             else Shizuku.requestPermission(REQUEST_CODE);
         }catch(Throwable t){show(tr("Could not connect Shizuku: ","Не удалось подключить Shizuku: ")+t.getClass().getSimpleName());}
     }
