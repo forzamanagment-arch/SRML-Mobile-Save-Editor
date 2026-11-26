@@ -47,7 +47,7 @@ import rikka.shizuku.Shizuku;
 public class MainActivity extends Activity {
     private static final int REQUEST_CODE=4201;
     private static final int MAX_FILE_BYTES=64*1024*1024;
-    private static final int TEAL=Color.rgb(78,205,196);
+    private static final int TEAL=Color.rgb(49,73,110);
     private static final int PINK=Color.rgb(255,107,157);
     private static final int LAVENDER=Color.rgb(179,157,219);
     private final ExecutorService executor=Executors.newSingleThreadExecutor();
@@ -58,14 +58,17 @@ public class MainActivity extends Activity {
     private final LinearLayout[] pageContents=new LinearLayout[4];
     private int pageWidth;
     private Button shizukuButton,launchButton;
-    private TextView pageTitle;
+    private final android.os.Handler navHandler=new android.os.Handler(android.os.Looper.getMainLooper());
+    private final Runnable beginNavDrag=()->navDragging=true;
+    private boolean navDragging=false;
+    private float navTouchStartX;
+    private boolean darkTheme=true;
     private LinearLayout navBar,shizukuPanel;
     private FrameLayout navContainer;
     private View navHighlight;
     private final List<LinearLayout> navItems=new ArrayList<>();
     private int selectedPage=0;
-    private float touchStartX,touchStartY,navTouchStartX;
-    private boolean darkTheme=false;
+    private float touchStartX,touchStartY;
     private String backupNotice;
     private boolean showingBackups=false;
     private boolean russian=false;
@@ -97,19 +100,14 @@ public class MainActivity extends Activity {
 
     private void buildUi(){
         russian=getSharedPreferences("srml_settings",MODE_PRIVATE).getBoolean("russian",false);
-        darkTheme=getSharedPreferences("srml_settings",MODE_PRIVATE).getBoolean("dark_theme",false);
+        darkTheme=getSharedPreferences("srml_settings",MODE_PRIVATE).getBoolean("dark_theme",true);
         LinearLayout root=new LinearLayout(this);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(20),dp(24),dp(20),dp(12));
+        root.setPadding(dp(20),dp(16),dp(20),dp(12));
         root.setBackground(new MarshmallowDrawable());
         getWindow().setBackgroundDrawable(new android.graphics.drawable.ColorDrawable(creamColor()));
         getWindow().setStatusBarColor(creamColor());
         getWindow().getDecorView().setSystemUiVisibility(darkTheme?0:View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR);
-        pageTitle=text("SRML Save Editor",30,inkColor(),true);
-        pageTitle.setTypeface(GameAssets.typeface(this,true));
-        pageTitle.setPadding(0,dp(3),0,dp(14));
-        root.addView(pageTitle);
-
         shizukuPanel=new LinearLayout(this);
         shizukuPanel.setOrientation(LinearLayout.VERTICAL);
         shizukuPanel.setPadding(dp(14),dp(10),dp(14),dp(10));
@@ -153,7 +151,7 @@ public class MainActivity extends Activity {
         navContainer=new FrameLayout(this);
         navContainer.setBackground(background(cardColor(),borderColor(),dp(34)));
         navHighlight=new View(this);
-        navHighlight.setBackground(gradientBackground(Color.rgb(224,248,243),Color.rgb(202,239,232),Color.TRANSPARENT,dp(28)));
+        navHighlight.setBackground(gradientBackground(darkTheme?Color.rgb(37,54,79):Color.rgb(231,237,246),darkTheme?Color.rgb(31,45,66):Color.rgb(210,220,235),Color.TRANSPARENT,dp(28)));
         FrameLayout.LayoutParams highlightParams=new FrameLayout.LayoutParams(dp(64),dp(48),Gravity.TOP|Gravity.LEFT);
         highlightParams.leftMargin=dp(5);highlightParams.topMargin=dp(5);
         navContainer.addView(navHighlight,highlightParams);
@@ -162,7 +160,7 @@ public class MainActivity extends Activity {
         navBar.setGravity(Gravity.CENTER);
         navBar.setPadding(dp(5),dp(5),dp(5),dp(5));
         navBar.setBackgroundColor(Color.TRANSPARENT);
-        String[] iconFiles={"SaveTurquoiseIcon.png","BackupTurquoiseIcon.png","SettingsTurquoiseIcon.png","InfoTurquoiseIcon.png"};
+        String[] iconFiles={"SaveTurquoiseIcon.png","BackupTurquoiseIcon.FIXED.png","SettingsTurquoiseIcon.png","InfoTurquoiseIcon.png"};
         for(int i=0;i<4;i++){
             final int index=i;
             LinearLayout item=new LinearLayout(this);
@@ -173,17 +171,48 @@ public class MainActivity extends Activity {
             android.graphics.Bitmap bitmap=GameAssets.exactIcon(this,iconFiles[i]);
             if(bitmap!=null)icon.setImageBitmap(bitmap);
             icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            item.addView(icon,new LinearLayout.LayoutParams(dp(32),dp(32)));
+            icon.setPadding(dp(2),dp(2),dp(2),dp(2));
+            item.addView(icon,new LinearLayout.LayoutParams(dp(30),dp(30)));
             item.setTag(icon);
             item.setOnClickListener(v->setPage(index));
             item.setOnTouchListener((v,event)->{
                 if(index!=selectedPage)return false;
-                if(event.getAction()==MotionEvent.ACTION_DOWN){navTouchStartX=event.getRawX();return true;}
-                if(event.getAction()==MotionEvent.ACTION_MOVE)return true;
+                if(event.getAction()==MotionEvent.ACTION_DOWN){
+                    navTouchStartX=event.getRawX();
+                    navDragging=false;
+                    navHandler.removeCallbacks(beginNavDrag);
+                    navHandler.postDelayed(beginNavDrag,190);
+                    return true;
+                }
+                if(event.getAction()==MotionEvent.ACTION_MOVE){
+                    if(navDragging&&navHighlight!=null&&navBar!=null){
+                        int[] location=new int[2];navContainer.getLocationOnScreen(location);
+                        float localX=event.getRawX()-location[0];
+                        float max=navBar.getWidth()-navHighlight.getWidth()-dp(5);
+                        float tx=Math.max(0,Math.min(max,localX-navHighlight.getWidth()/2f-dp(5)));
+                        navHighlight.setTranslationX(tx);
+                    }
+                    return true;
+                }
                 if(event.getAction()==MotionEvent.ACTION_UP){
-                    float dx=event.getRawX()-navTouchStartX;
-                    if(Math.abs(dx)>dp(24))setPage(Math.max(0,Math.min(3,selectedPage+(dx<0?1:-1))));
-                    else v.performClick();
+                    navHandler.removeCallbacks(beginNavDrag);
+                    if(navDragging){
+                        int[] location=new int[2];navBar.getLocationOnScreen(location);
+                        float x=event.getRawX()-location[0];
+                        int width=Math.max(1,navBar.getWidth()/4);
+                        int target=Math.max(0,Math.min(3,(int)(x/width)));
+                        navDragging=false;
+                        setPage(target);
+                    }else{
+                        navDragging=false;
+                        v.performClick();
+                    }
+                    return true;
+                }
+                if(event.getAction()==MotionEvent.ACTION_CANCEL){
+                    navHandler.removeCallbacks(beginNavDrag);
+                    navDragging=false;
+                    updateNavVisual(selectedPage);
                     return true;
                 }
                 return true;
@@ -210,6 +239,7 @@ public class MainActivity extends Activity {
         ImageView icon=new ImageView(this);android.graphics.Bitmap bitmap=GameAssets.exactIcon(this,iconFile);
         if(bitmap!=null)icon.setImageBitmap(bitmap);
         icon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        icon.setColorFilter(TEAL,android.graphics.PorterDuff.Mode.SRC_IN);
         row.addView(icon,new LinearLayout.LayoutParams(dp(34),dp(34)));
         TextView label=text(title,22,inkColor(),true);label.setPadding(dp(10),0,0,0);row.addView(label);
         LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,-2);params.bottomMargin=dp(12);content.addView(row,params);
@@ -378,8 +408,6 @@ public class MainActivity extends Activity {
         content=pageContents[page];
         if(content!=null)content.removeAllViews();
         if(pageTitle!=null){
-            String[] titles={tr("SRML Save Editor","SRML Save Editor"),tr("Backups","Резервные копии"),tr("Settings","Настройки"),tr("About","О приложении")};
-            pageTitle.setText(titles[page]);
         }
         if(output!=null)output.setVisibility(page<2?View.VISIBLE:View.GONE);
         if(shizukuPanel!=null)shizukuPanel.setVisibility(page<2?View.VISIBLE:View.GONE);
@@ -404,7 +432,7 @@ public class MainActivity extends Activity {
             ImageView icon=(ImageView)item.getTag();
             boolean active=i==page;
             if(icon!=null){
-                if(active){icon.clearColorFilter();icon.setAlpha(1f);}
+                if(active){icon.setColorFilter(TEAL,android.graphics.PorterDuff.Mode.SRC_IN);icon.setAlpha(1f);}
                 else{ColorMatrix matrix=new ColorMatrix();matrix.setSaturation(0f);icon.setColorFilter(new ColorMatrixColorFilter(matrix));icon.setAlpha(0.72f);}
             }
             item.setBackgroundColor(Color.TRANSPARENT);
@@ -429,18 +457,19 @@ public class MainActivity extends Activity {
         LinearLayout themeChoices=new LinearLayout(this);themeChoices.setOrientation(LinearLayout.HORIZONTAL);
         Button light=actionButton(tr("Light theme","Светлая тема"),()->setDarkTheme(false));
         Button dark=actionButton(tr("Dark theme","Тёмная тема"),()->setDarkTheme(true));
-        light.setBackground(gradientBackground(darkTheme?surfaceAlt():TEAL,darkTheme?Color.rgb(34,111,108):Color.rgb(42,166,158),Color.TRANSPARENT,dp(24)));
-        dark.setBackground(gradientBackground(darkTheme?TEAL:surfaceAlt(),darkTheme?Color.rgb(42,166,158):Color.rgb(220,215,207),Color.TRANSPARENT,dp(24)));
+        light.setBackground(gradientBackground(darkTheme?surfaceAlt():TEAL,Color.rgb(39,58,88),Color.TRANSPARENT,dp(24)));
+        dark.setBackground(gradientBackground(darkTheme?TEAL:surfaceAlt(),darkTheme?Color.rgb(39,58,88):Color.rgb(220,215,207),Color.TRANSPARENT,dp(24)));
         LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(0,dp(48),1);tp.rightMargin=dp(7);
         themeChoices.addView(light,tp);themeChoices.addView(dark,new LinearLayout.LayoutParams(0,dp(48),1));content.addView(themeChoices);
         addSectionCard(tr("Language","Язык"),tr("App interface language","Язык интерфейса приложения"));
         LinearLayout choices=new LinearLayout(this);choices.setOrientation(LinearLayout.HORIZONTAL);
         Button en=actionButton("English",()->setLanguage(false));
         Button ru=actionButton("Русский",()->setLanguage(true));
-        en.setBackground(gradientBackground(russian?surfaceAlt():TEAL,russian?darken(surfaceAlt(),0.08f):Color.rgb(42,166,158),Color.TRANSPARENT,dp(24)));
-        ru.setBackground(gradientBackground(russian?TEAL:surfaceAlt(),russian?Color.rgb(42,166,158):darken(surfaceAlt(),0.08f),Color.TRANSPARENT,dp(24)));
+        en.setBackground(gradientBackground(russian?surfaceAlt():TEAL,russian?darken(surfaceAlt(),0.08f):Color.rgb(39,58,88),Color.TRANSPARENT,dp(24)));
+        ru.setBackground(gradientBackground(russian?TEAL:surfaceAlt(),russian?Color.rgb(39,58,88):darken(surfaceAlt(),0.08f),Color.TRANSPARENT,dp(24)));
         LinearLayout.LayoutParams p=new LinearLayout.LayoutParams(0,dp(48),1);p.rightMargin=dp(7);choices.addView(en,p);
         choices.addView(ru,new LinearLayout.LayoutParams(0,dp(48),1));content.addView(choices);
+        View languageGap=new View(this);content.addView(languageGap,new LinearLayout.LayoutParams(1,dp(14)));
         LinearLayout info=new LinearLayout(this);
         info.setOrientation(LinearLayout.VERTICAL);
         info.setPadding(dp(20),dp(18),dp(20),dp(18));
@@ -463,12 +492,16 @@ public class MainActivity extends Activity {
         LinearLayout card=new LinearLayout(this);card.setOrientation(LinearLayout.VERTICAL);
         card.setGravity(Gravity.CENTER_VERTICAL);card.setPadding(dp(24),dp(26),dp(24),dp(26));
         card.setBackground(background(cardColor(),borderColor(),dp(28)));
-        card.addView(new SlimeLogoView(this),new LinearLayout.LayoutParams(dp(82),dp(82)));
+        ImageView slimeIcon=new ImageView(this);
+        android.graphics.Bitmap saberSlime=GameAssets.icon(this,"Saber_Slime_SP");
+        if(saberSlime!=null)slimeIcon.setImageBitmap(saberSlime);
+        slimeIcon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+        card.addView(slimeIcon,new LinearLayout.LayoutParams(dp(82),dp(82)));
         TextView name=text("SRML Save Editor",24,inkColor(),true);name.setTypeface(GameAssets.typeface(this,true));name.setPadding(0,dp(17),0,dp(4));card.addView(name);
         card.addView(text("Version "+BuildConfig.VERSION_NAME,13,Color.rgb(155,168,181),false));
         TextView description=text(tr("An Android save editor for Slime Rancher Mobile. Manage supported save values and inventory slots, and keep recoverable backups.","Android-редактор сохранений Slime Rancher Mobile. Изменяй поддерживаемые значения и предметы инвентаря, сохраняя резервные копии."),15,mutedColor(),false);
         description.setGravity(Gravity.START);description.setTextAlignment(View.TEXT_ALIGNMENT_VIEW_START);description.setPadding(0,dp(16),0,0);card.addView(description);
-        content.addView(card,new LinearLayout.LayoutParams(-1,-2));
+        LinearLayout.LayoutParams aboutCardParams=new LinearLayout.LayoutParams(-1,-2);aboutCardParams.bottomMargin=dp(16);content.addView(card,aboutCardParams);
 
         addSectionCard(tr("Authors & credits","Авторы и благодарности"),
             tr("Project creator and developer: forzamanagment-arch.\nDevelopment assistance: ChatGPT (OpenAI).\nSlime Rancher is developed by Monomi Park. Game names and original game assets belong to their respective owners.","Создатель и разработчик проекта: forzamanagment-arch.\nПомощь в разработке: ChatGPT (OpenAI).\nSlime Rancher разработана Monomi Park. Названия и оригинальные игровые материалы принадлежат их правообладателям."));
@@ -608,15 +641,15 @@ public class MainActivity extends Activity {
             canvas.drawRect(b,p);p.setShader(null);
             p.setShader(new android.graphics.RadialGradient(w*.88f,h*.08f,w*.48f,new int[]{0x55FF9AD1,0x00FF9AD1},null,android.graphics.Shader.TileMode.CLAMP));
             canvas.drawRect(b,p);p.setShader(null);
-            p.setShader(new android.graphics.RadialGradient(w*.12f,h*.88f,w*.42f,new int[]{0x554ECDC4,0x004ECDC4},null,android.graphics.Shader.TileMode.CLAMP));
+            p.setShader(new android.graphics.RadialGradient(w*.12f,h*.88f,w*.42f,new int[]{0x5531496E,0x0031496E},null,android.graphics.Shader.TileMode.CLAMP));
             canvas.drawRect(b,p);p.setShader(null);
             p.setShader(new android.graphics.RadialGradient(w*.58f,h*.78f,w*.34f,new int[]{0x44B39DDB,0x00B39DDB},null,android.graphics.Shader.TileMode.CLAMP));
             canvas.drawRect(b,p);p.setShader(null);
-            p.setColor(darkTheme?0x1679D8CF:0x147B6AA8);p.setStyle(Paint.Style.FILL);
+            p.setColor(darkTheme?0x1631496E:0x147B6AA8);p.setStyle(Paint.Style.FILL);
             for(int y=24;y<h;y+=54)for(int x=20;x<w;x+=58)canvas.drawCircle(x+(y%3)*5,y,1.5f,p);
-            p.setShader(new android.graphics.RadialGradient(w*.08f,h*.28f,w*.22f,new int[]{darkTheme?0x263EAAA3:0x20FF8FBE,0x00000000},null,android.graphics.Shader.TileMode.CLAMP));
+            p.setShader(new android.graphics.RadialGradient(w*.08f,h*.28f,w*.22f,new int[]{darkTheme?0x2631496E:0x20FF8FBE,0x00000000},null,android.graphics.Shader.TileMode.CLAMP));
             canvas.drawCircle(w*.08f,h*.28f,w*.22f,p);p.setShader(null);
-            p.setShader(new android.graphics.RadialGradient(w*.94f,h*.62f,w*.25f,new int[]{darkTheme?0x224ECDC4:0x1E4ECDC4,0x00000000},null,android.graphics.Shader.TileMode.CLAMP));
+            p.setShader(new android.graphics.RadialGradient(w*.94f,h*.62f,w*.25f,new int[]{darkTheme?0x2231496E:0x1E31496E,0x00000000},null,android.graphics.Shader.TileMode.CLAMP));
             canvas.drawCircle(w*.94f,h*.62f,w*.25f,p);p.setShader(null);
         }
         @Override public void setAlpha(int alpha){}
@@ -699,7 +732,7 @@ public class MainActivity extends Activity {
     private void renderBackups(List<ShizukuFileAccess.BackupItem>items){
         LinearLayout content=pageContents[1];
         content.removeAllViews();
-        addHeader(tr("Backups","Резервные копии"),"BackupTurquoiseIcon.png");
+        addHeader(tr("Backups","Резервные копии"),"BackupTurquoiseIcon.FIXED.png");
         TextView hint=text(tr("Choose a backup to restore it to your worlds.","Выбери копию, чтобы восстановить её в список миров."),13,mutedColor(),false);
         hint.setPadding(0,dp(4),0,dp(12));content.addView(hint);
         Button clearFolder=actionButton(tr("Clear backup folder","Очистить папку Backup"),this::confirmClearBackups);
@@ -742,7 +775,7 @@ public class MainActivity extends Activity {
 
         TextView file=text(item.originalName,13,Color.rgb(31,41,55),true);
         file.setPadding(dp(12),dp(8),dp(12),dp(8));
-        file.setBackground(background(Color.rgb(230,248,245),TEAL,dp(18)));
+        file.setBackground(background(darkTheme?surfaceAlt():Color.rgb(232,237,246),TEAL,dp(18)));
         card.addView(file);
 
         TextView details=text(
@@ -937,8 +970,8 @@ public class MainActivity extends Activity {
         });
         skip.setBackground(background(TEAL,Color.TRANSPARENT,dp(26)));
         Button cancel=actionButton(tr("Cancel","Отмена"),dialog::dismiss);
-        cancel.setTextColor(inkColor());
-        cancel.setBackground(background(Color.rgb(245,240,232),borderColor(),dp(26)));
+        cancel.setTextColor(darkTheme?Color.WHITE:inkColor());
+        cancel.setBackground(darkTheme?background(TEAL,Color.TRANSPARENT,dp(26)):background(Color.rgb(245,240,232),borderColor(),dp(26)));
         for(Button button:new Button[]{create,skip,cancel}){
             LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,dp(44));
             params.topMargin=dp(7);card.addView(button,params);
