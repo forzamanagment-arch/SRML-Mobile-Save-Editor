@@ -88,3 +88,59 @@ Important: the existence of `OSG.CheatFunctionAttribute` and the scanner does no
 ## Updated research priority
 
 The next high-value task is to enumerate all types and methods marked with `OSG.CheatFunctionAttribute` and `OSG.CheatParameterProviderAttribute` in the compiled metadata, then map their command names, parameter types, categories, and handlers. This should answer whether there are ready-made player/gameplay cheats, rather than guessing from class names.
+
+
+## Full command-framework inventory from the IL2CPP function/assembly index
+
+The broader dump confirms the debug system is more capable than the four command-provider groups alone suggest.
+
+### Parameter editor / call builder
+
+The compiled `OSG.CallBuilder` includes dedicated input/selector paths for:
+- `IntInput`, `UIntInput`
+- `LongInput`, `ULongInput`
+- `FloatInput`, `DoubleInput`
+- `TextInput`
+- `Vector2Input`, `Vector3Input`, `Vector4Input`
+- `QuaternionInput`
+- `CallBuilderBoolSelector`
+- `EnumCallBuilder`
+- `CallBuilderGameObjectSelector`
+- generic type selectors and a `FromAttribute` provider mechanism
+
+This is concrete evidence of a typed parameter UI, not just fixed buttons. The game-specific `CheatManager` class lives in `Assembly-CSharp.dll`, inherits the OSG manager interface (its vtable overrides the OSG manager hooks), and creates a `CustomCallBuilder`. That custom builder delegates type selection to the OSG call-builder system. This is a game-specific customization seam for the developer tool, but it does not prove that every arbitrary game method is callable.
+
+### Menu customization features
+
+The OSG manager exposes:
+- custom GUI event hooks;
+- category and cheat visibility filtering;
+- pinned cheats and favourites;
+- repeat-last-cheat behavior;
+- menu scaling and saved scale;
+- transparency controls;
+- mobile shortcut handling;
+- built-in console UI and command selector;
+- logging and debug-message UI.
+
+### Current command providers found by owner/type
+
+The function index identifies these concrete provider classes inside `com.osg.debug.dll`:
+1. `OSG.TimeScaleCheats`
+2. `OSG.QualitySettingsCheats`
+3. `OSG.Logger.LoggerCheats`
+4. `OSG.DEBUG.CaptureScreenCheat`
+
+The game assembly also has `CheatManager` and `CustomCallBuilder`, but the indexed methods for `CheatManager` are only `get_Instance`, `GetBuilder`, and its constructor. No indexed game-specific provider class for currency, health, energy, inventory, slime spawning, or unlocks has been confirmed so far.
+
+### Important completeness limitation
+
+The current `functions.jsonl` is a method/function index. It does not preserve the complete IL2CPP custom-attribute association table for every method. Therefore, a method-owner search is a strong inventory of obvious provider types, but it is **not yet a formal exhaustive list of every method carrying `OSG.CheatFunctionAttribute`**. The next exactness step is to parse the metadata custom-attribute tables (or use a metadata dump that preserves method attributes) and join each attribute record to its declaring method.
+
+### Assessment
+
+The user's intuition is partly confirmed:
+- **Yes:** this is a substantial developer cheat/debug framework with typed arguments, object/enum selectors, favourites, categories, custom GUI hooks, console and mobile input handling.
+- **No evidence yet:** the retail mobile build offers player-economy/gameplay commands such as adding Newbucks, setting health/energy, granting items, spawning slimes, or unlocking areas.
+- **Hard gate:** `OSG.BaseCheatManager.get_CanCheat` returns constant false in the inspected build, and the normal manager lifecycle disables itself. The framework is compiled in, but not currently available through its normal retail UI.
+- We will use this discovery to inform SRML Game Tools' own cheat-menu feature set. We will not turn the project into a general mod loader or bypass the retail protection gate.
