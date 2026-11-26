@@ -56,7 +56,17 @@ class LiveMenuOverlayService : Service() {
         wm = getSystemService(WINDOW_SERVICE) as WindowManager
         createChannel()
         startForeground(61, buildNotification())
-        showBubble()
+        if (!Settings.canDrawOverlays(this)) {
+            Toast.makeText(this, tr("Overlay permission is missing", "Нет разрешения на отображение поверх окон"), Toast.LENGTH_LONG).show()
+            stopSelf()
+            return
+        }
+        try {
+            showBubble()
+        } catch (error: Throwable) {
+            AppLog.e(this, "OVERLAY", "Could not create floating bubble: " + error.javaClass.simpleName)
+            stopSelf()
+        }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -223,7 +233,10 @@ class LiveMenuOverlayService : Service() {
         applyParams.topMargin = dp(12)
         body.addView(apply, applyParams)
 
-        val lp = params(dp(336), min(dp(640), resources.displayMetrics.heightPixels - dp(72)), true).apply {
+        val availableWidth = resources.displayMetrics.widthPixels - dp(24)
+        val panelWidth = min(dp(336), availableWidth)
+        val availableHeight = resources.displayMetrics.heightPixels - dp(72)
+        val lp = params(panelWidth, min(dp(640), availableHeight), true).apply {
             x = dp(12)
             y = dp(54)
         }
