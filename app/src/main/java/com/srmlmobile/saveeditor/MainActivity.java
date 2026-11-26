@@ -491,8 +491,13 @@ public class MainActivity extends Activity {
         Button dark=actionButton(tr("Dark theme","Тёмная тема"),()->setDarkTheme(true));
         light.setBackground(gradientBackground(darkTheme?surfaceAlt():TEAL,Color.rgb(39,58,88),Color.TRANSPARENT,dp(24)));
         dark.setBackground(gradientBackground(darkTheme?TEAL:surfaceAlt(),darkTheme?Color.rgb(39,58,88):Color.rgb(220,215,207),Color.TRANSPARENT,dp(24)));
+        light.setEnabled(false);
+        light.setAlpha(0.55f);
         LinearLayout.LayoutParams tp=new LinearLayout.LayoutParams(0,dp(48),1);tp.rightMargin=dp(7);
         themeChoices.addView(light,tp);themeChoices.addView(dark,new LinearLayout.LayoutParams(0,dp(48),1));content.addView(themeChoices);
+        TextView themeNotice=text(tr("Light theme switching is temporarily unavailable.","Переключение на светлую тему временно не работает."),12,mutedColor(),false);
+        themeNotice.setPadding(dp(4),dp(7),dp(4),0);
+        content.addView(themeNotice,new LinearLayout.LayoutParams(-1,-2));
         View languageGap=new View(this);content.addView(languageGap,new LinearLayout.LayoutParams(1,dp(14)));
         addSectionCard(tr("Language","Язык"),tr("App interface language","Язык интерфейса приложения"));
         LinearLayout choices=new LinearLayout(this);choices.setOrientation(LinearLayout.HORIZONTAL);
@@ -843,8 +848,18 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams stopParams=new LinearLayout.LayoutParams(-1,dp(50));
         stopParams.topMargin=dp(9);
         content.addView(stop,stopParams);
-        addSectionCard(tr("Current limitation","Текущее ограничение"),
-            tr("The overlay itself works independently of the game. Its controls are still a UI prototype: live game values are not connected yet. Starting the overlay does not modify the game APK.","Оверлей работает отдельно от игры. Его элементы пока остаются прототипом интерфейса: изменение игровых значений ещё не подключено. Для запуска оверлея APK игры изменять не нужно."));
+        LinearLayout limitationCard=new LinearLayout(this);
+        limitationCard.setOrientation(LinearLayout.VERTICAL);
+        limitationCard.setPadding(dp(16),dp(14),dp(16),dp(14));
+        limitationCard.setBackground(background(cardColor(),borderColor(),dp(22)));
+        TextView limitationTitle=text(tr("Current limitation","Текущее ограничение"),14,inkColor(),true);
+        TextView limitationText=text(tr("The overlay itself works independently of the game. Its controls are still a UI prototype: live game values are not connected yet. Starting the overlay does not modify the game APK.","Оверлей работает отдельно от игры. Его элементы пока остаются прототипом интерфейса: изменение игровых значений ещё не подключено. Для запуска оверлея APK игры изменять не нужно."),12,mutedColor(),false);
+        limitationText.setPadding(0,dp(6),0,0);
+        limitationCard.addView(limitationTitle);
+        limitationCard.addView(limitationText);
+        LinearLayout.LayoutParams limitationParams=new LinearLayout.LayoutParams(-1,-2);
+        limitationParams.topMargin=dp(16);
+        content.addView(limitationCard,limitationParams);
     }
     private void showBackups(){
         showingBackups=true;
