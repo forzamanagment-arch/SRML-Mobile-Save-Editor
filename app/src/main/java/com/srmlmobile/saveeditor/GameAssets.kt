@@ -10,6 +10,7 @@ object GameAssets {
     private const val FONT_ROOT = "fonts"
     private val cachedFonts = mutableMapOf<Boolean, Typeface>()
     private var indexedIcons: List<String>? = null
+    private var indexedInterfaceIcons: List<String>? = null
 
     @JvmStatic fun typeface(context: Context): Typeface = typeface(context, false)
 
@@ -37,7 +38,7 @@ object GameAssets {
     }
 
     @JvmStatic fun exactIcon(context: Context, filename: String): Bitmap? {
-        val files = indexedIcons ?: allFiles(context, ICON_ROOT).also { indexedIcons = it }
+        val files = indexedInterfaceIcons ?: allFiles(context, "interface-icons").also { indexedInterfaceIcons = it }
         val match = files.firstOrNull { it.substringAfterLast('/').equals(filename, true) } ?: return null
         return try { context.assets.open(match).use { BitmapFactory.decodeStream(it) } } catch (_: Exception) { null }
     }
