@@ -59,8 +59,12 @@ public class MainActivity extends Activity {
     private LinearLayout pageStrip;
     private final LinearLayout[] pageContents=new LinearLayout[4];
     private int pageWidth;
-    private Button shizukuButton,overlayPermissionButton;
-    private TextView overlayStatus;
+    private Button shizukuButton,overlayPermissionButton,modifyApkButton;
+    private TextView overlayStatus,modifyApkStatus;
+    private static final int PICK_GAME_APK=4202;
+    private static final String EXPECTED_GAME_PACKAGE="com.playdigious.slimerancher";
+    private static final String EXPECTED_GAME_VERSION="1.1.1103";
+    private Uri selectedGameApkUri;
     private LinearLayout permissionPanel;
     private int homeMode=0;
     private final android.os.Handler navHandler=new android.os.Handler(android.os.Looper.getMainLooper());
@@ -139,6 +143,29 @@ public class MainActivity extends Activity {
         LinearLayout.LayoutParams overlayPanelParams=new LinearLayout.LayoutParams(-1,-2);
         overlayPanelParams.topMargin=dp(9);
         permissionPanel.addView(overlayPanel,overlayPanelParams);
+
+        LinearLayout modifyApkPanel=new LinearLayout(this);
+        modifyApkPanel.setOrientation(LinearLayout.VERTICAL);
+        modifyApkPanel.setPadding(dp(14),dp(10),dp(14),dp(10));
+        modifyApkPanel.setBackground(background(cardColor(),borderColor(),dp(22)));
+        TextView modifyApkTitle=text(tr("Modify game APK","Модифицировать APK игры"),15,inkColor(),true);
+        modifyApkPanel.addView(modifyApkTitle);
+        TextView modifyApkDescription=text(
+            tr("Prepare a separate modded copy of Slime Rancher. Before any changes, SRML Game Tools will preserve your pt_saves folder in /sdcard/BackupPT_SAVES. The original game and its saves will not be deleted.",
+               "Подготовь отдельную модифицированную копию Slime Rancher. Перед изменениями SRML Game Tools сохранит папку pt_saves в /sdcard/BackupPT_SAVES. Оригинальная игра и её сохранения не будут удалены."),
+            12,mutedColor(),false);
+        modifyApkDescription.setPadding(0,dp(6),0,dp(2));
+        modifyApkPanel.addView(modifyApkDescription);
+        modifyApkStatus=text(tr("Waiting for APK selection","Ожидает выбора APK"),12,mutedColor(),false);
+        modifyApkStatus.setPadding(0,dp(7),0,dp(2));
+        modifyApkPanel.addView(modifyApkStatus);
+        modifyApkButton=actionButton(tr("Select APK and continue","Выбрать APK и продолжить"),this::chooseGameApk);
+        LinearLayout.LayoutParams modifyButtonParams=new LinearLayout.LayoutParams(-1,dp(44));
+        modifyButtonParams.topMargin=dp(8);
+        modifyApkPanel.addView(modifyApkButton,modifyButtonParams);
+        LinearLayout.LayoutParams modifyPanelParams=new LinearLayout.LayoutParams(-1,-2);
+        modifyPanelParams.topMargin=dp(9);
+        permissionPanel.addView(modifyApkPanel,modifyPanelParams);
         root.addView(permissionPanel);
 
         pager=new HorizontalScrollView(this);
@@ -785,6 +812,87 @@ public class MainActivity extends Activity {
             byte[]b=new byte[8192];int n;while((n=in.read(b))!=-1){if(out.size()+n>MAX_FILE_BYTES)throw new IOException("Архив больше 64 МБ");out.write(b,0,n);}return out.toByteArray();
         }
     }
+    private void chooseGameApk(){
+        Intent pick=new Intent(Intent.ACTION_OPEN_DOCUMENT);
+        pick.addCategory(Intent.CATEGORY_OPENABLE);
+        pick.setType("application/vnd.android.package-archive");
+        pick.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION|Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION);
+        try{startActivityForResult(pick,PICK_GAME_APK);}
+        catch(Throwable t){show(tr("Could not open the APK picker.","Не удалось открыть выбор APK."));}
+    }
+
+    @Override protected void onActivityResult(int requestCode,int resultCode,Intent data){
+        super.onActivityResult(requestCode,resultCode,data);
+        if(requestCode!=PICK_GAME_APK||resultCode!=RESULT_OK||data==null||data.getData()==null)return;
+        selectedGameApkUri=data.getData();
+        try{getContentResolver().takePersistableUriPermission(selectedGameApkUri,Intent.FLAG_GRANT_READ_URI_PERMISSION);}catch(Throwable ignored){}
+        new AlertDialog.Builder(this)
+            .setTitle(tr("Save game data first?","Сначала сохранить данные игры?"))
+            .setMessage(tr("Before preparing the APK, SRML Game Tools will copy the complete pt_saves folder to /sdcard/BackupPT_SAVES. The original folder will remain untouched. Keep Slime Rancher closed during this process. The APK patching module is still being prepared, so this step will only validate the selected APK and create the backup; it will not install or modify the game yet.",
+                "Перед подготовкой APK SRML Game Tools скопирует всю папку pt_saves в /sdcard/BackupPT_SAVES. Исходная папка останется нетронутой. На время операции закрой Slime Rancher. Модуль изменения APK ещё готовится, поэтому сейчас приложение проверит выбранный APK и создаст резервную копию, но пока не будет изменять или устанавливать игру."))
+            .setNegativeButton(tr("Cancel","Отмена"),(d,w)->{})
+            .setPositiveButton(tr("Continue","Продолжить"),(d,w)->prepareSelectedGameApk())
+            .show();
+    }
+
+    private void prepareSelectedGameApk(){
+        if(selectedGameApkUri==null)return;
+        if(!hasPermission()){
+            show(tr("Connect Shizuku before backing up pt_saves.","Подключи Shizuku перед резервным копированием pt_saves."));
+            refreshStatus();
+            requestShizuku();
+            return;
+        }
+        if(modifyApkButton!=null){modifyApkButton.setEnabled(false);modifyApkButton.setText(tr("Preparing…","Подготовка…"));}
+        if(modifyApkStatus!=null)modifyApkStatus.setText(tr("1/3 · Copying and checking APK…","1/3 · Копирование и проверка APK…"));
+        executor.execute(()->{
+            File staged=null;
+            try{
+                staged=new File(getFilesDir(),"selected_slime_rancher.apk");
+                try(InputStream in=getContentResolver().openInputStream(selectedGameApkUri);
+                    FileOutputStream out=new FileOutputStream(staged,false)){
+                    if(in==null)throw new IOException("Не удалось открыть выбранный APK");
+                    byte[]buffer=new byte[65536];int n;long total=0;
+                    while((n=in.read(buffer))!=-1){
+                        total+=n;
+                        if(total>1024L*1024L*1024L)throw new IOException("APK больше 1 ГБ");
+                        out.write(buffer,0,n);
+                    }
+                    out.getFD().sync();
+                }
+                PackageManager pm=getPackageManager();
+                android.content.pm.PackageInfo info=pm.getPackageArchiveInfo(staged.getAbsolutePath(),0);
+                if(info==null||info.packageName==null)throw new IOException("Android не смог прочитать манифест APK");
+                if(!EXPECTED_GAME_PACKAGE.equals(info.packageName))
+                    throw new IOException("Выбран не Slime Rancher Mobile. Package: "+info.packageName);
+                if(info.versionName==null||!EXPECTED_GAME_VERSION.equals(info.versionName))
+                    throw new IOException("Неподдерживаемая версия игры: "+info.versionName+". Нужна "+EXPECTED_GAME_VERSION);
+                ShizukuFileAccess.backupPtSaves();
+                final File finalFile=staged;
+                runOnUiThread(()->{
+                    if(modifyApkStatus!=null)modifyApkStatus.setText(
+                        tr("APK verified: ","APK проверен: ")+info.versionName+
+                        tr("\n2/3 · pt_saves backup verified at /sdcard/BackupPT_SAVES/pt_saves.",
+                           "\n2/3 · Резервная копия pt_saves проверена: /sdcard/BackupPT_SAVES/pt_saves.")+
+                        tr("\n3/3 · APK patcher is not connected yet. The selected APK has not been changed or installed.",
+                           "\n3/3 · Модуль модификации APK ещё не подключён. Выбранный APK не изменён и не установлен."));
+                    if(modifyApkButton!=null){modifyApkButton.setEnabled(true);modifyApkButton.setText(tr("Choose another APK","Выбрать другой APK"));}
+                    AppLog.i(this,"APK_PREPARE","Verified game APK staged at "+finalFile.getAbsolutePath()+"; pt_saves backup verified");
+                });
+            }catch(Throwable t){
+                AppLog.exception(this,"APK_PREPARE","APK preparation failed",t);
+                if(staged!=null)staged.delete();
+                String message=t.getMessage()==null?t.getClass().getSimpleName():t.getMessage();
+                runOnUiThread(()->{
+                    if(modifyApkStatus!=null)modifyApkStatus.setText(tr("Preparation failed: ","Ошибка подготовки: ")+message);
+                    if(modifyApkButton!=null){modifyApkButton.setEnabled(true);modifyApkButton.setText(tr("Try again","Повторить"));}
+                    new AlertDialog.Builder(this).setTitle(tr("Preparation failed","Подготовка не удалась"))
+                        .setMessage(message).setPositiveButton("OK",null).show();
+                });
+            }
+        });
+    }
+
     private void showWorlds(){
         homeMode=1;
         scanSaves();
@@ -800,13 +908,51 @@ public class MainActivity extends Activity {
                 scanSaves();
                 if(permissionPanel!=null)permissionPanel.setVisibility(View.GONE);
             });
-        addToolCard("SRML Mod Menu (Cheat)",
-            tr("Open a floating prototype menu with editable player values, inventory fields and toggle controls. Game changes are not connected yet.","Открой плавающее меню-прототип с полями параметров игрока, редактором инвентаря и переключателями. Изменение игры пока не подключено."),
-            "SettingsTurquoiseIcon.png",tr("Open Mod Menu","Открыть Mod Menu"),()->{
-                homeMode=2;
-                if(permissionPanel!=null)permissionPanel.setVisibility(View.GONE);
-                renderModMenuControls();
-            });
+        boolean modMenuUnlocked=getSharedPreferences("srml_settings",MODE_PRIVATE).getBoolean("mod_menu_unlocked",false);
+        if(modMenuUnlocked){
+            addToolCard("SRML Mod Menu",
+                tr("Open the floating in-game control panel.","Открой плавающее меню управления игрой."),
+                "SettingsTurquoiseIcon.png",tr("Open Mod Menu","Открыть Mod Menu"),()->{
+                    homeMode=2;
+                    if(permissionPanel!=null)permissionPanel.setVisibility(View.GONE);
+                    renderModMenuControls();
+                });
+        }else{
+            addLockedModMenuCard();
+        }
+    }
+
+    private void addLockedModMenuCard(){
+        LinearLayout card=new LinearLayout(this);
+        card.setOrientation(LinearLayout.VERTICAL);
+        card.setPadding(dp(16),dp(15),dp(16),dp(14));
+        card.setBackground(background(cardColor(),borderColor(),dp(24)));
+        LinearLayout titleRow=new LinearLayout(this);
+        titleRow.setOrientation(LinearLayout.HORIZONTAL);
+        titleRow.setGravity(Gravity.CENTER_VERTICAL);
+        ImageView lock=new ImageView(this);
+        lock.setImageResource(android.R.drawable.ic_lock_lock);
+        lock.setColorFilter(mutedColor());
+        titleRow.addView(lock,new LinearLayout.LayoutParams(dp(23),dp(23)));
+        TextView title=text("SRML Mod Menu",17,mutedColor(),true);
+        title.setPadding(dp(9),0,0,0);
+        titleRow.addView(title);
+        card.addView(titleRow);
+        TextView detail=text(
+            tr("Locked until a compatible modified game is installed and the saved pt_saves data has been restored.",
+               "Заблокировано до установки совместимой модифицированной игры и восстановления сохранений pt_saves."),
+            13,mutedColor(),false);
+        detail.setPadding(dp(3),dp(10),dp(3),dp(10));
+        card.addView(detail);
+        Button locked=actionButton(tr("Locked","Заблокировано"),()->Toast.makeText(this,
+            tr("Complete APK preparation and save transfer first.","Сначала заверши подготовку APK и перенос сохранений."),
+            Toast.LENGTH_LONG).show());
+        locked.setEnabled(false);
+        locked.setAlpha(0.55f);
+        card.addView(locked,new LinearLayout.LayoutParams(-1,dp(48)));
+        LinearLayout.LayoutParams params=new LinearLayout.LayoutParams(-1,-2);
+        params.bottomMargin=dp(12);
+        content.addView(card,params);
     }
 
     private void addToolCard(String title,String description,String iconName,String buttonLabel,Runnable action){
