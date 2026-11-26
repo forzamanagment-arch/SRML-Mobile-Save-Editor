@@ -167,3 +167,52 @@ Energy follows the same structure:
 - The comparison controls an additional branch, not a clamp of the current-energy field.
 
 This means the static code supports the narrower statement that the setters themselves accept and store a float above the recorded maximum. It does not prove that every later gameplay system, save operation, UI display, or recovery routine preserves an arbitrarily high value. That still needs a controlled in-game test and should not be assumed from this one method.
+
+## 10. Correction: SceneContext is not confirmed as an SRSingleton
+
+A closer comparison of the generated vtables and lifecycle methods changes the earlier singleton hypothesis.
+
+### Vtable evidence
+
+The generated `SceneContext_VTable` contains these six slots:
+
+- `Equals`
+- `Finalize`
+- `GetHashCode`
+- `ToString`
+- `Awake`
+- `Update`
+
+The generated `GameContext_VTable` contains:
+
+- `Equals`
+- `Finalize`
+- `GetHashCode`
+- `ToString`
+- `Awake`
+- `OnDestroy`
+
+The generic `SRSingleton<T>_VTable` also contains `Awake` and `OnDestroy` in those same final slots. This makes `GameContext` a plausible `SRSingleton<GameContext>`-style class, while the `SceneContext` vtable instead resembles a Unity component with `Awake` and `Update`. The vtable evidence does not support treating `SceneContext` as `SRSingleton<SceneContext>`.
+
+### Lifecycle evidence
+
+- `GameContext$$Awake` checks an existing Unity object and destroys the duplicate GameObject when the check indicates another instance already exists. This is consistent with singleton-style duplicate prevention.
+- `GameContext$$OnDestroy` performs teardown and removes a log callback.
+- `SceneContext$$.ctor` creates and stores a registry-like object at offset `0x100`.
+- `SceneContext$$Awake` initializes a large set of scene-specific directors and components.
+- `SceneContext$$Start` constructs and starts an async state machine. It is not a singleton getter.
+- `SceneContext` exposes instance setters for `PlayerState` and `GameModel`, but this pass has not identified the external owner that supplies those references.
+
+### Updated conclusion
+
+Do **not** describe the access path as `SRSingleton<SceneContext>.Instance`. That was too strong and is withdrawn.
+
+The more accurate state is:
+
+1. `SRSingleton<T>.get_Instance` exists as a generic method.
+2. `GameContext` is the stronger singleton candidate based on its vtable shape and duplicate-object handling.
+3. `SceneContext` appears to be a scene-owned Unity component, not a confirmed singleton.
+4. The active `SceneContext*` acquisition path remains unresolved.
+5. The next trace should focus on scene/bootstrap code, Unity component creation or lookup, and the code that calls `SceneContext.set_PlayerState` and `SceneContext.set_GameModel`.
+
+This correction matters: resolving the generic singleton for `GameContext` would not automatically give us a `SceneContext*`, and we must not substitute one for the other.
