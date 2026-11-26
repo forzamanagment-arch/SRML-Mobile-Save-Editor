@@ -50,7 +50,7 @@ jobs:
                   continue
               with p.open("rb") as f:
                   head = f.read(64)
-              if len(head) < 20 or head[:4] != b"\\x7fELF":
+              if len(head) < 20 or head[:4] != bytes([0x7f, 0x45, 0x4c, 0x46]):
                   report.append(f"NOT_ELF\t{p.relative_to(root)}")
                   continue
               elf_count += 1
