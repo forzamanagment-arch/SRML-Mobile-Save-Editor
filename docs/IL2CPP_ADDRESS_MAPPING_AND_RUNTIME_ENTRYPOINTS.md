@@ -216,3 +216,46 @@ The more accurate state is:
 5. The next trace should focus on scene/bootstrap code, Unity component creation or lookup, and the code that calls `SceneContext.set_PlayerState` and `SceneContext.set_GameModel`.
 
 This correction matters: resolving the generic singleton for `GameContext` would not automatically give us a `SceneContext*`, and we must not substitute one for the other.
+## 11. Startup path and model construction: additional trace
+
+A follow-up scan of the disassembly archive found a concrete initialization chain connecting the scene startup state machine, `PlayerState`, `GameModel`, and `PlayerModel`.
+
+### GameModel construction
+
+`MonomiPark.SlimeRancher.DataModel.GameModel$$.ctor` at `0x32990D0` constructs a `PlayerModel` by calling `PlayerModel$$.ctor` at `0x32D71DC`, then stores that reference at `GameModel + 0xB8` (184). The constructor also creates the `RanchModel` at `GameModel + 0xC0` and initializes other model members.
+
+`SavedGame$$PushBase` at `0x30FC590` receives a `GameModel` reference as its first data argument, calls `GameModel$$Init` at `0x329CD7C`, then calls `GameModel$$Push` and `GameModel$$NotifyParticipants`. This is a confirmed save/model synchronization path, but it does not by itself identify who originally creates the active GameModel instance.
+
+### SceneContext startup and PlayerState
+
+`SceneContext$$Start` at `0x33DDB14` creates an async state machine. Its `MoveNext` method is `<Start>d__124$$MoveNext` at `0x33DE724`.
+
+The state machine retains the `SceneContext` instance and initializes multiple scene-level systems. It eventually obtains an object through an internal helper call and passes that object to `PlayerState$$InitForLevel` at `0x3360900`. The helper target is in the native runtime/helper region and is not named in the current function index, so it must not yet be labelled as a specific property getter or singleton accessor.
+
+`PlayerState$$InitForLevel` then obtains another object through internal helper calls and invokes `GameModel$$RegisterPlayerParticipant` at `0x329ED1C`, passing the current `PlayerState` as the participant.
+
+### GameModel to PlayerModel registration
+
+`GameModel$$RegisterPlayerParticipant` directly reads `GameModel + 0xB8` and calls `PlayerModel$$AddParticipant` with the supplied player-state object. This confirms that the `GameModel`'s `PlayerModel` is the model participating in the player's gameplay state.
+
+The resulting verified relationship is:
+
+`SceneContext.Start` async state machine → `PlayerState.InitForLevel` → `GameModel.RegisterPlayerParticipant` → `GameModel + 0xB8` (`PlayerModel`) → `PlayerModel.AddParticipant`.
+
+This adds a lifecycle path to the earlier getter/offset evidence. It does not yet establish how the live `SceneContext*` is obtained by an external bridge.
+
+### Context singleton hypothesis: keep it unresolved
+
+The generated header does contain a closed generic instantiation named `SRSingleton<SceneContext>`. That is evidence the closed generic type exists in the build, but existence alone does not prove that `SceneContext` inherits `SRSingleton<SceneContext>` or that its `get_Instance` accessor is the helper used by the startup code.
+
+The `SceneContext` and `SRSingleton<T>` vtable layouts differ in the generated header (`SceneContext` ends with `Awake`/`Update`, while `SRSingleton<T>` ends with `Awake`/`OnDestroy`). This is evidence against assuming a straightforward inheritance relationship, but the generated class hierarchy and field data are incomplete and should not be treated as definitive.
+
+An `Identifiable$$Awake` call site also obtains an object through an unresolved runtime helper before calling `SceneContext$$set_Player`. This is another lead to a context access path, not proof of the exact generic method.
+
+Updated conclusion:
+
+1. `GameModel` constructs and owns its `PlayerModel` reference at offset `0xB8`.
+2. Scene startup initializes `PlayerState` and registers it with the `GameModel`'s `PlayerModel`.
+3. The startup path uses internal helper calls to obtain the relevant objects; those helper targets still need identification.
+4. `SRSingleton<SceneContext>` exists in generated generic metadata, but its actual role and relation to `SceneContext` remain unconfirmed.
+5. The assignment source for `SceneContext.PlayerState` and `SceneContext.GameModel` remains unresolved. Direct calls to their property setters were not found in the disassembly scan, so serialized-field assignment, indirect invocation, or another initialization path remain possibilities rather than established facts.
