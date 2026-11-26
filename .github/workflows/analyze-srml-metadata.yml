@@ -163,12 +163,50 @@ jobs:
           {
             echo "# Runtime helper investigation"
             echo
-            echo "## Binary symbols"
+            echo "## Binary symbols (first 300)"
             readelf -Ws "$LIB" | head -n 300
             echo
-            echo "## Dynamic symbols"
+            echo "## Dynamic symbols (first 300)"
             nm -D -C "$LIB" 2>&1 | head -n 300 || true
           } > analysis-output/runtime-helpers/NATIVE_SYMBOLS.txt
+
+          # Check whether the native IL2CPP embedding/invocation API is exported.
+          # This is a static capability check only; it does not attach to or modify the game.
+          readelf -Ws "$LIB" > analysis-output/runtime-helpers/ELF_SYMBOL_TABLE_FULL.txt
+          nm -D --defined-only "$LIB" 2>&1 > analysis-output/runtime-helpers/DYNAMIC_SYMBOLS_FULL.txt || true
+          {
+            echo "# IL2CPP runtime API export check"
+            echo
+            for symbol in \
+              il2cpp_domain_get \
+              il2cpp_thread_attach \
+              il2cpp_thread_current \
+              il2cpp_domain_assembly_open \
+              il2cpp_assembly_get_image \
+              il2cpp_class_from_name \
+              il2cpp_class_get_method_from_name \
+              il2cpp_runtime_invoke \
+              il2cpp_object_unbox \
+              il2cpp_field_get_value \
+              il2cpp_field_set_value \
+              il2cpp_class_get_type \
+              il2cpp_type_get_object \
+              il2cpp_resolve_icall \
+              il2cpp_class_get_fields \
+              il2cpp_class_get_methods \
+              il2cpp_class_get_name \
+              il2cpp_class_get_namespace \
+              il2cpp_method_get_name \
+              il2cpp_method_get_param_count \
+              il2cpp_gc_wbarrier_set_field; do
+              if grep -qE "[[:space:]]${symbol}(@|$)" analysis-output/runtime-helpers/ELF_SYMBOL_TABLE_FULL.txt analysis-output/runtime-helpers/DYNAMIC_SYMBOLS_FULL.txt; then
+                printf "FOUND  %s\\n" "$symbol"
+                grep -hE "[[:space:]]${symbol}(@|$)" analysis-output/runtime-helpers/ELF_SYMBOL_TABLE_FULL.txt analysis-output/runtime-helpers/DYNAMIC_SYMBOLS_FULL.txt | head -n 4
+              else
+                printf "MISSING %s\\n" "$symbol"
+              fi
+            done
+          } > analysis-output/runtime-helpers/IL2CPP_RUNTIME_API_EXPORTS.txt
           if [ -n "$USYM" ]; then
             {
               echo "USYM_PATH=$USYM"
