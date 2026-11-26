@@ -24,10 +24,18 @@ object ItemPickerDialog {
         waterOnly: Boolean = false,
         onSelect: (Long, Long) -> Unit
     ) {
+        val dark = activity.getSharedPreferences("srml_settings", Activity.MODE_PRIVATE).getBoolean("dark_theme", true)
+        val russian = activity.getSharedPreferences("srml_settings", Activity.MODE_PRIVATE).getBoolean("russian", false)
+        val surfaceColor = if (dark) Color.rgb(34,39,46) else surfaceColor
+        val textColor = if (dark) Color.rgb(244,242,236) else textColor
+        val mutedTextColor = if (dark) Color.rgb(177,187,198) else mutedTextColor
+        val borderColor = if (dark) Color.rgb(65,73,83) else borderColor
+        val accentColor = Color.rgb(49,73,110)
+        val fallbackColor = if (dark) Color.rgb(43,49,58) else fallbackColor
         val root = LinearLayout(activity).apply {
             orientation = LinearLayout.VERTICAL
             setPadding(dp(activity, 16), dp(activity, 16), dp(activity, 16), dp(activity, 14))
-            background = rounded(activity, Color.rgb(255,253,247), Color.rgb(224,216,204), 28)
+            background = rounded(activity, surfaceColor, borderColor, 28)
         }
         val headerBar = LinearLayout(activity).apply {
             orientation = LinearLayout.HORIZONTAL
@@ -58,9 +66,9 @@ object ItemPickerDialog {
             typeface = GameAssets.typeface(activity)
             textSize = 14f
             setPadding(dp(activity, 12), dp(activity, 7), dp(activity, 12), dp(activity, 7))
-            setTextColor(Color.rgb(45,55,72))
-            setHintTextColor(Color.rgb(155,168,181))
-            background = rounded(activity, Color.rgb(255,253,247), Color.rgb(224,216,204), 999)
+            setTextColor(textColor)
+            setHintTextColor(mutedTextColor)
+            background = rounded(activity, surfaceColor, borderColor, 999)
         }
         val searchParams = LinearLayout.LayoutParams(-1, dp(activity, 44))
         searchParams.topMargin = dp(activity, 9)
@@ -75,7 +83,7 @@ object ItemPickerDialog {
             text = "Some catalog IDs are community references and may not be supported by the mobile build."
             textSize = 10f
             typeface = GameAssets.typeface(activity)
-            setTextColor(Color.rgb(107,123,141))
+            setTextColor(mutedTextColor)
             setPadding(dp(activity, 3), dp(activity, 2), dp(activity, 3), dp(activity, 4))
         })
         val results = LinearLayout(activity).apply { orientation = LinearLayout.VERTICAL }
@@ -99,9 +107,9 @@ object ItemPickerDialog {
             gravity = Gravity.CENTER
             textSize = 16f
             typeface = GameAssets.typeface(activity, true)
-            setTextColor(Color.rgb(45,55,72))
-            setHintTextColor(Color.rgb(155,168,181))
-            background = rounded(activity, Color.rgb(255,253,247), Color.rgb(224,216,204), 999)
+            setTextColor(textColor)
+            setHintTextColor(mutedTextColor)
+            background = rounded(activity, surfaceColor, borderColor, 999)
         }
         var selectedId = currentId
         var category = "All"
@@ -110,8 +118,8 @@ object ItemPickerDialog {
             isAllCaps = false
             textSize = 17f
             typeface = GameAssets.typeface(activity, true)
-            setTextColor(Color.rgb(45,55,72))
-            background = rounded(activity, Color.rgb(255,253,247), Color.rgb(63,184,173), 999)
+            setTextColor(textColor)
+            background = rounded(activity, surfaceColor, accentColor, 999)
             setOnClickListener { action() }
         }
         quantityRow.addView(qtyButton("−") {
@@ -145,17 +153,17 @@ object ItemPickerDialog {
             for (index in 0 until chips.childCount) {
                 val chip = chips.getChildAt(index) as? Button ?: continue
                 val active = chip.text.toString() == category
-                chip.setTextColor(if (active) Color.WHITE else Color.rgb(45,55,72))
+                chip.setTextColor(if (active) Color.WHITE else textColor)
                 chip.background = rounded(activity,
-                    if (active) Color.rgb(232,76,138) else Color.rgb(255,253,247),
-                    if (active) Color.TRANSPARENT else Color.rgb(224,216,204), 999)
+                    if (active) Color.rgb(232,76,138) else surfaceColor,
+                    if (active) Color.TRANSPARENT else borderColor, 999)
             }
         }
         fun render() {
             results.removeAllViews()
             val query = search.text.toString().trim().lowercase()
             val items = ItemCatalog.names.entries.filter { (id, name) ->
-                val localized = ItemCatalog.localizedName(id, false)
+                val localized = ItemCatalog.localizedName(id, russian)
                 (if (waterOnly) id == 0L || id == 48L || id == 113L else ItemCatalog.isAllowedInRegularSlot(id)) &&
                     categoryMatches(id, localized) &&
                     (query.isEmpty() || localized.lowercase().contains(query) || id.toString().contains(query))
@@ -169,8 +177,8 @@ object ItemPickerDialog {
                         orientation = LinearLayout.VERTICAL
                         gravity = Gravity.CENTER
                         setPadding(dp(activity, 5), dp(activity, 6), dp(activity, 5), dp(activity, 5))
-                        background = rounded(activity, Color.rgb(255,253,247),
-                            if (selected) Color.rgb(63,184,173) else Color.rgb(224,216,204), 14)
+                        background = rounded(activity, surfaceColor,
+                            if (selected) accentColor else borderColor, 14)
                         setOnClickListener { selectedId = id; render() }
                     }
                     val bitmap = GameAssets.icon(activity, *ItemCatalog.iconHints(id).toTypedArray())
@@ -182,8 +190,8 @@ object ItemPickerDialog {
                             text = "?"
                             textSize = 27f
                             gravity = Gravity.CENTER
-                            setTextColor(Color.rgb(63,184,173))
-                            background = rounded(activity, Color.rgb(232,220,200), Color.rgb(203,191,168), 12)
+                            setTextColor(accentColor)
+                            background = rounded(activity, fallbackColor, borderColor, 12)
                         }, LinearLayout.LayoutParams(dp(activity, 46), dp(activity, 46)))
                     }
                     tile.addView(TextView(activity).apply {
@@ -192,13 +200,13 @@ object ItemPickerDialog {
                         typeface = GameAssets.typeface(activity, true)
                         maxLines = 2
                         gravity = Gravity.CENTER
-                        setTextColor(Color.rgb(45,55,72))
+                        setTextColor(textColor)
                     }, LinearLayout.LayoutParams(-1, dp(activity, 31)))
                     tile.addView(TextView(activity).apply {
                         text = "ID: $id"
                         textSize = 9f
                         typeface = GameAssets.typeface(activity)
-                        setTextColor(Color.rgb(155,168,181))
+                        setTextColor(mutedTextColor)
                     })
                     val params = LinearLayout.LayoutParams(0, dp(activity, 102), 1f)
                     params.setMargins(dp(activity, 3), dp(activity, 3), dp(activity, 3), dp(activity, 3))
@@ -215,8 +223,8 @@ object ItemPickerDialog {
                 isAllCaps = false
                 textSize = 10f
                 typeface = GameAssets.typeface(activity, true)
-                setTextColor(if (category == label) Color.WHITE else Color.rgb(45,55,72))
-                background = rounded(activity, if (category == label) Color.rgb(232,76,138) else Color.rgb(255,253,247), if (category == label) Color.TRANSPARENT else Color.rgb(224,216,204), 999)
+                setTextColor(if (category == label) Color.WHITE else textColor)
+                background = rounded(activity, if (category == label) Color.rgb(232,76,138) else surfaceColor, if (category == label) Color.TRANSPARENT else borderColor, 999)
                 setPadding(dp(activity, 16), 0, dp(activity, 16), 0)
                 setOnClickListener { category = label; updateChipAppearance(); render() }
             }
@@ -235,15 +243,15 @@ object ItemPickerDialog {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.END or Gravity.CENTER_VERTICAL
             setPadding(dp(activity, 4), dp(activity, 12), dp(activity, 4), dp(activity, 2))
-            background = rounded(activity, Color.rgb(255,253,247), Color.TRANSPARENT, 20)
+            background = rounded(activity, surfaceColor, Color.TRANSPARENT, 20)
         }
         val cancel = Button(activity).apply {
             text = "Cancel"
             isAllCaps = false
             textSize = 13f
             typeface = GameAssets.typeface(activity, true)
-            setTextColor(Color.rgb(63,184,173))
-            background = rounded(activity, Color.TRANSPARENT, Color.rgb(63,184,173), 999)
+            setTextColor(accentColor)
+            background = rounded(activity, Color.TRANSPARENT, accentColor, 999)
             setPadding(dp(activity, 18), 0, dp(activity, 18), 0)
         }
         val select = Button(activity).apply {
@@ -252,7 +260,7 @@ object ItemPickerDialog {
             textSize = 13f
             typeface = GameAssets.typeface(activity, true)
             setTextColor(Color.WHITE)
-            background = rounded(activity, Color.rgb(63,184,173), Color.TRANSPARENT, 999)
+            background = rounded(activity, accentColor, Color.TRANSPARENT, 999)
             setPadding(dp(activity, 20), 0, dp(activity, 20), 0)
         }
         val cancelParams = LinearLayout.LayoutParams(-2, dp(activity, 42))
