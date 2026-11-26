@@ -149,6 +149,60 @@ jobs:
           print("\n".join(report[:80]))
           PY
 
+
+      - name: Inspect unresolved IL2CPP runtime helpers and USYM symbols
+        shell: bash
+        run: |
+          set -euo pipefail
+          LIB="${{ steps.locate.outputs.lib }}"
+          USYM="$(find extracted -type f -name 'il2cpp.usym' -print -quit || true)"
+          mkdir -p analysis-output/runtime-helpers
+          sudo apt-get update -qq
+          sudo apt-get install -y llvm binutils
+          OBJDUMP="$(command -v llvm-objdump || command -v llvm-objdump-20 || command -v llvm-objdump-19 || command -v llvm-objdump-18)"
+          {
+            echo "# Runtime helper investigation"
+            echo
+            echo "## Binary symbols"
+            readelf -Ws "$LIB" | head -n 300
+            echo
+            echo "## Dynamic symbols"
+            nm -D -C "$LIB" 2>&1 | head -n 300 || true
+          } > analysis-output/runtime-helpers/NATIVE_SYMBOLS.txt
+          if [ -n "$USYM" ]; then
+            {
+              echo "USYM_PATH=$USYM"
+              stat "$USYM"
+              file "$USYM"
+              echo
+              echo "First 256 bytes:"
+              xxd -g1 -l 256 "$USYM"
+              echo
+              echo "First printable strings:"
+              strings -a -n 4 "$USYM" | head -n 500
+            } > analysis-output/runtime-helpers/IL2CPP_USYM_INSPECTION.txt
+          else
+            echo "il2cpp.usym not found in uploaded archive" > analysis-output/runtime-helpers/IL2CPP_USYM_INSPECTION.txt
+          fi
+          dump_range() {
+            local name="$1" start="$2" stop="$3"
+            "$OBJDUMP" -d --no-show-raw-insn --start-address="$start" --stop-address="$stop" "$LIB" \
+              > "analysis-output/runtime-helpers/$name.txt"
+          }
+          # The unresolved targets previously observed in SceneContext/PlayerState startup.
+          dump_range helper_1F7C350 0x1F7C250 0x1F7C480
+          dump_range helper_1F82300 0x1F82200 0x1F82440
+          dump_range helper_1F88690 0x1F88590 0x1F88820
+          dump_range helper_2C5F524 0x2C5F440 0x2C5F620
+          dump_range helper_2C5F794 0x2C5F6B0 0x2C5F880
+          # Managed callsites around the helper invocations.
+          dump_range SceneContext_Awake 0x33DD17C 0x33DD940
+          dump_range SceneContext_Start 0x33DDB14 0x33DDC20
+          dump_range SceneContext_Start_MoveNext 0x33DE724 0x33DF7D8
+          dump_range PlayerState_InitForLevel 0x3360900 0x3360994
+          dump_range Identifiable_Awake 0x32BEA10 0x32BEC00
+          echo "Runtime helper disassembly and USYM inspection complete."
+
       - name: Upload complete analysis
         uses: actions/upload-artifact@v4
         with:
