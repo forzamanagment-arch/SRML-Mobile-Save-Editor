@@ -18,7 +18,6 @@ import android.widget.EditText
 import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.Spinner
-import android.widget.Switch
 import android.widget.TextView
 import android.widget.ImageView
 import android.widget.FrameLayout
@@ -80,7 +79,6 @@ class SaveEditorActivity : Activity() {
     private var keysInput: EditText? = null
     private var currentHealthInput: EditText? = null
     private var currentEnergyInput: EditText? = null
-    private var saveNameInput: EditText? = null
     private val slotEditors = mutableListOf<SlotEditor>()
     private var waterCountInput: EditText? = null
     private var waterTypeSpinner: Spinner? = null
@@ -93,7 +91,7 @@ class SaveEditorActivity : Activity() {
     private lateinit var page: LinearLayout
     private lateinit var status: TextView
     private val russian: Boolean get() = getSharedPreferences("srml_settings", MODE_PRIVATE).getBoolean("russian", false)
-    private val darkTheme: Boolean get() = getSharedPreferences("srml_settings", MODE_PRIVATE).getBoolean("dark_theme", false)
+    private val darkTheme: Boolean get() = getSharedPreferences("srml_settings", MODE_PRIVATE).getBoolean("dark_theme", true)
     private fun tr(en: String, ru: String): String = if (russian) ru else en
     private fun inkColor() = if (darkTheme) Color.rgb(244,242,236) else Color.rgb(45,55,72)
     private fun mutedColor() = if (darkTheme) Color.rgb(177,187,198) else Color.rgb(107,123,141)
@@ -281,45 +279,13 @@ class SaveEditorActivity : Activity() {
         )
     }
 
-    private fun addSaveNameCard(currentName: String) {
-        val card = LinearLayout(this).apply {
-            orientation = LinearLayout.VERTICAL
-            setPadding(dp(12), dp(10), dp(12), dp(12))
-            background = rounded(hudColor(), if (darkTheme) Color.rgb(99,88,133) else Color.rgb(179,157,219), dp(18))
-        }
-        card.addView(TextView(this).apply {
-            text = tr("SAVE NAME", "ИМЯ СОХРАНЕНИЯ")
-            textSize = 11f
-            typeface = GameAssets.typeface(this@SaveEditorActivity, true)
-            setTextColor(inkColor())
-            letterSpacing = 0.06f
-        })
-        val input = EditText(this).apply {
-            setSingleLine(true)
-            typeface = GameAssets.typeface(this@SaveEditorActivity, true)
-            inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_FLAG_CAP_SENTENCES
-            filters = arrayOf(InputFilter.LengthFilter(64))
-            setText(currentName)
-            textSize = 15f
-            setTextColor(inkColor())
-            setHintTextColor(mutedColor())
-            setPadding(dp(10), dp(7), dp(10), dp(7))
-            background = rounded(cardColor(), borderColor(), dp(12))
-        }
-        card.addView(input, LinearLayout.LayoutParams(-1, dp(44)).apply { topMargin = dp(7) })
-        page.addView(card, LinearLayout.LayoutParams(-1, -2).apply { bottomMargin = dp(8) })
-        saveNameInput = input
-    }
-
     private fun showEditor() {
         val data = parsed ?: return
         newbucksInput = null
         keysInput = null
         currentHealthInput = null
         currentEnergyInput = null
-        saveNameInput = null
         buildBase(tr("Save dashboard", "Панель сохранения"))
-        addSaveNameCard(data.sourceName)
         addSection(tr("PLAYER HUD", "ПАРАМЕТРЫ ИГРОКА"))
         val hudGrid = LinearLayout(this).apply { orientation = LinearLayout.VERTICAL }
         page.addView(hudGrid)
@@ -380,7 +346,7 @@ class SaveEditorActivity : Activity() {
             val card = LinearLayout(this).apply {
                 orientation = LinearLayout.VERTICAL
                 gravity = Gravity.CENTER
-                setPadding(dp(10), dp(10), dp(10), dp(8))
+                setPadding(dp(10), dp(10), dp(10), dp(9))
                 background = rounded(cardColor(), Color.rgb(232, 76, 138), dp(18))
             }
             val icon = ImageView(this)
@@ -392,26 +358,41 @@ class SaveEditorActivity : Activity() {
                 gravity = Gravity.CENTER
                 typeface = GameAssets.typeface(this@SaveEditorActivity, true)
                 setTextColor(inkColor())
-                setPadding(0, dp(4), 0, dp(4))
+                setPadding(0, dp(4), 0, dp(7))
             })
-            val toggle = Switch(this).apply {
+            var enabled = (input?.text?.toString()?.toLongOrNull() ?: 0L) >= MAX_PLAYER_STAT
+            var previousValue: Long? = null
+            val toggle = Button(this).apply {
                 isEnabled = input != null
-                var previousValue = input?.text?.toString()?.toLongOrNull()
-                isChecked = (previousValue ?: 0L) >= MAX_PLAYER_STAT
-                thumbTintList = android.content.res.ColorStateList.valueOf(Color.rgb(232, 76, 138))
-                trackTintList = android.content.res.ColorStateList.valueOf(Color.rgb(255, 182, 205))
-                setOnCheckedChangeListener { _, checked ->
-                    if (input != null) {
-                        if (checked) {
-                            previousValue = input.text.toString().toLongOrNull() ?: 0L
-                            input.setText(MAX_PLAYER_STAT.toString())
-                        } else if (previousValue != null) {
-                            input.setText(previousValue.toString())
+                text = tr(if (enabled) "Disable" else "Enable", if (enabled) "Выключить" else "Включить")
+                isAllCaps = false
+                textSize = 12f
+                typeface = GameAssets.typeface(this@SaveEditorActivity, true)
+                setTextColor(Color.WHITE)
+                background = rounded(Color.rgb(255, 107, 157), Color.TRANSPARENT, dp(22))
+                setPadding(dp(14), 0, dp(14), 0)
+                setOnClickListener {
+                    val field = input ?: return@setOnClickListener
+                    if (!enabled) {
+                        previousValue = field.text.toString().toLongOrNull() ?: 0L
+                        field.setText(MAX_PLAYER_STAT.toString())
+                        enabled = true
+                    } else {
+                        val restore = previousValue
+                        if (restore == null) {
+                            status.text = tr(
+                                "This value was already at the infinite setting when the editor opened. Change it manually before disabling.",
+                                "Значение уже было максимальным при открытии редактора. Чтобы отключить режим, сначала измени значение вручную."
+                            )
+                            return@setOnClickListener
                         }
+                        field.setText(restore.toString())
+                        enabled = false
                     }
+                    text = tr(if (enabled) "Disable" else "Enable", if (enabled) "Выключить" else "Включить")
                 }
             }
-            card.addView(toggle)
+            card.addView(toggle, LinearLayout.LayoutParams(-1, dp(38)))
             val params = LinearLayout.LayoutParams(0, -2, 1f)
             params.setMargins(dp(3), dp(5), dp(3), dp(4))
             infiniteRow.addView(card, params)
@@ -484,7 +465,7 @@ class SaveEditorActivity : Activity() {
                 textSize = 26f
                 gravity = Gravity.CENTER
                 typeface = GameAssets.typeface(this@SaveEditorActivity, true)
-                setTextColor(Color.rgb(63,184,173))
+                setTextColor(Color.rgb(49,73,110))
                 visibility = if (waterBitmap == null) View.VISIBLE else View.GONE
             }
             waterFrame.addView(waterPlaceholder, FrameLayout.LayoutParams(dp(48), dp(48), Gravity.CENTER))
@@ -494,7 +475,7 @@ class SaveEditorActivity : Activity() {
                 gravity = Gravity.CENTER
                 setTextColor(Color.WHITE)
                 setPadding(dp(6), 0, dp(6), 0)
-                background = rounded(Color.rgb(63,184,173), Color.TRANSPARENT, dp(20))
+                background = rounded(Color.rgb(49,73,110), Color.TRANSPARENT, dp(20))
             }
             waterFrame.addView(waterBadge, FrameLayout.LayoutParams(-2, dp(20), Gravity.TOP or Gravity.END))
             waterTile.addView(waterFrame, LinearLayout.LayoutParams(dp(48), dp(48)))
@@ -547,7 +528,7 @@ class SaveEditorActivity : Activity() {
                 text = "⌄"
                 isAllCaps = false
                 setTextColor(Color.WHITE)
-                background = rounded(Color.rgb(63,184,173), Color.TRANSPARENT, dp(24))
+                background = rounded(Color.rgb(49,73,110), Color.TRANSPARENT, dp(24))
                 setOnClickListener { openWaterPicker() }
             }
             waterTile.addView(choose, LinearLayout.LayoutParams(dp(44), dp(40)))
@@ -602,7 +583,7 @@ class SaveEditorActivity : Activity() {
         inventoryActions.addView(fillInventory, fillParams)
         page.addView(inventoryActions)
 
-        addButton(tr("Save changes", "Сохранить изменения")) { prepareOutput() }
+        addEditorActions()
         addHint(tr("The original save stays in pt_saves while you edit. A backup is kept only if you chose to create one.", "Исходное сохранение остаётся в pt_saves во время редактирования. Резервная копия хранится только если ты согласился её создать."))
     }
 
@@ -624,14 +605,14 @@ class SaveEditorActivity : Activity() {
             gravity = Gravity.CENTER
             setTextColor(Color.WHITE)
             setPadding(dp(6), 0, dp(6), 0)
-            background = rounded(Color.rgb(63,184,173), Color.TRANSPARENT, dp(20))
+            background = rounded(Color.rgb(49,73,110), Color.TRANSPARENT, dp(20))
         }
         val placeholder = TextView(this).apply {
             text = "?"
             textSize = 26f
             gravity = Gravity.CENTER
             typeface = GameAssets.typeface(this@SaveEditorActivity, true)
-            setTextColor(Color.rgb(63,184,173))
+            setTextColor(Color.rgb(49,73,110))
             visibility = View.GONE
         }
         fun refreshTile() {
@@ -765,18 +746,10 @@ class SaveEditorActivity : Activity() {
             }
             pendingArchive = output.toByteArray()
             val target = remoteTargetPath
-            val requestedName = saveNameInput?.text?.toString()?.trim().orEmpty().ifEmpty { sourceName }
-            if (requestedName == "." || requestedName == ".." || requestedName.contains("/") ||
-                requestedName.contains("\\") || requestedName.any { Character.isISOControl(it) }) {
-                error("Имя сохранения не должно содержать /, \\ или управляющие символы")
-            }
             if (target != null) {
-                val newTarget = target.substringBeforeLast('/') + "/" + requestedName
                 Thread {
                     try {
-                        ShizukuFileAccess.renameSaveAtomic(target, newTarget, pendingArchive!!)
-                        remoteTargetPath = newTarget
-                        sourceName = requestedName
+                        ShizukuFileAccess.writeAtomic(target, pendingArchive!!)
                         stageFile?.delete()
                         saveCompleted = true
                         val backupMessage = if (backupPath != null)
@@ -796,7 +769,7 @@ class SaveEditorActivity : Activity() {
                 val intent = Intent(Intent.ACTION_CREATE_DOCUMENT).apply {
                     addCategory(Intent.CATEGORY_OPENABLE)
                     type = "application/octet-stream"
-                    putExtra(Intent.EXTRA_TITLE, requestedName)
+                    putExtra(Intent.EXTRA_TITLE, sourceName)
                 }
                 startActivityForResult(intent, CREATE_SAVE)
             }
@@ -805,10 +778,39 @@ class SaveEditorActivity : Activity() {
         }
     }
 
-    override fun onBackPressed() {
-        // The source save is never moved or deleted during editing, so cancelling only removes the temp copy.
+    override fun onBackPressed() { cancelEditing() }
+
+    private fun cancelEditing() {
+        // The original file remains in pt_saves untouched until Save changes is pressed.
         stageFile?.delete()
-        super.onBackPressed()
+        finish()
+    }
+
+    private fun addEditorActions() {
+        val actions = LinearLayout(this).apply { orientation = LinearLayout.HORIZONTAL }
+        val cancel = Button(this).apply {
+            text = tr("Cancel editing", "Отменить редакцию")
+            isAllCaps = false
+            textSize = 12f
+            typeface = GameAssets.typeface(this@SaveEditorActivity, true)
+            setTextColor(Color.WHITE)
+            background = rounded(Color.rgb(49, 73, 110), Color.TRANSPARENT, dp(24))
+            setOnClickListener { cancelEditing() }
+        }
+        val save = Button(this).apply {
+            text = tr("Save changes", "Сохранить изменения")
+            isAllCaps = false
+            textSize = 12f
+            typeface = GameAssets.typeface(this@SaveEditorActivity, true)
+            setTextColor(Color.WHITE)
+            background = rounded(Color.rgb(232, 76, 138), Color.TRANSPARENT, dp(24))
+            setOnClickListener { prepareOutput() }
+        }
+        val cancelParams = LinearLayout.LayoutParams(0, dp(48), 1f).apply { marginEnd = dp(7) }
+        actions.addView(cancel, cancelParams)
+        actions.addView(save, LinearLayout.LayoutParams(0, dp(48), 1f).apply { marginStart = dp(7) })
+        val params = LinearLayout.LayoutParams(-1, dp(48)).apply { topMargin = dp(12) }
+        page.addView(actions, params)
     }
 
     private fun parseUnsigned(text: String?, label: String): Long {
@@ -892,7 +894,7 @@ class SaveEditorActivity : Activity() {
             textSize = 15f
             setTextColor(Color.WHITE)
             typeface = GameAssets.typeface(this@SaveEditorActivity, true)
-            background = rounded(Color.rgb(63, 184, 173), Color.TRANSPARENT, dp(28))
+            background = rounded(Color.rgb(49, 73, 110), Color.TRANSPARENT, dp(28))
             setOnClickListener { action() }
         }
         val params = LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, dp(52))
@@ -938,7 +940,7 @@ class SaveEditorActivity : Activity() {
                 intArrayOf(if (darkTheme) 0x44B85D91 else 0x55FF9AD1, 0x00FF9AD1), null, android.graphics.Shader.TileMode.CLAMP)
             canvas.drawRect(b, paint)
             paint.shader = android.graphics.RadialGradient(w * .12f, h * .88f, w * .42f,
-                intArrayOf(if (darkTheme) 0x444ECDC4 else 0x554ECDC4, 0x004ECDC4), null, android.graphics.Shader.TileMode.CLAMP)
+                intArrayOf(if (darkTheme) 0x4431496E else 0x5531496E, 0x0031496E), null, android.graphics.Shader.TileMode.CLAMP)
             canvas.drawRect(b, paint)
             paint.shader = android.graphics.RadialGradient(w * .58f, h * .78f, w * .34f,
                 intArrayOf(0x44B39DDB, 0x00B39DDB), null, android.graphics.Shader.TileMode.CLAMP)
@@ -953,7 +955,7 @@ class SaveEditorActivity : Activity() {
                 intArrayOf(if (darkTheme) 0x263EAAA3 else 0x20FF8FBE, 0x00000000), null, android.graphics.Shader.TileMode.CLAMP)
             canvas.drawCircle(w * .08f, h * .30f, w * .22f, paint)
             paint.shader = android.graphics.RadialGradient(w * .94f, h * .62f, w * .25f,
-                intArrayOf(if (darkTheme) 0x224ECDC4 else 0x1E4ECDC4, 0x00000000), null, android.graphics.Shader.TileMode.CLAMP)
+                intArrayOf(if (darkTheme) 0x2231496E else 0x1E31496E, 0x00000000), null, android.graphics.Shader.TileMode.CLAMP)
             canvas.drawCircle(w * .94f, h * .62f, w * .25f, paint)
             paint.shader = null
         }
