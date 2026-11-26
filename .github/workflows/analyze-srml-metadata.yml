@@ -62,9 +62,13 @@ jobs:
           set -euo pipefail
           mkdir -p analysis-output
           ./disunity meta \
+            --out analysis-output --all \
             "${{ steps.locate.outputs.lib }}" \
-            "${{ steps.locate.outputs.metadata }}" \
-            --out analysis-output --all
+            "${{ steps.locate.outputs.metadata }}"
+          echo "Generated files:"
+          find analysis-output -maxdepth 2 -type f -printf '%p (%s bytes)\\n'
+          test -s analysis-output/unity_meta.json
+          test -s analysis-output/script.json
 
       - name: Build readable game explorer index
         shell: bash
@@ -74,8 +78,10 @@ jobs:
           from pathlib import Path
 
           root=Path("analysis-output")
-          meta_path=root/"unity_meta.json"
-          script_path=root/"script.json"
+          meta_candidates=list(root.rglob("unity_meta.json"))
+          script_candidates=list(root.rglob("script.json"))
+          meta_path=meta_candidates[0] if meta_candidates else root/"unity_meta.json"
+          script_path=script_candidates[0] if script_candidates else root/"script.json"
           report=[]
           report.append("# SRML Game Explorer: IL2CPP analysis")
           report.append("")
@@ -112,6 +118,7 @@ jobs:
               report.append("- A missing address does not mean a method is absent; generic, stripped, or unresolved methods may need separate analysis.")
           else:
               report += ["Metadata parser did not produce unity_meta.json.", "See workflow logs for the parser error."]
+              report += [f"- Found files: {p}" for p in root.rglob("*") if p.is_file()]
           (root/"GAME_EXPLORER_INDEX.md").write_text("\n".join(report),encoding="utf-8")
           print("\n".join(report[:80]))
           PY
