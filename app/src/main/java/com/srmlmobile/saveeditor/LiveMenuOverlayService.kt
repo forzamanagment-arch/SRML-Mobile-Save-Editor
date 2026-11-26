@@ -177,9 +177,26 @@ class LiveMenuOverlayService : Service() {
         }
         val body = LinearLayout(this).apply {
             orientation = LinearLayout.VERTICAL
-            setPadding(dp(16), dp(13), dp(16), dp(16))
+            setPadding(dp(12), dp(8), dp(12), dp(14))
+            clipChildren = true
+            clipToPadding = true
         }
-        scroll.addView(body)
+        scroll.addView(body, ScrollView.LayoutParams(
+            WindowManager.LayoutParams.MATCH_PARENT,
+            WindowManager.LayoutParams.WRAP_CONTENT
+        ))
+        val dragHandle = TextView(this).apply {
+            text = "•••   " + tr("DRAG TO MOVE MENU", "ПЕРЕМЕСТИТЬ МЕНЮ") + "   •••"
+            textSize = 10f
+            letterSpacing = 0.12f
+            gravity = Gravity.CENTER
+            setTextColor(muted)
+            typeface = GameAssets.typeface(this@LiveMenuOverlayService, true)
+            background = shape(alt, 14, if (dark) Color.rgb(65, 73, 83) else Color.rgb(224, 216, 204), 1)
+        }
+        val dragParams = LinearLayout.LayoutParams(-1, dp(28))
+        dragParams.bottomMargin = dp(6)
+        body.addView(dragHandle, dragParams)
         val header = LinearLayout(this).apply {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
@@ -215,10 +232,10 @@ class LiveMenuOverlayService : Service() {
 
         addSection(body, tr("PLAYER", "ИГРОК"))
         addNumberRow(body, tr("Newbucks", "Ньюбаксы"), "Newbucks", "9535")
-        addNumberRow(body, tr("Max Health", "Макс. здоровье"), "Health", "100")
+        addNumberRow(body, tr("Max Health", "Макс. здоровье"), "Heart.PNG", "100")
         addNumberRow(body, tr("Max Energy", "Макс. энергия"), "Energy", "100")
         addNumberRow(body, tr("Keys", "Ключи"), "Key", "2")
-        addToggleRow(body, tr("Infinity Health", "Бесконечное здоровье"), "Health")
+        addToggleRow(body, tr("Infinity Health", "Бесконечное здоровье"), "Heart.PNG")
         addToggleRow(body, tr("Infinity Energy", "Бесконечная энергия"), "Energy")
 
         addSection(body, tr("INVENTORY EDITOR", "РЕДАКТОР ИНВЕНТАРЯ"))
@@ -233,9 +250,9 @@ class LiveMenuOverlayService : Service() {
         applyParams.topMargin = dp(12)
         body.addView(apply, applyParams)
 
-        val availableWidth = resources.displayMetrics.widthPixels - dp(24)
+        val availableWidth = (resources.displayMetrics.widthPixels - dp(24)).coerceAtLeast(dp(240))
         val panelWidth = min(dp(336), availableWidth)
-        val availableHeight = resources.displayMetrics.heightPixels - dp(72)
+        val availableHeight = (resources.displayMetrics.heightPixels - dp(72)).coerceAtLeast(dp(240))
         val lp = params(panelWidth, min(dp(640), availableHeight), true).apply {
             x = dp(12)
             y = dp(54)
@@ -243,10 +260,10 @@ class LiveMenuOverlayService : Service() {
         wm.addView(scroll, lp)
         panel = scroll
         panelParams = lp
-        attachPanelDrag(header)
+        attachPanelDrag(dragHandle)
     }
 
-    private fun attachPanelDrag(header: View) {
+    private fun attachPanelDrag(handle: View) {
         val lp = panelParams ?: return
         val target = panel ?: return
         var downX = 0f
@@ -254,7 +271,7 @@ class LiveMenuOverlayService : Service() {
         var startX = 0
         var startY = 0
         var moved = false
-        header.setOnTouchListener { _, event ->
+        handle.setOnTouchListener { _, event ->
             when (event.action) {
                 MotionEvent.ACTION_DOWN -> {
                     downX = event.rawX; downY = event.rawY
@@ -267,7 +284,10 @@ class LiveMenuOverlayService : Service() {
                     val dy = (event.rawY - downY).toInt()
                     if (abs(dx) + abs(dy) > dp(7)) moved = true
                     if (moved) {
-                        lp.x = startX + dx; lp.y = startY + dy
+                        val screenW = resources.displayMetrics.widthPixels
+                        val screenH = resources.displayMetrics.heightPixels
+                        lp.x = (startX + dx).coerceIn(0, (screenW - lp.width).coerceAtLeast(0))
+                        lp.y = (startY + dy).coerceIn(0, (screenH - lp.height).coerceAtLeast(0))
                         try { wm.updateViewLayout(target, lp) } catch (_: Exception) {}
                     }
                     true
@@ -363,7 +383,7 @@ class LiveMenuOverlayService : Service() {
             orientation = LinearLayout.HORIZONTAL
             gravity = Gravity.CENTER_VERTICAL
         }
-        addAssetIcon(heading, if (water) "Water" else "Pink Slime", 28)
+        addAssetIcon(heading, if (water) "Water_icon.webp" else "Pink Slime", 28)
         val slotName = TextView(this).apply {
             text = if (water) tr("Water slot", "Слот воды") else tr("Slot $slot", "Слот $slot")
             textSize = 12f
