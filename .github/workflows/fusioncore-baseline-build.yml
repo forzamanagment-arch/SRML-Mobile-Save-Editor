@@ -1,4 +1,5 @@
 name: FusionCore upstream baseline build
+# Builds the exact upstream revision used by the compatibility audit.
 
 on:
   workflow_dispatch:
